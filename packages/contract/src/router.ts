@@ -1,5 +1,6 @@
 import { oc } from "@orpc/contract";
 import { z } from "zod";
+import { apiKeys } from "./routes/api-keys.ts";
 import { campaigns } from "./routes/campaigns.ts";
 import { customers } from "./routes/customers.ts";
 import { loyalty } from "./routes/loyalty.ts";
@@ -37,6 +38,7 @@ export const contract = {
   rewardTypes,
   loyalty,
   referrals,
+  apiKeys,
 };
 
 export type Contract = typeof contract;

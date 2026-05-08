@@ -79,7 +79,7 @@ const sections: { label: string; items: NavItem[] }[] = [
   {
     label: "Settings",
     items: [
-      { href: "/settings/api-keys", label: "API keys", icon: Key, comingPhase: 8 },
+      { href: "/settings/api-keys", label: "API keys", icon: Key },
       { href: "/settings/audit-log", label: "Audit log", icon: FileText, comingPhase: 9 },
       { href: "/settings/users", label: "Users", icon: Boxes, comingPhase: 8 },
       { href: "/settings", label: "Workspace", icon: Settings, comingPhase: 8 },

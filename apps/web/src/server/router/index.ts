@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { contract } from "@open-voucherify/contract/router";
 import type { RequestContext } from "@/server/context";
 import { db } from "@/lib/db";
+import { apiKeysRouter } from "./api-keys";
 import { campaignsRouter } from "./campaigns";
 import { customersRouter } from "./customers";
 import { loyaltyRouter } from "./loyalty";
@@ -44,4 +45,5 @@ export const router = os.router({
   rewardTypes: rewardTypesRouter,
   loyalty: loyaltyRouter,
   referrals: referralsRouter,
+  apiKeys: apiKeysRouter,
 });

@@ -14,11 +14,13 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@open-voucherify/sdk": "workspace:*"
+    "@open-voucherify/sdk": "workspace:*",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@open-voucherify/config": "workspace:*",
     "@types/node": "^20.19.40",
+    "tsx": "^4.21.0",
     "typescript": "^6.0.3"
   }
 }
