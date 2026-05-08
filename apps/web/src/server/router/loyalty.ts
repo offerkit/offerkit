@@ -11,7 +11,12 @@ import {
 import type { RequestContext } from "@/server/context";
 import { db } from "@/lib/db";
 import { requireSession } from "@/server/middleware/auth";
-import { decodeCursor, encodeCursor } from "./helpers";
+import {
+  decodeCursor,
+  encodeCursor,
+  paginatedSoftDeleteList,
+  softDeleteById,
+} from "./helpers";
 
 const os = implement(contract).$context<RequestContext>();
 
@@ -98,32 +103,14 @@ function toTransaction(row: TransactionRow) {
 
 const programsList = os.loyalty.programs.list
   .use(requireSession)
-  .handler(async ({ input }) => {
-    const limit = input.limit;
-    const cursor = decodeCursor(input.cursor);
-    const filters = [isNull(schema.loyaltyProgram.deletedAt)];
-    if (cursor) {
-      filters.push(
-        sql`(${schema.loyaltyProgram.createdAt}, ${schema.loyaltyProgram.id}) < (${cursor.createdAt}, ${cursor.id})`,
-      );
-    }
-    const rows = (await db()
-      .select()
-      .from(schema.loyaltyProgram)
-      .where(and(...filters))
-      .orderBy(desc(schema.loyaltyProgram.createdAt), desc(schema.loyaltyProgram.id))
-      .limit(limit + 1)) as ProgramRow[];
-    const hasMore = rows.length > limit;
-    const data = rows.slice(0, limit);
-    const last = data[data.length - 1];
-    return {
-      data: data.map(toProgram),
-      next:
-        hasMore && last
-          ? encodeCursor({ createdAt: last.createdAt.toISOString(), id: last.id })
-          : undefined,
-    };
-  });
+  .handler(({ input }) =>
+    paginatedSoftDeleteList<ProgramRow, ReturnType<typeof toProgram>>({
+      table: schema.loyaltyProgram,
+      limit: input.limit,
+      cursor: decodeCursor(input.cursor),
+      toOutput: toProgram,
+    }),
+  );
 
 const programGet = os.loyalty.programs.get.use(requireSession).handler(async ({ input }) => {
   const row = await db().query.loyaltyProgram.findFirst({
@@ -182,17 +169,7 @@ const programUpdate = os.loyalty.programs.update
 const programDelete = os.loyalty.programs.delete
   .use(requireSession)
   .handler(async ({ input }) => {
-    const [row] = await db()
-      .update(schema.loyaltyProgram)
-      .set({ deletedAt: new Date() })
-      .where(
-        and(
-          eq(schema.loyaltyProgram.id, input.id),
-          isNull(schema.loyaltyProgram.deletedAt),
-        ),
-      )
-      .returning({ id: schema.loyaltyProgram.id });
-    if (!row) throw new ORPCError("NOT_FOUND", { message: "Loyalty program not found" });
+    await softDeleteById(schema.loyaltyProgram, input.id, "Loyalty program not found");
     return { ok: true as const };
   });
 
@@ -353,14 +330,7 @@ const rewardsUpdate = os.loyalty.rewards.update.use(requireSession).handler(asyn
 });
 
 const rewardsDelete = os.loyalty.rewards.delete.use(requireSession).handler(async ({ input }) => {
-  const [row] = await db()
-    .update(schema.loyaltyReward)
-    .set({ deletedAt: new Date() })
-    .where(
-      and(eq(schema.loyaltyReward.id, input.id), isNull(schema.loyaltyReward.deletedAt)),
-    )
-    .returning({ id: schema.loyaltyReward.id });
-  if (!row) throw new ORPCError("NOT_FOUND", { message: "Reward not found" });
+  await softDeleteById(schema.loyaltyReward, input.id, "Reward not found");
   return { ok: true as const };
 });
 

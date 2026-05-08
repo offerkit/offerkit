@@ -84,7 +84,6 @@ export const referralConvertOutput = z.object({
   refereeCustomerId: z.string().uuid().optional(),
   referrerReward: referralIssued.optional(),
   refereeReward: referralIssued.optional(),
-  alreadyConverted: z.boolean().optional(),
   code: z.string().optional(),
   message: z.string().optional(),
 });

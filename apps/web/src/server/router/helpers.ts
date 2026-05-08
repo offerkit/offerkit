@@ -1,4 +1,8 @@
+import { ORPCError } from "@orpc/server";
+import { and, desc, eq, isNull, sql, type SQL } from "drizzle-orm";
+import type { AnyPgTable, PgColumn } from "drizzle-orm/pg-core";
 import type { schema } from "@open-voucherify/db";
+import { db } from "@/lib/db";
 
 export type CustomerRow = typeof schema.customer.$inferSelect;
 export type SegmentRow = typeof schema.segment.$inferSelect;
@@ -122,4 +126,77 @@ export function toRewardType(row: RewardTypeRow, revision: RewardTypeRevisionRow
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
+}
+
+// Tables we paginate over share three columns (id, createdAt, deletedAt).
+// Drizzle's typed builders don't infer well across generic table refs, so
+// the helper accepts a small descriptor and casts internally; the public
+// signatures stay typed via the toOutput mapper.
+interface SoftDeleteTable {
+  id: PgColumn;
+  createdAt: PgColumn;
+  deletedAt: PgColumn;
+}
+
+interface PaginatedListOpts<TRow, TOut> {
+  table: AnyPgTable & SoftDeleteTable;
+  limit: number;
+  cursor: Cursor | undefined;
+  /** Extra WHERE predicates (e.g. search, foreign-key scoping). */
+  filters?: SQL[];
+  toOutput: (row: TRow) => TOut;
+}
+
+/**
+ * List a soft-deletable table by descending createdAt with an opaque
+ * cursor and a configurable extra-filters slot. Stable under concurrent
+ * inserts because the cursor compares (createdAt, id) lexicographically.
+ */
+export async function paginatedSoftDeleteList<TRow extends { id: string; createdAt: Date }, TOut>({
+  table,
+  limit,
+  cursor,
+  filters: extraFilters = [],
+  toOutput,
+}: PaginatedListOpts<TRow, TOut>): Promise<{ data: TOut[]; next?: string }> {
+  const filters: (SQL | undefined)[] = [isNull(table.deletedAt), ...extraFilters];
+  if (cursor) {
+    filters.push(
+      sql`(${table.createdAt}, ${table.id}) < (${cursor.createdAt}, ${cursor.id})`,
+    );
+  }
+  const rows = (await db()
+    .select()
+    .from(table)
+    .where(and(...filters))
+    .orderBy(desc(table.createdAt), desc(table.id))
+    .limit(limit + 1)) as unknown as TRow[];
+
+  const hasMore = rows.length > limit;
+  const data = rows.slice(0, limit);
+  const last = data[data.length - 1];
+  return {
+    data: data.map(toOutput),
+    next:
+      hasMore && last
+        ? encodeCursor({ createdAt: last.createdAt.toISOString(), id: last.id })
+        : undefined,
+  };
+}
+
+/**
+ * Soft-delete by id, throwing 404 if the row is missing or already
+ * deleted. Returns nothing — handlers wrap the call in `return { ok: true }`.
+ */
+export async function softDeleteById(
+  table: AnyPgTable & SoftDeleteTable,
+  id: string,
+  notFoundMessage: string,
+): Promise<void> {
+  const [row] = (await db()
+    .update(table)
+    .set({ deletedAt: new Date() } as never)
+    .where(and(eq(table.id, id), isNull(table.deletedAt)))
+    .returning({ id: table.id })) as { id: string }[];
+  if (!row) throw new ORPCError("NOT_FOUND", { message: notFoundMessage });
 }

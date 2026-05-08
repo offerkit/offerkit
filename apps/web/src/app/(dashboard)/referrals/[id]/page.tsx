@@ -69,9 +69,7 @@ export default function ReferralProgramDetail({ params }: PageProps) {
     onSuccess: async (r) => {
       if (!r.ok) toast.error(r.message ?? gt("Convert failed"));
       else {
-        toast.success(
-          r.alreadyConverted ? gt("Already converted") : gt("Conversion succeeded"),
-        );
+        toast.success(gt("Conversion succeeded"));
         setConvertCode("");
         setRefereeCustomerId("");
         await refresh();

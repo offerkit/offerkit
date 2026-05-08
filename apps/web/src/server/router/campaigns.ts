@@ -1,11 +1,17 @@
 import { ORPCError, implement } from "@orpc/server";
-import { and, desc, eq, ilike, isNull, sql } from "drizzle-orm";
+import { and, eq, ilike, isNull } from "drizzle-orm";
 import { schema } from "@open-voucherify/db";
 import { contract } from "@open-voucherify/contract/router";
 import type { RequestContext } from "@/server/context";
 import { db } from "@/lib/db";
 import { requireSession } from "@/server/middleware/auth";
-import { decodeCursor, encodeCursor, toCampaign, type CampaignRow } from "./helpers";
+import {
+  decodeCursor,
+  paginatedSoftDeleteList,
+  softDeleteById,
+  toCampaign,
+  type CampaignRow,
+} from "./helpers";
 
 const os = implement(contract).$context<RequestContext>();
 
@@ -17,37 +23,15 @@ function toDateOrNull(value: string | undefined | null): Date | null | undefined
 
 const list = os.campaigns.list
   .use(requireSession)
-  .handler(async ({ input }) => {
-    const limit = input.limit;
-    const cursor = decodeCursor(input.cursor);
+  .handler(({ input }) => {
     const search = input.search?.trim();
-
-    const filters = [isNull(schema.campaign.deletedAt)];
-    if (search) filters.push(ilike(schema.campaign.name, `%${search}%`));
-    if (cursor) {
-      filters.push(
-        sql`(${schema.campaign.createdAt}, ${schema.campaign.id}) < (${cursor.createdAt}, ${cursor.id})`,
-      );
-    }
-
-    const rows = (await db()
-      .select()
-      .from(schema.campaign)
-      .where(and(...filters))
-      .orderBy(desc(schema.campaign.createdAt), desc(schema.campaign.id))
-      .limit(limit + 1)) as CampaignRow[];
-
-    const hasMore = rows.length > limit;
-    const data = rows.slice(0, limit);
-    const last = data[data.length - 1];
-
-    return {
-      data: data.map(toCampaign),
-      next:
-        hasMore && last
-          ? encodeCursor({ createdAt: last.createdAt.toISOString(), id: last.id })
-          : undefined,
-    };
+    return paginatedSoftDeleteList<CampaignRow, ReturnType<typeof toCampaign>>({
+      table: schema.campaign,
+      limit: input.limit,
+      cursor: decodeCursor(input.cursor),
+      filters: search ? [ilike(schema.campaign.name, `%${search}%`)] : [],
+      toOutput: toCampaign,
+    });
   });
 
 const get = os.campaigns.get
@@ -119,12 +103,7 @@ const update = os.campaigns.update
 const remove = os.campaigns.delete
   .use(requireSession)
   .handler(async ({ input }) => {
-    const [row] = await db()
-      .update(schema.campaign)
-      .set({ deletedAt: new Date() })
-      .where(and(eq(schema.campaign.id, input.id), isNull(schema.campaign.deletedAt)))
-      .returning({ id: schema.campaign.id });
-    if (!row) throw new ORPCError("NOT_FOUND", { message: "Campaign not found" });
+    await softDeleteById(schema.campaign, input.id, "Campaign not found");
     return { ok: true as const };
   });
 

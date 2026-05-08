@@ -11,7 +11,7 @@ export type ReferralFailureCode =
   | "program_not_found"
   | "referrer_not_found"
   | "referral_not_found"
-  | "already_converted"
+  | "referral_already_converted"
   | "self_referral"
   | "missing_loyalty_member"
   | "validation_error";
@@ -109,7 +109,6 @@ export interface ConvertOutcome {
   refereeCustomerId: string;
   referrerReward: ReferralIssued;
   refereeReward: ReferralIssued;
-  alreadyConverted?: boolean;
 }
 
 export interface ReferralIssued {
@@ -137,23 +136,13 @@ export async function convert(
       return { ok: false, code: "self_referral", message: "Referrer cannot also be the referee" };
     }
     if (r.status === "converted") {
-      // Idempotent replay — return what we already issued.
-      const existingReferrer: ReferralIssued = {
-        kind: "custom",
-        ...(r.metadata as { referrerReward?: ReferralIssued }).referrerReward,
-      };
-      const existingReferee: ReferralIssued = {
-        kind: "custom",
-        ...(r.metadata as { refereeReward?: ReferralIssued }).refereeReward,
-      };
+      // Re-conversion is rejected: the referee already received their
+      // reward, and replaying might hand back codes for soft-deleted
+      // vouchers. Look up GET /referrals/{code} for the original outcome.
       return {
-        ok: true,
-        referralId: r.id,
-        referrerCustomerId: r.referrerCustomerId,
-        refereeCustomerId: r.refereeCustomerId ?? input.refereeCustomerId,
-        referrerReward: existingReferrer,
-        refereeReward: existingReferee,
-        alreadyConverted: true,
+        ok: false,
+        code: "referral_already_converted",
+        message: "Referral has already been converted",
       };
     }
 
@@ -183,7 +172,6 @@ export async function convert(
         status: "converted",
         convertedAt: new Date(),
         conversionEventId: input.conversionEventId ?? null,
-        metadata: { referrerReward: referrer, refereeReward: referee },
         updatedAt: new Date(),
       })
       .where(eq(schema.referral.id, r.id));

@@ -1,5 +1,5 @@
 import { ORPCError, implement } from "@orpc/server";
-import { and, desc, eq, ilike, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, isNull } from "drizzle-orm";
 import { schema } from "@open-voucherify/db";
 import { contract } from "@open-voucherify/contract/router";
 import { evaluateRule, type Rule } from "@open-voucherify/core/rules";
@@ -8,7 +8,8 @@ import { db } from "@/lib/db";
 import { requireSession } from "@/server/middleware/auth";
 import {
   decodeCursor,
-  encodeCursor,
+  paginatedSoftDeleteList,
+  softDeleteById,
   toCustomer,
   toSegment,
   type CustomerRow,
@@ -19,37 +20,15 @@ const os = implement(contract).$context<RequestContext>();
 
 const list = os.segments.list
   .use(requireSession)
-  .handler(async ({ input }) => {
-    const limit = input.limit;
-    const cursor = decodeCursor(input.cursor);
+  .handler(({ input }) => {
     const search = input.search?.trim();
-
-    const filters = [isNull(schema.segment.deletedAt)];
-    if (search) filters.push(ilike(schema.segment.name, `%${search}%`));
-    if (cursor) {
-      filters.push(
-        sql`(${schema.segment.createdAt}, ${schema.segment.id}) < (${cursor.createdAt}, ${cursor.id})`,
-      );
-    }
-
-    const rows = (await db()
-      .select()
-      .from(schema.segment)
-      .where(and(...filters))
-      .orderBy(desc(schema.segment.createdAt), desc(schema.segment.id))
-      .limit(limit + 1)) as SegmentRow[];
-
-    const hasMore = rows.length > limit;
-    const data = rows.slice(0, limit);
-    const last = data[data.length - 1];
-
-    return {
-      data: data.map(toSegment),
-      next:
-        hasMore && last
-          ? encodeCursor({ createdAt: last.createdAt.toISOString(), id: last.id })
-          : undefined,
-    };
+    return paginatedSoftDeleteList<SegmentRow, ReturnType<typeof toSegment>>({
+      table: schema.segment,
+      limit: input.limit,
+      cursor: decodeCursor(input.cursor),
+      filters: search ? [ilike(schema.segment.name, `%${search}%`)] : [],
+      toOutput: toSegment,
+    });
   });
 
 const get = os.segments.get
@@ -97,12 +76,7 @@ const update = os.segments.update
 const remove = os.segments.delete
   .use(requireSession)
   .handler(async ({ input }) => {
-    const [row] = await db()
-      .update(schema.segment)
-      .set({ deletedAt: new Date() })
-      .where(and(eq(schema.segment.id, input.id), isNull(schema.segment.deletedAt)))
-      .returning({ id: schema.segment.id });
-    if (!row) throw new ORPCError("NOT_FOUND", { message: "Segment not found" });
+    await softDeleteById(schema.segment, input.id, "Segment not found");
     return { ok: true as const };
   });
 

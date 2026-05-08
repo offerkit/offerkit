@@ -1,5 +1,5 @@
 import { ORPCError, implement } from "@orpc/server";
-import { and, desc, eq, ilike, isNull, sql } from "drizzle-orm";
+import { and, eq, ilike, isNull, sql } from "drizzle-orm";
 import { schema } from "@open-voucherify/db";
 import { contract } from "@open-voucherify/contract/router";
 import { generateUniqueCodes } from "@open-voucherify/core/codes";
@@ -7,7 +7,12 @@ import { redeem, validate } from "@open-voucherify/core/redemption";
 import type { RequestContext } from "@/server/context";
 import { db } from "@/lib/db";
 import { requireSession } from "@/server/middleware/auth";
-import { decodeCursor, encodeCursor, toVoucher, type VoucherRow } from "./helpers";
+import {
+  decodeCursor,
+  paginatedSoftDeleteList,
+  toVoucher,
+  type VoucherRow,
+} from "./helpers";
 
 const os = implement(contract).$context<RequestContext>();
 
@@ -28,40 +33,20 @@ async function generateUnique(config: Record<string, unknown> | undefined): Prom
 
 const list = os.vouchers.list
   .use(requireSession)
-  .handler(async ({ input }) => {
-    const limit = input.limit;
-    const cursor = decodeCursor(input.cursor);
+  .handler(({ input }) => {
     const search = input.search?.trim();
-
-    const filters = [isNull(schema.voucher.deletedAt)];
+    const filters = [];
     if (search) filters.push(ilike(schema.voucher.code, `%${search}%`));
     if (input.campaignId) filters.push(eq(schema.voucher.campaignId, input.campaignId));
     if (input.customerId) filters.push(eq(schema.voucher.customerId, input.customerId));
     if (input.active !== undefined) filters.push(eq(schema.voucher.active, input.active));
-    if (cursor) {
-      filters.push(
-        sql`(${schema.voucher.createdAt}, ${schema.voucher.id}) < (${cursor.createdAt}, ${cursor.id})`,
-      );
-    }
-
-    const rows = (await db()
-      .select()
-      .from(schema.voucher)
-      .where(and(...filters))
-      .orderBy(desc(schema.voucher.createdAt), desc(schema.voucher.id))
-      .limit(limit + 1)) as VoucherRow[];
-
-    const hasMore = rows.length > limit;
-    const data = rows.slice(0, limit);
-    const last = data[data.length - 1];
-
-    return {
-      data: data.map(toVoucher),
-      next:
-        hasMore && last
-          ? encodeCursor({ createdAt: last.createdAt.toISOString(), id: last.id })
-          : undefined,
-    };
+    return paginatedSoftDeleteList<VoucherRow, ReturnType<typeof toVoucher>>({
+      table: schema.voucher,
+      limit: input.limit,
+      cursor: decodeCursor(input.cursor),
+      filters,
+      toOutput: toVoucher,
+    });
   });
 
 const get = os.vouchers.get

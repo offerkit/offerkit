@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { ORPCError, implement } from "@orpc/server";
-import { and, desc, eq, ilike, isNull, sql } from "drizzle-orm";
+import { and, eq, ilike, isNull } from "drizzle-orm";
 import { schema } from "@open-voucherify/db";
 import { contract } from "@open-voucherify/contract/router";
 import type { RequestContext } from "@/server/context";
@@ -8,7 +8,8 @@ import { db } from "@/lib/db";
 import { requireSession } from "@/server/middleware/auth";
 import {
   decodeCursor,
-  encodeCursor,
+  paginatedSoftDeleteList,
+  softDeleteById,
   toRewardType,
   type RewardTypeRow,
   type RewardTypeRevisionRow,
@@ -36,30 +37,17 @@ async function loadActiveRevision(
 const list = os.rewardTypes.list
   .use(requireSession)
   .handler(async ({ input }) => {
-    const limit = input.limit;
-    const cursor = decodeCursor(input.cursor);
     const search = input.search?.trim();
-
-    const filters = [isNull(schema.rewardType.deletedAt)];
-    if (search) filters.push(ilike(schema.rewardType.name, `%${search}%`));
-    if (cursor) {
-      filters.push(
-        sql`(${schema.rewardType.createdAt}, ${schema.rewardType.id}) < (${cursor.createdAt}, ${cursor.id})`,
-      );
-    }
-
-    const rows = (await db()
-      .select()
-      .from(schema.rewardType)
-      .where(and(...filters))
-      .orderBy(desc(schema.rewardType.createdAt), desc(schema.rewardType.id))
-      .limit(limit + 1)) as RewardTypeRow[];
-
-    const hasMore = rows.length > limit;
-    const data = rows.slice(0, limit);
-    const last = data[data.length - 1];
-
-    const revisionIds = data
+    const page = await paginatedSoftDeleteList<RewardTypeRow, RewardTypeRow>({
+      table: schema.rewardType,
+      limit: input.limit,
+      cursor: decodeCursor(input.cursor),
+      filters: search ? [ilike(schema.rewardType.name, `%${search}%`)] : [],
+      // Defer the row-to-output mapping; reward types need their active
+      // revision joined in afterwards as a single batched lookup.
+      toOutput: (row) => row,
+    });
+    const revisionIds = page.data
       .map((r) => r.activeRevisionId)
       .filter((v): v is string => v !== null);
     const revisions = revisionIds.length
@@ -68,15 +56,11 @@ const list = os.rewardTypes.list
         })
       : [];
     const byId = new Map(revisions.map((r) => [r.id, r]));
-
     return {
-      data: data.map((row) =>
+      data: page.data.map((row) =>
         toRewardType(row, row.activeRevisionId ? byId.get(row.activeRevisionId) : undefined),
       ),
-      next:
-        hasMore && last
-          ? encodeCursor({ createdAt: last.createdAt.toISOString(), id: last.id })
-          : undefined,
+      next: page.next,
     };
   });
 
@@ -185,12 +169,7 @@ const update = os.rewardTypes.update
 const remove = os.rewardTypes.delete
   .use(requireSession)
   .handler(async ({ input }) => {
-    const [row] = await db()
-      .update(schema.rewardType)
-      .set({ deletedAt: new Date() })
-      .where(and(eq(schema.rewardType.id, input.id), isNull(schema.rewardType.deletedAt)))
-      .returning({ id: schema.rewardType.id });
-    if (!row) throw new ORPCError("NOT_FOUND", { message: "Reward type not found" });
+    await softDeleteById(schema.rewardType, input.id, "Reward type not found");
     return { ok: true as const };
   });
 

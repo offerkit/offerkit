@@ -6,7 +6,12 @@ import { convert as convertReferral, issueCode } from "@open-voucherify/core/ref
 import type { RequestContext } from "@/server/context";
 import { db } from "@/lib/db";
 import { requireSession } from "@/server/middleware/auth";
-import { decodeCursor, encodeCursor } from "./helpers";
+import {
+  decodeCursor,
+  encodeCursor,
+  paginatedSoftDeleteList,
+  softDeleteById,
+} from "./helpers";
 
 const os = implement(contract).$context<RequestContext>();
 
@@ -46,32 +51,14 @@ function toReferral(row: ReferralRow) {
 
 const programsList = os.referrals.programs.list
   .use(requireSession)
-  .handler(async ({ input }) => {
-    const limit = input.limit;
-    const cursor = decodeCursor(input.cursor);
-    const filters = [isNull(schema.referralProgram.deletedAt)];
-    if (cursor) {
-      filters.push(
-        sql`(${schema.referralProgram.createdAt}, ${schema.referralProgram.id}) < (${cursor.createdAt}, ${cursor.id})`,
-      );
-    }
-    const rows = (await db()
-      .select()
-      .from(schema.referralProgram)
-      .where(and(...filters))
-      .orderBy(desc(schema.referralProgram.createdAt), desc(schema.referralProgram.id))
-      .limit(limit + 1)) as ProgramRow[];
-    const hasMore = rows.length > limit;
-    const data = rows.slice(0, limit);
-    const last = data[data.length - 1];
-    return {
-      data: data.map(toProgram),
-      next:
-        hasMore && last
-          ? encodeCursor({ createdAt: last.createdAt.toISOString(), id: last.id })
-          : undefined,
-    };
-  });
+  .handler(({ input }) =>
+    paginatedSoftDeleteList<ProgramRow, ReturnType<typeof toProgram>>({
+      table: schema.referralProgram,
+      limit: input.limit,
+      cursor: decodeCursor(input.cursor),
+      toOutput: toProgram,
+    }),
+  );
 
 const programGet = os.referrals.programs.get
   .use(requireSession)
@@ -140,17 +127,7 @@ const programUpdate = os.referrals.programs.update
 const programDelete = os.referrals.programs.delete
   .use(requireSession)
   .handler(async ({ input }) => {
-    const [row] = await db()
-      .update(schema.referralProgram)
-      .set({ deletedAt: new Date() })
-      .where(
-        and(
-          eq(schema.referralProgram.id, input.id),
-          isNull(schema.referralProgram.deletedAt),
-        ),
-      )
-      .returning({ id: schema.referralProgram.id });
-    if (!row) throw new ORPCError("NOT_FOUND", { message: "Referral program not found" });
+    await softDeleteById(schema.referralProgram, input.id, "Referral program not found");
     return { ok: true as const };
   });
 
@@ -211,7 +188,6 @@ const convert = os.referrals.convert.use(requireSession).handler(async ({ input 
     refereeCustomerId: result.refereeCustomerId,
     referrerReward: result.referrerReward,
     refereeReward: result.refereeReward,
-    alreadyConverted: result.alreadyConverted,
   };
 });
 

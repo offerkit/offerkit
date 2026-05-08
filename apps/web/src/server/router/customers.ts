@@ -1,22 +1,25 @@
 import { ORPCError, implement } from "@orpc/server";
-import { and, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
+import { and, eq, ilike, isNull, or } from "drizzle-orm";
 import { schema } from "@open-voucherify/db";
 import { contract } from "@open-voucherify/contract/router";
 import type { RequestContext } from "@/server/context";
 import { db } from "@/lib/db";
 import { requireSession } from "@/server/middleware/auth";
-import { decodeCursor, encodeCursor, toCustomer, type CustomerRow } from "./helpers";
+import {
+  decodeCursor,
+  paginatedSoftDeleteList,
+  softDeleteById,
+  toCustomer,
+  type CustomerRow,
+} from "./helpers";
 
 const os = implement(contract).$context<RequestContext>();
 
 const list = os.customers.list
   .use(requireSession)
-  .handler(async ({ input }) => {
-    const limit = input.limit;
-    const cursor = decodeCursor(input.cursor);
+  .handler(({ input }) => {
     const search = input.search?.trim();
-
-    const filters = [isNull(schema.customer.deletedAt)];
+    const filters = [];
     if (search) {
       const matches = or(
         ilike(schema.customer.email, `%${search}%`),
@@ -24,30 +27,13 @@ const list = os.customers.list
       );
       if (matches) filters.push(matches);
     }
-    if (cursor) {
-      filters.push(
-        sql`(${schema.customer.createdAt}, ${schema.customer.id}) < (${cursor.createdAt}, ${cursor.id})`,
-      );
-    }
-
-    const rows = (await db()
-      .select()
-      .from(schema.customer)
-      .where(and(...filters))
-      .orderBy(desc(schema.customer.createdAt), desc(schema.customer.id))
-      .limit(limit + 1)) as CustomerRow[];
-
-    const hasMore = rows.length > limit;
-    const data = rows.slice(0, limit);
-    const last = data[data.length - 1];
-
-    return {
-      data: data.map(toCustomer),
-      next:
-        hasMore && last
-          ? encodeCursor({ createdAt: last.createdAt.toISOString(), id: last.id })
-          : undefined,
-    };
+    return paginatedSoftDeleteList<CustomerRow, ReturnType<typeof toCustomer>>({
+      table: schema.customer,
+      limit: input.limit,
+      cursor: decodeCursor(input.cursor),
+      filters,
+      toOutput: toCustomer,
+    });
   });
 
 const get = os.customers.get
@@ -101,12 +87,7 @@ const update = os.customers.update
 const remove = os.customers.delete
   .use(requireSession)
   .handler(async ({ input }) => {
-    const [row] = await db()
-      .update(schema.customer)
-      .set({ deletedAt: new Date() })
-      .where(and(eq(schema.customer.id, input.id), isNull(schema.customer.deletedAt)))
-      .returning({ id: schema.customer.id });
-    if (!row) throw new ORPCError("NOT_FOUND", { message: "Customer not found" });
+    await softDeleteById(schema.customer, input.id, "Customer not found");
     return { ok: true as const };
   });
 
