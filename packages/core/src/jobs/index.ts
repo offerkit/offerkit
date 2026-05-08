@@ -52,6 +52,30 @@ export async function enqueueJob(
   return row.id;
 }
 
+/**
+ * Idempotent scheduler: enqueues a job only if no pending row of the
+ * same type already exists. Use for periodic / recurring jobs that
+ * should re-schedule themselves — boot enqueues the first run, and
+ * subsequent ones are scheduled by the handler when it finishes.
+ *
+ * Safe under multiple worker replicas: races at worst produce one
+ * extra row, which the next run dedupes via the same check.
+ */
+export async function ensureScheduled(
+  db: Db,
+  type: string,
+  runAt: Date,
+  payload: Record<string, unknown> = {},
+): Promise<void> {
+  const existing = await db
+    .select({ id: schema.job.id })
+    .from(schema.job)
+    .where(and(eq(schema.job.type, type), eq(schema.job.status, "pending")))
+    .limit(1);
+  if (existing.length > 0) return;
+  await enqueueJob(db, type, payload, { runAt });
+}
+
 interface RunWorkerOptions {
   db: Db;
   registry: JobRegistry;

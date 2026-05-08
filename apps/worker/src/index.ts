@@ -4,6 +4,7 @@ import { getDb } from "@open-voucherify/db";
 import {
   createJobRegistry,
   enqueueJob,
+  ensureScheduled,
   reclaimStaleJobs,
   runWorker,
 } from "@open-voucherify/core/jobs";
@@ -22,9 +23,19 @@ registry.register("noop.heartbeat", ({ jobId }) => {
   return Promise.resolve();
 });
 
+// Daily loyalty sweep that schedules its own next run after success.
+// Boot calls ensureScheduled() so a freshly-deployed db gets the first
+// row; from then on the queue is the source of truth for cadence.
+const LOYALTY_EXPIRE_INTERVAL_MS = 24 * 60 * 60_000;
 registry.register("loyalty.points.expire", async ({ jobId }) => {
   const result = await expirePoints(db);
   log.info({ jobId, expired: result.expired }, "loyalty points expired");
+  await enqueueJob(
+    db,
+    "loyalty.points.expire",
+    {},
+    { runAt: new Date(Date.now() + LOYALTY_EXPIRE_INTERVAL_MS) },
+  );
 });
 
 const controller = new AbortController();
@@ -69,11 +80,9 @@ async function bootstrap() {
     });
   }, 60_000);
 
-  // Daily loyalty points expiration sweep.
-  await enqueueJob(db, "loyalty.points.expire", {});
-  setInterval(() => {
-    void enqueueJob(db, "loyalty.points.expire", {});
-  }, 24 * 60 * 60_000);
+  // Seed the recurring loyalty sweep. The handler reschedules itself,
+  // so boot only ensures one row exists; multiple replicas converge.
+  await ensureScheduled(db, "loyalty.points.expire", new Date());
 }
 
 void bootstrap();
