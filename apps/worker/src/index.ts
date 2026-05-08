@@ -7,6 +7,7 @@ import {
   reclaimStaleJobs,
   runWorker,
 } from "@open-voucherify/core/jobs";
+import { expirePoints } from "@open-voucherify/core/loyalty";
 import { initOtel, logger } from "@open-voucherify/core/observability";
 
 initOtel({ serviceName: "open-voucherify-worker" });
@@ -19,6 +20,11 @@ const registry = createJobRegistry();
 registry.register("noop.heartbeat", ({ jobId }) => {
   log.info({ jobId }, "heartbeat");
   return Promise.resolve();
+});
+
+registry.register("loyalty.points.expire", async ({ jobId }) => {
+  const result = await expirePoints(db);
+  log.info({ jobId, expired: result.expired }, "loyalty points expired");
 });
 
 const controller = new AbortController();
@@ -62,6 +68,12 @@ async function bootstrap() {
       lastHeartbeat = Date.now();
     });
   }, 60_000);
+
+  // Daily loyalty points expiration sweep.
+  await enqueueJob(db, "loyalty.points.expire", {});
+  setInterval(() => {
+    void enqueueJob(db, "loyalty.points.expire", {});
+  }, 24 * 60 * 60_000);
 }
 
 void bootstrap();

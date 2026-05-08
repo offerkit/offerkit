@@ -2,6 +2,7 @@ import { oc } from "@orpc/contract";
 import { z } from "zod";
 import { campaigns } from "./routes/campaigns.ts";
 import { customers } from "./routes/customers.ts";
+import { loyalty } from "./routes/loyalty.ts";
 import { rewardTypes } from "./routes/reward-types.ts";
 import { segments } from "./routes/segments.ts";
 import { validationRules } from "./routes/validation-rules.ts";
@@ -33,6 +34,7 @@ export const contract = {
   vouchers,
   validationRules,
   rewardTypes,
+  loyalty,
 };
 
 export type Contract = typeof contract;

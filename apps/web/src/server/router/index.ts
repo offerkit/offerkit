@@ -5,6 +5,7 @@ import type { RequestContext } from "@/server/context";
 import { db } from "@/lib/db";
 import { campaignsRouter } from "./campaigns";
 import { customersRouter } from "./customers";
+import { loyaltyRouter } from "./loyalty";
 import { rewardTypesRouter } from "./reward-types";
 import { segmentsRouter } from "./segments";
 import { validationRulesRouter } from "./validation-rules";
@@ -40,4 +41,5 @@ export const router = os.router({
   vouchers: vouchersRouter,
   validationRules: validationRulesRouter,
   rewardTypes: rewardTypesRouter,
+  loyalty: loyaltyRouter,
 });
