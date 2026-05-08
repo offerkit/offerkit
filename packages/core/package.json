@@ -5,6 +5,7 @@
   "license": "MIT",
   "type": "module",
   "exports": {
+    "./codes": "./src/codes/index.ts",
     "./jobs": "./src/jobs/index.ts",
     "./rules": "./src/rules/index.ts",
     "./redemption": "./src/redemption/index.ts",
@@ -29,6 +30,7 @@
     "@types/json-logic-js": "^2.0.8",
     "@types/node": "^25.6.2",
     "@types/pg": "^8.20.0",
+    "fast-check": "^4.7.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.5"
   }

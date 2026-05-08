@@ -54,9 +54,9 @@ const sections: { label: string; items: NavItem[] }[] = [
   {
     label: "Promotions",
     items: [
-      { href: "/campaigns", label: "Campaigns", icon: Megaphone, comingPhase: 3 },
-      { href: "/vouchers", label: "Vouchers", icon: TicketPercent, comingPhase: 3 },
-      { href: "/orders", label: "Orders", icon: ShoppingBag, comingPhase: 3 },
+      { href: "/campaigns", label: "Campaigns", icon: Megaphone },
+      { href: "/vouchers", label: "Vouchers", icon: TicketPercent },
+      { href: "/orders", label: "Orders", icon: ShoppingBag, comingPhase: 4 },
       { href: "/insights", label: "Insights", icon: BarChart3, comingPhase: 10 },
     ],
   },
@@ -70,8 +70,8 @@ const sections: { label: string; items: NavItem[] }[] = [
   {
     label: "Configuration",
     items: [
-      { href: "/rules", label: "Validation rules", icon: ClipboardList, comingPhase: 3 },
-      { href: "/rewards", label: "Reward types", icon: Gift, comingPhase: 5 },
+      { href: "/rules", label: "Validation rules", icon: ClipboardList },
+      { href: "/rewards", label: "Reward types", icon: Gift },
       { href: "/events", label: "Events", icon: ScrollText, comingPhase: 9 },
       { href: "/webhooks", label: "Webhooks", icon: Webhook, comingPhase: 9 },
     ],

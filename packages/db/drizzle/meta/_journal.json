@@ -15,6 +15,13 @@
       "when": 1778272621330,
       "tag": "0001_absent_kronos",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778275331774,
+      "tag": "0002_wooden_forge",
+      "breakpoints": true
     }
   ]
 }
