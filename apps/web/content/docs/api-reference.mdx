@@ -1,0 +1,49 @@
+---
+title: API reference
+description: REST + RPC routes, generated from the live oRPC contract.
+---
+
+The API contract is defined once in `packages/contract` as Zod schemas + oRPC route metadata. From the same definition we serve:
+
+- **REST** at `/api/v1/...` (the path conventions you'd expect — `POST /vouchers/{code}/redemption`, `GET /campaigns`, etc.)
+- A typed RPC transport for the SDK
+- An **OpenAPI 3.1** spec at `/api/openapi.json` for third-party tooling
+
+## Authentication
+
+Send `Authorization: Bearer <api_key>`. Mint keys at **Settings → API keys**. Tokens look like `ovx_<prefix12>_<secret40>`. Cookie sessions also work for browser callers (the dashboard uses them).
+
+## Pagination
+
+List endpoints take `limit` (1-100, default 20) and an opaque `cursor`. The response is `{ data: [...], next?: "<cursor>" }`. The cursor is base64 of `(createdAt, id)`, stable under concurrent inserts.
+
+## Idempotency
+
+Mutations that can be safely retried accept an `idempotencyKey` (e.g. `vouchers.redeem`, `redemptions.stack`). Replays return the original outcome with `idempotent: true`.
+
+## Error envelope
+
+```json
+{ "code": "voucher_not_found", "message": "...", "status": 404 }
+```
+
+Codes are a closed enum. Common ones:
+
+- `voucher_not_found` (404)
+- `voucher_disabled` (400)
+- `voucher_expired` (400)
+- `redemption_limit_reached` (400)
+- `gift_balance_zero` (400)
+- `currency_mismatch` (422)
+- `referral_already_converted` (400)
+- `unauthorized` (401)
+- `validation_error` (422)
+
+## Hot path
+
+- `POST /vouchers/{code}/validate` — read-only preview against an order
+- `POST /vouchers/{code}/redemption` — single-voucher commit
+- `POST /redemptions/stack` — N-voucher atomic batch (priority sort + exclusivity short-circuit + per-voucher cap)
+- `POST /vouchers/{code}/transactions` — gift card balance ledger lookup
+
+See the [OpenAPI spec](/api/openapi.json) for every path, method, request schema, and response schema.

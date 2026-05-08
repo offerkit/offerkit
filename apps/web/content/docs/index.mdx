@@ -1,18 +1,28 @@
 ---
 title: open-voucherify
-description: Self-hostable, MIT-licensed alternative to Voucherify
+description: Self-hostable, MIT-licensed promotion engine — vouchers, gift cards, loyalty, referrals, all in one.
 ---
 
-Welcome to **open-voucherify** — a self-hostable promotion engine built around vouchers, gift cards, loyalty programs, referrals, and a flexible validation rules engine.
+Welcome. **open-voucherify** is an MIT-licensed alternative to Voucherify you run yourself. One Docker compose, one Railway template, and you have:
 
-## What's here
+- a **dashboard** to manage campaigns, vouchers, customers, segments, loyalty, referrals, webhooks, API keys
+- a **REST API** at `/api/v1/...` with the same shape you'd hit through the typed SDK
+- a typed **TypeScript SDK** — no codegen, types flow from the oRPC contract
+- a **CLI** (`ovx`) with verbs for the most common back-office tasks
+- a curated **MCP server** so an agent can drive your promotion stack
 
-- **Dashboard** at `/dashboard` — manage campaigns, customers, segments, vouchers.
-- **REST API** at `/api/v1/...` — programmatic access for your storefront and back-office.
-- **OpenAPI spec** at `/api/openapi.json` — typed clients are auto-generated.
-- **MCP server** — agentic control over the API.
+## Where to start
 
-## Phase 1 status
+- [Get started](/docs/getting-started) — install + your first redemption end-to-end
+- [Self-host](/docs/self-host) — Docker compose locally and a one-click Railway template
+- [API reference](/docs/api-reference) — auto-generated from the live oRPC contract
+- [Webhooks](/docs/webhooks) — Stripe-style HMAC signatures + retry semantics
+- [SDK / CLI / MCP](/docs/integrations) — the three programmatic surfaces
 
-Foundation only: auth, db schema, observability, worker queue, and an empty dashboard.
-Real promotion features (campaigns, vouchers, validation, redemption) ship in Phase 2+.
+## Domain model at a glance
+
+A **campaign** is a parent for one of five kinds of programs (`DISCOUNT`, `GIFT_VOUCHERS`, `LOYALTY_PROGRAM`, `REFERRAL_PROGRAM`, `PROMOTION`). A **voucher** belongs to a discount or gift campaign and either carries a discount config or a gift-card balance. A **loyalty program** has tiers, earning rules, rewards, and member ledgers. A **referral program** issues `{prefix}-{code}` codes that, on convert, hand out two configurable rewards. **Validation rules** live in a reusable JSON-Logic library. Every state-changing operation emits an **event**; **webhooks** subscribe to event types and receive HMAC-signed POSTs with exponential-backoff retries.
+
+## License
+
+MIT, across the entire monorepo.

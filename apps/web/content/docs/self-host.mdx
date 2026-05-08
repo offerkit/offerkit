@@ -1,0 +1,59 @@
+---
+title: Self-host
+description: Docker compose locally and Railway in production. No CI required.
+---
+
+## Local: Docker compose
+
+The provided `docker-compose.yml` boots three services from the same image:
+
+- `web` — Next.js dashboard + REST API on `:3000`
+- `worker` — long-running Node process pulling jobs out of the Postgres queue
+- `postgres` — Postgres 17 on `:5432`
+
+```bash
+cp .env.example .env
+# Required:
+#   DATABASE_URL=postgres://openvoucherify:dev@postgres:5432/openvoucherify
+#   BETTER_AUTH_SECRET=…
+#   ADMIN_EMAIL=…
+#   ADMIN_PASSWORD=…
+#   OVX_PUBLIC_URL=http://localhost:3000
+docker compose up -d
+```
+
+`web`'s entrypoint runs `drizzle-kit migrate` before starting Next.js, so a fresh DB is fully migrated on first boot. The `worker` reclaims orphaned jobs on startup and re-seeds the recurring `loyalty.points.expire` sweep if it's missing.
+
+## Production: Railway
+
+The repo ships a `railway.toml` template that provisions:
+
+- a Postgres add-on (DATABASE_URL wired automatically)
+- two services from the same Dockerfile, differing only in start command (`web` runs Next.js + migrations; `worker` runs the queue consumer)
+- a healthcheck on `/api/v1/ready` (web) and `:9091/health` (worker)
+
+Click **Deploy on Railway** in the README, set:
+
+```
+ADMIN_EMAIL=…
+ADMIN_PASSWORD=…
+BETTER_AUTH_SECRET=…
+OVX_PUBLIC_URL=https://your-domain
+```
+
+…and the first deploy will boot a working instance. There is no GitHub Actions pipeline; Railway builds directly from the repo on push.
+
+## Observability
+
+The image is OpenTelemetry-ready out of the box. Set:
+
+```
+OTEL_EXPORTER_OTLP_ENDPOINT=https://api.axiom.co
+OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer <AXIOM_TOKEN>,X-Axiom-Dataset=ovx
+```
+
+…and you'll get traces and metrics from `apps/web` and `apps/worker` in the same dataset, separable by `service.name`. Set `OTEL_SDK_DISABLED=true` to opt out entirely.
+
+## Multi-environment
+
+The model is "run two deploys" — each environment is its own Railway project with its own Postgres. There's no concept of a logical environment within a single deployment. Staging and production roll forward independently.

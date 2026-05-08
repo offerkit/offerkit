@@ -1,0 +1,67 @@
+---
+title: Webhooks
+description: HMAC-signed event delivery with exponential-backoff retries.
+---
+
+## Subscribe
+
+Create a webhook in **Settings → Webhooks** (or via `POST /api/v1/webhooks`). You'll be shown the signing secret **once** — save it.
+
+## Receive
+
+Every delivery is a `POST` with a JSON body:
+
+```json
+{
+  "id": "ev_…",
+  "type": "voucher.redeemed",
+  "payload": { "redemptionId": "…", "voucherCode": "…", "amount": 1000, … },
+  "createdAt": "2026-05-08T22:25:00Z"
+}
+```
+
+Headers:
+
+- `X-OVX-Event-Type` — convenience copy of `type`
+- `X-OVX-Event-Id` — copy of `id`
+- `X-OVX-Signature: t=<unix>,v1=<hex>` — HMAC signature
+
+## Verify
+
+`v1` = `HMAC-SHA256(secret, "<t>.<rawBody>")`. The TS SDK ships `verifyWebhook`:
+
+```ts
+import { verifyWebhook } from "@open-voucherify/sdk";
+
+app.post("/ovx-webhook", async (req, res) => {
+  const raw = await readRawBody(req);
+  const sig = req.headers["x-ovx-signature"] as string;
+  if (!verifyWebhook(raw, sig, process.env.OVX_WEBHOOK_SECRET!)) {
+    return res.status(401).end();
+  }
+  const ev = JSON.parse(raw);
+  // …handle
+  res.status(200).end();
+});
+```
+
+`verifyWebhook` rejects timestamps older than 5 minutes (configurable) and uses constant-time comparison.
+
+## Retries
+
+Failed deliveries (non-2xx or transport error) retry on this schedule, then dead-letter:
+
+```
+1m → 5m → 30m → 2h → 12h → 24h → dead
+```
+
+Successful deliveries record `responseStatus` + `responseBody`; failures record the same plus the error string. The dashboard's `/webhooks/{id}` page shows the last 50 deliveries with a **Replay** button that re-enqueues them with attempts reset.
+
+## Event catalog
+
+- `customer.created`
+- `voucher.redeemed`
+- `voucher.redeemed.rolled_back`
+- `voucher.stack.redeemed`
+
+More event types land alongside future features. Subscribe to `*` to receive everything.

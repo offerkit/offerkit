@@ -1,7 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 
-const PUBLIC_PATHS = ["/sign-in", "/sign-up", "/api", "/_next", "/favicon.ico"];
+const PUBLIC_PATHS = [
+  "/sign-in",
+  "/sign-up",
+  "/api",
+  "/docs",
+  "/_next",
+  "/favicon.ico",
+];
 const CHANGE_PASSWORD_PATH = "/change-password";
 
 export async function proxy(req: NextRequest): Promise<NextResponse> {
