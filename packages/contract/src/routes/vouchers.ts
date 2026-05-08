@@ -10,6 +10,8 @@ import {
 import {
   redeemInput,
   redeemOutput,
+  stackRedeemInput,
+  stackRedeemOutput,
   validateInput,
   validateOutput,
 } from "../schemas/redemption.ts";
@@ -64,6 +66,15 @@ export const vouchers = {
     })
     .input(redeemInput)
     .output(redeemOutput),
+
+  stackRedeem: oc
+    .route({
+      method: "POST",
+      path: "/redemptions/stack",
+      summary: "Redeem multiple vouchers against one order in a single transaction",
+    })
+    .input(stackRedeemInput)
+    .output(stackRedeemOutput),
 
   transactions: oc
     .route({

@@ -57,6 +57,20 @@
       "when": 1778281029949,
       "tag": "0007_slow_sebastian_shaw",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1778281722511,
+      "tag": "0008_regular_alex_power",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1778281962058,
+      "tag": "0009_remarkable_sleepwalker",
+      "breakpoints": true
     }
   ]
 }

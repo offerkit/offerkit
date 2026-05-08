@@ -29,6 +29,9 @@ export const redemption = pgTable(
     breakdown: jsonb("breakdown").$type<Record<string, unknown>>(),
     idempotencyKey: text("idempotency_key"),
     parentRedemptionId: uuid("parent_redemption_id"),
+    // Set to a shared uuid when N codes are redeemed in one stack call.
+    // null for solo redemptions.
+    batchId: uuid("batch_id"),
     metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -36,7 +39,10 @@ export const redemption = pgTable(
     index("redemption_voucher_id_idx").on(t.voucherId),
     index("redemption_customer_id_idx").on(t.customerId),
     index("redemption_created_at_idx").on(t.createdAt),
+    index("redemption_batch_id_idx").on(t.batchId),
     // Partial unique index: idempotencyKey unique per voucher when present.
+    // Solo redeem replays land here; stack-redeem replays use the
+    // (idempotencyKey, result=SUCCESS) lookup against batchId-bearing rows.
     uniqueIndex("redemption_voucher_idempotency_idx")
       .on(t.voucherId, t.idempotencyKey)
       .where(sql`${t.idempotencyKey} IS NOT NULL`),

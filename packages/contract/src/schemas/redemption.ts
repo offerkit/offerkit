@@ -55,3 +55,30 @@ export const redeemOutput = z.object({
   code: z.string().optional(),
   message: z.string().optional(),
 });
+
+export const stackRedeemInput = z.object({
+  codes: z.array(z.string().min(1)).min(1).max(20),
+  customerId: z.string().uuid().optional(),
+  orderId: z.string().optional(),
+  order: orderInput,
+  idempotencyKey: z.string().min(1).max(128).optional(),
+});
+
+export const stackEntry = z.object({
+  voucherCode: z.string(),
+  voucherId: z.string().uuid(),
+  redemptionId: z.string().uuid(),
+  amount: z.number().int(),
+});
+
+export const stackRedeemOutput = z.object({
+  ok: z.boolean(),
+  batchId: z.string().uuid().optional(),
+  amount: z.number().int().optional(),
+  finalOrder: z.object({ amount: z.number().int(), currency: z.string() }).optional(),
+  breakdown: z.array(breakdownEntry).optional(),
+  entries: z.array(stackEntry).optional(),
+  idempotent: z.boolean().optional(),
+  code: z.string().optional(),
+  message: z.string().optional(),
+});

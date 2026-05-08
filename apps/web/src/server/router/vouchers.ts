@@ -3,7 +3,7 @@ import { and, eq, ilike, isNull, sql } from "drizzle-orm";
 import { schema } from "@open-voucherify/db";
 import { contract } from "@open-voucherify/contract/router";
 import { generateUniqueCodes } from "@open-voucherify/core/codes";
-import { redeem, validate } from "@open-voucherify/core/redemption";
+import { redeem, stackRedeem, validate } from "@open-voucherify/core/redemption";
 import type { RequestContext } from "@/server/context";
 import { db } from "@/lib/db";
 import { requireSession } from "@/server/middleware/auth";
@@ -314,6 +314,30 @@ const transactions = os.vouchers.transactions
     };
   });
 
+const stackRedeemProc = os.vouchers.stackRedeem
+  .use(requireSession)
+  .handler(async ({ input }) => {
+    const result = await stackRedeem(db(), {
+      voucherCodes: input.codes,
+      customerId: input.customerId,
+      orderId: input.orderId,
+      order: input.order,
+      idempotencyKey: input.idempotencyKey,
+    });
+    if (result.ok) {
+      return {
+        ok: true,
+        batchId: result.batchId,
+        amount: result.amount,
+        finalOrder: result.finalOrder,
+        breakdown: result.breakdown,
+        entries: result.entries,
+        idempotent: result.idempotent,
+      };
+    }
+    return { ok: false, code: result.code, message: result.message };
+  });
+
 export const vouchersRouter = {
   list,
   get,
@@ -323,5 +347,6 @@ export const vouchersRouter = {
   bulk,
   validate: validateProc,
   redeem: redeemProc,
+  stackRedeem: stackRedeemProc,
   transactions,
 };

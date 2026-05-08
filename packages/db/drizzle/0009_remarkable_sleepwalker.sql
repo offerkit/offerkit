@@ -1,0 +1,1 @@
+DROP INDEX "redemption_batch_idempotency_idx";
