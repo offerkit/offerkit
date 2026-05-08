@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useForm } from "@tanstack/react-form";
 import { useMutation } from "@tanstack/react-query";
 import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,12 +29,15 @@ export function SegmentForm({
   onSubmit: (state: SegmentFormState) => void;
   pending: boolean;
 }) {
-  const [name, setName] = useState(initial.name);
-  const [description, setDescription] = useState(initial.description);
-  const [rule, setRule] = useState<Record<string, unknown>>(initial.rule);
+  const form = useForm({
+    defaultValues: initial,
+    onSubmit: ({ value }) => {
+      onSubmit(value);
+    },
+  });
 
   const preview = useMutation({
-    mutationFn: () => ovx().segments.preview({ rule, sampleSize: 10 }),
+    mutationFn: (rule: Record<string, unknown>) => ovx().segments.preview({ rule, sampleSize: 10 }),
   });
 
   return (
@@ -43,7 +46,7 @@ export function SegmentForm({
         className="space-y-4"
         onSubmit={(e) => {
           e.preventDefault();
-          onSubmit({ name, description, rule });
+          void form.handleSubmit();
         }}
       >
         <Card>
@@ -51,26 +54,34 @@ export function SegmentForm({
             <CardTitle>Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                placeholder="VIP customers"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Optional context for this segment"
-                className="h-20"
-              />
-            </div>
+            <form.Field name="name">
+              {(field) => (
+                <div className="space-y-2">
+                  <Label htmlFor={field.name}>Name</Label>
+                  <Input
+                    id={field.name}
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    required
+                    placeholder="VIP customers"
+                  />
+                </div>
+              )}
+            </form.Field>
+            <form.Field name="description">
+              {(field) => (
+                <div className="space-y-2">
+                  <Label htmlFor={field.name}>Description</Label>
+                  <Textarea
+                    id={field.name}
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="Optional context for this segment"
+                    className="h-20"
+                  />
+                </div>
+              )}
+            </form.Field>
           </CardContent>
         </Card>
 
@@ -82,14 +93,22 @@ export function SegmentForm({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <RuleEditor value={rule} onChange={setRule} />
+            <form.Field name="rule">
+              {(field) => (
+                <RuleEditor value={field.state.value} onChange={field.handleChange} />
+              )}
+            </form.Field>
           </CardContent>
         </Card>
 
         <div className="flex justify-end gap-2">
-          <Button type="submit" disabled={pending || !name.trim()}>
-            {pending ? "Saving…" : submitLabel}
-          </Button>
+          <form.Subscribe selector={(s) => [s.values.name, s.isSubmitting] as const}>
+            {([name, isSubmitting]) => (
+              <Button type="submit" disabled={pending || isSubmitting || !name.trim()}>
+                {pending || isSubmitting ? "Saving…" : submitLabel}
+              </Button>
+            )}
+          </form.Subscribe>
         </div>
       </form>
 
@@ -102,15 +121,19 @@ export function SegmentForm({
           <CardDescription>Run the rule against existing customers.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={() => preview.mutate()}
-            disabled={preview.isPending}
-          >
-            {preview.isPending ? "Running…" : "Run preview"}
-          </Button>
+          <form.Subscribe selector={(s) => s.values.rule}>
+            {(rule) => (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => preview.mutate(rule)}
+                disabled={preview.isPending}
+              >
+                {preview.isPending ? "Running…" : "Run preview"}
+              </Button>
+            )}
+          </form.Subscribe>
 
           {preview.data ? (
             <div className="space-y-3">

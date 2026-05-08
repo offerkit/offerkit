@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -13,17 +13,10 @@ import { ovx } from "@/lib/sdk";
 export default function NewCustomerPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
 
   const create = useMutation({
-    mutationFn: () =>
-      ovx().customers.create({
-        email: email || undefined,
-        name: name || undefined,
-        phone: phone || undefined,
-      }),
+    mutationFn: (input: { email?: string; name?: string; phone?: string }) =>
+      ovx().customers.create(input),
     onSuccess: async (customer) => {
       await queryClient.invalidateQueries({ queryKey: ["customers"] });
       toast.success("Customer created");
@@ -32,6 +25,17 @@ export default function NewCustomerPage() {
     onError: (error: unknown) => {
       const message = error instanceof Error ? error.message : "Create failed";
       toast.error(message);
+    },
+  });
+
+  const form = useForm({
+    defaultValues: { email: "", name: "", phone: "" },
+    onSubmit: ({ value }) => {
+      create.mutate({
+        email: value.email || undefined,
+        name: value.name || undefined,
+        phone: value.phone || undefined,
+      });
     },
   });
 
@@ -51,38 +55,50 @@ export default function NewCustomerPage() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              create.mutate();
+              void form.handleSubmit();
             }}
             className="space-y-4"
           >
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="alice@example.com"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Alice"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+1 555 123 4567"
-              />
-            </div>
+            <form.Field name="email">
+              {(field) => (
+                <div className="space-y-2">
+                  <Label htmlFor={field.name}>Email</Label>
+                  <Input
+                    id={field.name}
+                    type="email"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="alice@example.com"
+                  />
+                </div>
+              )}
+            </form.Field>
+            <form.Field name="name">
+              {(field) => (
+                <div className="space-y-2">
+                  <Label htmlFor={field.name}>Name</Label>
+                  <Input
+                    id={field.name}
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="Alice"
+                  />
+                </div>
+              )}
+            </form.Field>
+            <form.Field name="phone">
+              {(field) => (
+                <div className="space-y-2">
+                  <Label htmlFor={field.name}>Phone</Label>
+                  <Input
+                    id={field.name}
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="+1 555 123 4567"
+                  />
+                </div>
+              )}
+            </form.Field>
             <div className="flex justify-end gap-2">
               <Button
                 type="button"

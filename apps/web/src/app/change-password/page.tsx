@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "@tanstack/react-form";
 import { changePassword } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,41 +11,34 @@ import { Label } from "@/components/ui/label";
 
 export default function ChangePasswordPage() {
   const router = useRouter();
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    if (newPassword !== confirm) {
-      setError("Passwords do not match");
-      return;
-    }
-    if (newPassword.length < 8) {
-      setError("Password must be at least 8 characters");
-      return;
-    }
-    setLoading(true);
-    const result = await changePassword({
-      currentPassword,
-      newPassword,
-      revokeOtherSessions: true,
-    });
-    if (result.error) {
-      setLoading(false);
-      setError(result.error.message ?? "Password change failed");
-      return;
-    }
-
-    // Clear the mustChangePassword flag for the current user via the server action.
-    await fetch("/api/v1/me/clear-must-change-password", { method: "POST" });
-    setLoading(false);
-    router.push("/dashboard");
-    router.refresh();
-  }
+  const form = useForm({
+    defaultValues: { currentPassword: "", newPassword: "", confirm: "" },
+    onSubmit: async ({ value }) => {
+      setError(null);
+      if (value.newPassword !== value.confirm) {
+        setError("Passwords do not match");
+        return;
+      }
+      if (value.newPassword.length < 8) {
+        setError("Password must be at least 8 characters");
+        return;
+      }
+      const result = await changePassword({
+        currentPassword: value.currentPassword,
+        newPassword: value.newPassword,
+        revokeOtherSessions: true,
+      });
+      if (result.error) {
+        setError(result.error.message ?? "Password change failed");
+        return;
+      }
+      await fetch("/api/v1/me/clear-must-change-password", { method: "POST" });
+      router.push("/dashboard");
+      router.refresh();
+    },
+  });
 
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
@@ -54,42 +48,64 @@ export default function ChangePasswordPage() {
           <CardDescription>You must change your password before continuing.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={onSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="current">Current password</Label>
-              <Input
-                id="current"
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                required
-                autoFocus
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="new">New password</Label>
-              <Input
-                id="new"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirm">Confirm new password</Label>
-              <Input
-                id="confirm"
-                type="password"
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                required
-              />
-            </div>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void form.handleSubmit();
+            }}
+            className="space-y-4"
+          >
+            <form.Field name="currentPassword">
+              {(field) => (
+                <div className="space-y-2">
+                  <Label htmlFor={field.name}>Current password</Label>
+                  <Input
+                    id={field.name}
+                    type="password"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    required
+                    autoFocus
+                  />
+                </div>
+              )}
+            </form.Field>
+            <form.Field name="newPassword">
+              {(field) => (
+                <div className="space-y-2">
+                  <Label htmlFor={field.name}>New password</Label>
+                  <Input
+                    id={field.name}
+                    type="password"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    required
+                  />
+                </div>
+              )}
+            </form.Field>
+            <form.Field name="confirm">
+              {(field) => (
+                <div className="space-y-2">
+                  <Label htmlFor={field.name}>Confirm new password</Label>
+                  <Input
+                    id={field.name}
+                    type="password"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    required
+                  />
+                </div>
+              )}
+            </form.Field>
             {error ? <p className="text-sm text-red-500">{error}</p> : null}
-            <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "Updating…" : "Update password"}
-            </Button>
+            <form.Subscribe selector={(s) => s.isSubmitting}>
+              {(isSubmitting) => (
+                <Button type="submit" disabled={isSubmitting} className="w-full">
+                  {isSubmitting ? "Updating…" : "Update password"}
+                </Button>
+              )}
+            </form.Subscribe>
           </form>
         </CardContent>
       </Card>

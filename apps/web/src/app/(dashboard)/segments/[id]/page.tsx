@@ -88,6 +88,7 @@ export default function SegmentDetailPage({ params }: PageProps) {
         </Button>
       </header>
       <SegmentForm
+        key={data.updatedAt}
         initial={{ name: data.name, description: data.description ?? "", rule: data.rule }}
         submitLabel="Save changes"
         pending={update.isPending}
