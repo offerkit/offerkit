@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "@tanstack/react-form";
+import { T, useGT } from "gt-next/client";
 import { changePassword } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +12,7 @@ import { Label } from "@/components/ui/label";
 
 export default function ChangePasswordPage() {
   const router = useRouter();
+  const gt = useGT();
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm({
@@ -18,11 +20,11 @@ export default function ChangePasswordPage() {
     onSubmit: async ({ value }) => {
       setError(null);
       if (value.newPassword !== value.confirm) {
-        setError("Passwords do not match");
+        setError(gt("Passwords do not match"));
         return;
       }
       if (value.newPassword.length < 8) {
-        setError("Password must be at least 8 characters");
+        setError(gt("Password must be at least 8 characters"));
         return;
       }
       const result = await changePassword({
@@ -31,7 +33,7 @@ export default function ChangePasswordPage() {
         revokeOtherSessions: true,
       });
       if (result.error) {
-        setError(result.error.message ?? "Password change failed");
+        setError(result.error.message ?? gt("Password change failed"));
         return;
       }
       await fetch("/api/v1/me/clear-must-change-password", { method: "POST" });
@@ -44,8 +46,12 @@ export default function ChangePasswordPage() {
     <main className="flex min-h-screen items-center justify-center p-6">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Change your password</CardTitle>
-          <CardDescription>You must change your password before continuing.</CardDescription>
+          <CardTitle>
+            <T>Change your password</T>
+          </CardTitle>
+          <CardDescription>
+            <T>You must change your password before continuing.</T>
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form
@@ -58,7 +64,9 @@ export default function ChangePasswordPage() {
             <form.Field name="currentPassword">
               {(field) => (
                 <div className="space-y-2">
-                  <Label htmlFor={field.name}>Current password</Label>
+                  <Label htmlFor={field.name}>
+                    <T>Current password</T>
+                  </Label>
                   <Input
                     id={field.name}
                     type="password"
@@ -73,7 +81,9 @@ export default function ChangePasswordPage() {
             <form.Field name="newPassword">
               {(field) => (
                 <div className="space-y-2">
-                  <Label htmlFor={field.name}>New password</Label>
+                  <Label htmlFor={field.name}>
+                    <T>New password</T>
+                  </Label>
                   <Input
                     id={field.name}
                     type="password"
@@ -87,7 +97,9 @@ export default function ChangePasswordPage() {
             <form.Field name="confirm">
               {(field) => (
                 <div className="space-y-2">
-                  <Label htmlFor={field.name}>Confirm new password</Label>
+                  <Label htmlFor={field.name}>
+                    <T>Confirm new password</T>
+                  </Label>
                   <Input
                     id={field.name}
                     type="password"
@@ -102,7 +114,7 @@ export default function ChangePasswordPage() {
             <form.Subscribe selector={(s) => s.isSubmitting}>
               {(isSubmitting) => (
                 <Button type="submit" disabled={isSubmitting} className="w-full">
-                  {isSubmitting ? "Updating…" : "Update password"}
+                  {isSubmitting ? <T>Updating…</T> : <T>Update password</T>}
                 </Button>
               )}
             </form.Subscribe>

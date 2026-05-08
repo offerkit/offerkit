@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { T } from "gt-next";
 import { auth } from "@/lib/auth";
 import {
   Sidebar,
@@ -31,7 +32,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
             </div>
             <div className="flex flex-col leading-none">
               <span className="text-sm font-semibold">open-voucherify</span>
-              <span className="text-xs text-muted-foreground">Phase 1 + 2</span>
+              <span className="text-xs text-muted-foreground">
+                <T>Phase 1 + 2</T>
+              </span>
             </div>
           </div>
         </SidebarHeader>

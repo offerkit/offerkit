@@ -1,3 +1,4 @@
+import { T } from "gt-next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function DashboardPage() {
@@ -5,29 +6,47 @@ export default function DashboardPage() {
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       <Card>
         <CardHeader>
-          <CardTitle>Customers</CardTitle>
-          <CardDescription>People who can redeem vouchers and earn loyalty points.</CardDescription>
+          <CardTitle>
+            <T>Customers</T>
+          </CardTitle>
+          <CardDescription>
+            <T>People who can redeem vouchers and earn loyalty points.</T>
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">Phase 2 ships customer CRUD and segments.</p>
+          <p className="text-sm text-muted-foreground">
+            <T>Phase 2 ships customer CRUD and segments.</T>
+          </p>
         </CardContent>
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>Segments</CardTitle>
-          <CardDescription>JSON Logic rules over customer attributes.</CardDescription>
+          <CardTitle>
+            <T>Segments</T>
+          </CardTitle>
+          <CardDescription>
+            <T>JSON Logic rules over customer attributes.</T>
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">Build a segment to target promotions.</p>
+          <p className="text-sm text-muted-foreground">
+            <T>Build a segment to target promotions.</T>
+          </p>
         </CardContent>
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>Promotions</CardTitle>
-          <CardDescription>Campaigns, vouchers, gift cards, loyalty.</CardDescription>
+          <CardTitle>
+            <T>Promotions</T>
+          </CardTitle>
+          <CardDescription>
+            <T>Campaigns, vouchers, gift cards, loyalty.</T>
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">Coming in Phase 3.</p>
+          <p className="text-sm text-muted-foreground">
+            <T>Coming in Phase 3.</T>
+          </p>
         </CardContent>
       </Card>
     </div>

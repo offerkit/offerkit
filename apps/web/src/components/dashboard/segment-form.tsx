@@ -2,6 +2,7 @@
 
 import { useForm } from "@tanstack/react-form";
 import { useMutation } from "@tanstack/react-query";
+import { T, useGT } from "gt-next/client";
 import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,10 +26,12 @@ export function SegmentForm({
   pending,
 }: {
   initial: SegmentFormState;
+  // submitLabel comes pre-translated from the parent (via gt()).
   submitLabel: string;
   onSubmit: (state: SegmentFormState) => void;
   pending: boolean;
 }) {
+  const gt = useGT();
   const form = useForm({
     defaultValues: initial,
     onSubmit: ({ value }) => {
@@ -51,19 +54,23 @@ export function SegmentForm({
       >
         <Card>
           <CardHeader>
-            <CardTitle>Details</CardTitle>
+            <CardTitle>
+              <T>Details</T>
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <form.Field name="name">
               {(field) => (
                 <div className="space-y-2">
-                  <Label htmlFor={field.name}>Name</Label>
+                  <Label htmlFor={field.name}>
+                    <T>Name</T>
+                  </Label>
                   <Input
                     id={field.name}
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     required
-                    placeholder="VIP customers"
+                    placeholder={gt("VIP customers")}
                   />
                 </div>
               )}
@@ -71,12 +78,14 @@ export function SegmentForm({
             <form.Field name="description">
               {(field) => (
                 <div className="space-y-2">
-                  <Label htmlFor={field.name}>Description</Label>
+                  <Label htmlFor={field.name}>
+                    <T>Description</T>
+                  </Label>
                   <Textarea
                     id={field.name}
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder="Optional context for this segment"
+                    placeholder={gt("Optional context for this segment")}
                     className="h-20"
                   />
                 </div>
@@ -87,16 +96,16 @@ export function SegmentForm({
 
         <Card>
           <CardHeader>
-            <CardTitle>Rule</CardTitle>
+            <CardTitle>
+              <T>Rule</T>
+            </CardTitle>
             <CardDescription>
-              Customer-attribute rules in JSON Logic. Order/redemption operators land in Phase 3.
+              <T>Customer-attribute rules in JSON Logic. Order/redemption operators land in Phase 3.</T>
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form.Field name="rule">
-              {(field) => (
-                <RuleEditor value={field.state.value} onChange={field.handleChange} />
-              )}
+              {(field) => <RuleEditor value={field.state.value} onChange={field.handleChange} />}
             </form.Field>
           </CardContent>
         </Card>
@@ -105,7 +114,7 @@ export function SegmentForm({
           <form.Subscribe selector={(s) => [s.values.name, s.isSubmitting] as const}>
             {([name, isSubmitting]) => (
               <Button type="submit" disabled={pending || isSubmitting || !name.trim()}>
-                {pending || isSubmitting ? "Saving…" : submitLabel}
+                {pending || isSubmitting ? <T>Saving…</T> : submitLabel}
               </Button>
             )}
           </form.Subscribe>
@@ -116,9 +125,11 @@ export function SegmentForm({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Eye className="size-4" />
-            Preview
+            <T>Preview</T>
           </CardTitle>
-          <CardDescription>Run the rule against existing customers.</CardDescription>
+          <CardDescription>
+            <T>Run the rule against existing customers.</T>
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <form.Subscribe selector={(s) => s.values.rule}>
@@ -130,7 +141,7 @@ export function SegmentForm({
                 onClick={() => preview.mutate(rule)}
                 disabled={preview.isPending}
               >
-                {preview.isPending ? "Running…" : "Run preview"}
+                {preview.isPending ? <T>Running…</T> : <T>Run preview</T>}
               </Button>
             )}
           </form.Subscribe>
@@ -139,15 +150,19 @@ export function SegmentForm({
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm">
                 <Badge variant="secondary">{preview.data.matchedCount}</Badge>
-                <span className="text-muted-foreground">customers match</span>
+                <span className="text-muted-foreground">
+                  <T>customers match</T>
+                </span>
               </div>
               <ul className="divide-y rounded-md border text-sm">
                 {preview.data.sample.length === 0 ? (
-                  <li className="px-3 py-2 text-muted-foreground">No sample matches.</li>
+                  <li className="px-3 py-2 text-muted-foreground">
+                    <T>No sample matches.</T>
+                  </li>
                 ) : (
                   preview.data.sample.map((c) => (
                     <li key={c.id} className="px-3 py-2">
-                      <div className="font-medium">{c.email ?? "(no email)"}</div>
+                      <div className="font-medium">{c.email ?? gt("(no email)")}</div>
                       <div className="text-xs text-muted-foreground">{c.name ?? "—"}</div>
                     </li>
                   ))
@@ -158,7 +173,7 @@ export function SegmentForm({
 
           {preview.error ? (
             <p className="text-xs text-red-500">
-              {preview.error instanceof Error ? preview.error.message : "Preview failed"}
+              {preview.error instanceof Error ? preview.error.message : gt("Preview failed")}
             </p>
           ) : null}
         </CardContent>

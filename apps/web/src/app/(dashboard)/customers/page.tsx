@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { T, useGT } from "gt-next/client";
 import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ import {
 import { ovx } from "@/lib/sdk";
 
 export default function CustomersPage() {
+  const gt = useGT();
   const [search, setSearch] = useState("");
   const [cursor, setCursor] = useState<string | undefined>();
 
@@ -29,21 +31,23 @@ export default function CustomersPage() {
     <div className="space-y-4">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Customers</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            <T>Customers</T>
+          </h1>
           <p className="text-sm text-muted-foreground">
-            People who can redeem vouchers and earn loyalty points.
+            <T>People who can redeem vouchers and earn loyalty points.</T>
           </p>
         </div>
         <Button render={<Link href="/customers/new" />}>
           <Plus className="size-4" />
-          New customer
+          <T>New customer</T>
         </Button>
       </header>
 
       <div className="relative max-w-sm">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search by email or name"
+          placeholder={gt("Search by email or name")}
           className="pl-9"
           value={search}
           onChange={(e) => {
@@ -57,23 +61,31 @@ export default function CustomersPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Email</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead className="text-right">Created</TableHead>
+              <TableHead>
+                <T>Email</T>
+              </TableHead>
+              <TableHead>
+                <T>Name</T>
+              </TableHead>
+              <TableHead>
+                <T>Phone</T>
+              </TableHead>
+              <TableHead className="text-right">
+                <T>Created</T>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
-                  Loading…
+                  <T>Loading…</T>
                 </TableCell>
               </TableRow>
             ) : !data || data.data.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
-                  {search ? "No customers match your search." : "No customers yet."}
+                  {search ? <T>No customers match your search.</T> : <T>No customers yet.</T>}
                 </TableCell>
               </TableRow>
             ) : (
@@ -81,7 +93,7 @@ export default function CustomersPage() {
                 <TableRow key={c.id} className="cursor-pointer">
                   <TableCell>
                     <Link className="font-medium hover:underline" href={`/customers/${c.id}`}>
-                      {c.email ?? "(no email)"}
+                      {c.email ?? <T>(no email)</T>}
                     </Link>
                   </TableCell>
                   <TableCell>{c.name ?? "—"}</TableCell>
@@ -98,12 +110,8 @@ export default function CustomersPage() {
 
       {data?.next ? (
         <div className="flex justify-end">
-          <Button
-            variant="outline"
-            disabled={isFetching}
-            onClick={() => setCursor(data.next)}
-          >
-            Next page
+          <Button variant="outline" disabled={isFetching} onClick={() => setCursor(data.next)}>
+            <T>Next page</T>
           </Button>
         </div>
       ) : null}

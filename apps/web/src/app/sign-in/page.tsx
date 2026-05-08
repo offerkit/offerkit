@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "@tanstack/react-form";
+import { T, useGT } from "gt-next/client";
 import { signIn } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +13,7 @@ import { Label } from "@/components/ui/label";
 export default function SignInPage() {
   const router = useRouter();
   const params = useSearchParams();
+  const gt = useGT();
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm({
@@ -20,7 +22,7 @@ export default function SignInPage() {
       setError(null);
       const result = await signIn.email(value);
       if (result.error) {
-        setError(result.error.message ?? "Sign in failed");
+        setError(result.error.message ?? gt("Sign in failed"));
         return;
       }
       router.push(params.get("next") ?? "/dashboard");
@@ -32,8 +34,12 @@ export default function SignInPage() {
     <main className="flex min-h-screen items-center justify-center p-6">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Sign in</CardTitle>
-          <CardDescription>Welcome to open-voucherify</CardDescription>
+          <CardTitle>
+            <T>Sign in</T>
+          </CardTitle>
+          <CardDescription>
+            <T>Welcome to open-voucherify</T>
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form
@@ -46,7 +52,9 @@ export default function SignInPage() {
             <form.Field name="email">
               {(field) => (
                 <div className="space-y-2">
-                  <Label htmlFor={field.name}>Email</Label>
+                  <Label htmlFor={field.name}>
+                    <T>Email</T>
+                  </Label>
                   <Input
                     id={field.name}
                     type="email"
@@ -61,7 +69,9 @@ export default function SignInPage() {
             <form.Field name="password">
               {(field) => (
                 <div className="space-y-2">
-                  <Label htmlFor={field.name}>Password</Label>
+                  <Label htmlFor={field.name}>
+                    <T>Password</T>
+                  </Label>
                   <Input
                     id={field.name}
                     type="password"
@@ -76,7 +86,7 @@ export default function SignInPage() {
             <form.Subscribe selector={(s) => s.isSubmitting}>
               {(isSubmitting) => (
                 <Button type="submit" disabled={isSubmitting} className="w-full">
-                  {isSubmitting ? "Signing in…" : "Sign in"}
+                  {isSubmitting ? <T>Signing in…</T> : <T>Sign in</T>}
                 </Button>
               )}
             </form.Subscribe>

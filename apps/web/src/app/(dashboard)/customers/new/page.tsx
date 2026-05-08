@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { T, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,17 +14,18 @@ import { ovx } from "@/lib/sdk";
 export default function NewCustomerPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const gt = useGT();
 
   const create = useMutation({
     mutationFn: (input: { email?: string; name?: string; phone?: string }) =>
       ovx().customers.create(input),
     onSuccess: async (customer) => {
       await queryClient.invalidateQueries({ queryKey: ["customers"] });
-      toast.success("Customer created");
+      toast.success(gt("Customer created"));
       router.push(`/customers/${customer.id}`);
     },
     onError: (error: unknown) => {
-      const message = error instanceof Error ? error.message : "Create failed";
+      const message = error instanceof Error ? error.message : gt("Create failed");
       toast.error(message);
     },
   });
@@ -42,14 +44,22 @@ export default function NewCustomerPage() {
   return (
     <div className="mx-auto w-full max-w-lg space-y-4">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight">New customer</h1>
-        <p className="text-sm text-muted-foreground">All fields are optional.</p>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          <T>New customer</T>
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          <T>All fields are optional.</T>
+        </p>
       </header>
 
       <Card>
         <CardHeader>
-          <CardTitle>Profile</CardTitle>
-          <CardDescription>Used for promotion targeting and analytics.</CardDescription>
+          <CardTitle>
+            <T>Profile</T>
+          </CardTitle>
+          <CardDescription>
+            <T>Used for promotion targeting and analytics.</T>
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form
@@ -62,7 +72,9 @@ export default function NewCustomerPage() {
             <form.Field name="email">
               {(field) => (
                 <div className="space-y-2">
-                  <Label htmlFor={field.name}>Email</Label>
+                  <Label htmlFor={field.name}>
+                    <T>Email</T>
+                  </Label>
                   <Input
                     id={field.name}
                     type="email"
@@ -76,12 +88,14 @@ export default function NewCustomerPage() {
             <form.Field name="name">
               {(field) => (
                 <div className="space-y-2">
-                  <Label htmlFor={field.name}>Name</Label>
+                  <Label htmlFor={field.name}>
+                    <T>Name</T>
+                  </Label>
                   <Input
                     id={field.name}
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder="Alice"
+                    placeholder={gt("Alice")}
                   />
                 </div>
               )}
@@ -89,7 +103,9 @@ export default function NewCustomerPage() {
             <form.Field name="phone">
               {(field) => (
                 <div className="space-y-2">
-                  <Label htmlFor={field.name}>Phone</Label>
+                  <Label htmlFor={field.name}>
+                    <T>Phone</T>
+                  </Label>
                   <Input
                     id={field.name}
                     value={field.state.value}
@@ -100,15 +116,11 @@ export default function NewCustomerPage() {
               )}
             </form.Field>
             <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => router.push("/customers")}
-              >
-                Cancel
+              <Button type="button" variant="ghost" onClick={() => router.push("/customers")}>
+                <T>Cancel</T>
               </Button>
               <Button type="submit" disabled={create.isPending}>
-                {create.isPending ? "Creating…" : "Create customer"}
+                {create.isPending ? <T>Creating…</T> : <T>Create customer</T>}
               </Button>
             </div>
           </form>

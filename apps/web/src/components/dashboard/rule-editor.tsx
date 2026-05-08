@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { T, useGT } from "gt-next/client";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -25,14 +26,12 @@ export interface RuleEditorProps {
 }
 
 export function RuleEditor({ value, onChange }: RuleEditorProps) {
+  const gt = useGT();
   const serialized = JSON.stringify(value, null, 2);
   const [text, setText] = useState(serialized);
   const [lastExternal, setLastExternal] = useState(serialized);
   const [error, setError] = useState<string | null>(null);
 
-  // Resync local text when the parent supplies a new value (preset buttons,
-  // initial load). Done during render to avoid a setState-in-effect cascade;
-  // the React docs explicitly recommend this pattern for derived state.
   if (serialized !== lastExternal) {
     setLastExternal(serialized);
     setText(serialized);
@@ -44,20 +43,22 @@ export function RuleEditor({ value, onChange }: RuleEditorProps) {
     try {
       const parsed = JSON.parse(next) as unknown;
       if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-        setError("Rule must be a JSON object");
+        setError(gt("Rule must be a JSON object"));
         return;
       }
       setError(null);
       onChange(parsed as Record<string, unknown>);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Invalid JSON");
+      setError(err instanceof Error ? err.message : gt("Invalid JSON"));
     }
   }
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label htmlFor="rule">Rule (JSON Logic)</Label>
+        <Label htmlFor="rule">
+          <T>Rule (JSON Logic)</T>
+        </Label>
         <div className="flex gap-2 text-xs">
           {SAMPLE_RULES.map((s) => (
             <button
@@ -66,7 +67,7 @@ export function RuleEditor({ value, onChange }: RuleEditorProps) {
               className="rounded-md border px-2 py-0.5 text-muted-foreground hover:text-foreground"
               onClick={() => applyText(JSON.stringify(s.rule, null, 2))}
             >
-              {s.label}
+              <T>{s.label}</T>
             </button>
           ))}
         </div>
@@ -80,8 +81,10 @@ export function RuleEditor({ value, onChange }: RuleEditorProps) {
       />
       {error ? <p className="text-xs text-red-500">{error}</p> : null}
       <p className="text-xs text-muted-foreground">
-        Phase 2 ships JSON Logic editing + canned rule presets. The visual builder over JSON Logic
-        lands in Phase 3.
+        <T>
+          Phase 2 ships JSON Logic editing + canned rule presets. The visual builder over JSON
+          Logic lands in Phase 3.
+        </T>
       </p>
     </div>
   );

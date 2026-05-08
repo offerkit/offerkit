@@ -3,6 +3,7 @@
 import { LogOut, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
+import { T } from "gt-next/client";
 import { authClient } from "@/lib/auth-client";
 import {
   DropdownMenu,
@@ -42,7 +43,9 @@ export function UserMenu({ name, email }: { name: string; email: string }) {
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={signOut} disabled={pending}>
           <LogOut className="size-4" />
-          <span>Sign out</span>
+          <span>
+            <T>Sign out</T>
+          </span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

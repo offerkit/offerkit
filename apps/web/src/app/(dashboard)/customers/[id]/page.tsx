@@ -5,6 +5,7 @@ import { use } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { T, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -37,16 +38,17 @@ function CustomerForm({
   deletePending: boolean;
 }) {
   const queryClient = useQueryClient();
+  const gt = useGT();
 
   const update = useMutation({
     mutationFn: (input: { email?: string; name?: string; phone?: string }) =>
       ovx().customers.update({ id: data.id, patch: input }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["customers"] });
-      toast.success("Customer updated");
+      toast.success(gt("Customer updated"));
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : "Update failed");
+      toast.error(err instanceof Error ? err.message : gt("Update failed"));
     },
   });
 
@@ -65,6 +67,8 @@ function CustomerForm({
     },
   });
 
+  const headerLabel = data.name ?? data.email ?? gt("(unnamed)");
+
   return (
     <div className="mx-auto w-full max-w-3xl space-y-4">
       <header className="flex items-center justify-between">
@@ -72,16 +76,14 @@ function CustomerForm({
           <Button
             variant="ghost"
             size="icon"
-            render={<Link href="/customers" aria-label="Back to customers" />}
+            render={<Link href="/customers" aria-label={gt("Back to customers")} />}
           >
             <ArrowLeft className="size-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {data.name ?? data.email ?? "(unnamed)"}
-            </h1>
+            <h1 className="text-2xl font-semibold tracking-tight">{headerLabel}</h1>
             <p className="text-sm text-muted-foreground">
-              Created {new Date(data.createdAt).toLocaleString()}
+              <T>Created {new Date(data.createdAt).toLocaleString()}</T>
             </p>
           </div>
         </div>
@@ -89,12 +91,14 @@ function CustomerForm({
           trigger={
             <Button variant="outline" disabled={deletePending}>
               <Trash2 className="size-4" />
-              Delete
+              <T>Delete</T>
             </Button>
           }
-          title="Delete this customer?"
-          description="The customer will be soft-deleted. Their redemption history is kept for audit, but they will no longer appear in lists or be reachable through the API."
-          confirmLabel="Delete customer"
+          title={gt("Delete this customer?")}
+          description={gt(
+            "The customer will be soft-deleted. Their redemption history is kept for audit, but they will no longer appear in lists or be reachable through the API.",
+          )}
+          confirmLabel={gt("Delete customer")}
           destructive
           pending={deletePending}
           onConfirm={onDelete}
@@ -103,8 +107,12 @@ function CustomerForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Profile</CardTitle>
-          <CardDescription>Edit and save to update this customer.</CardDescription>
+          <CardTitle>
+            <T>Profile</T>
+          </CardTitle>
+          <CardDescription>
+            <T>Edit and save to update this customer.</T>
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form
@@ -117,7 +125,9 @@ function CustomerForm({
             <form.Field name="email">
               {(field) => (
                 <div className="space-y-2">
-                  <Label htmlFor={field.name}>Email</Label>
+                  <Label htmlFor={field.name}>
+                    <T>Email</T>
+                  </Label>
                   <Input
                     id={field.name}
                     type="email"
@@ -130,7 +140,9 @@ function CustomerForm({
             <form.Field name="name">
               {(field) => (
                 <div className="space-y-2">
-                  <Label htmlFor={field.name}>Name</Label>
+                  <Label htmlFor={field.name}>
+                    <T>Name</T>
+                  </Label>
                   <Input
                     id={field.name}
                     value={field.state.value}
@@ -142,7 +154,9 @@ function CustomerForm({
             <form.Field name="phone">
               {(field) => (
                 <div className="space-y-2">
-                  <Label htmlFor={field.name}>Phone</Label>
+                  <Label htmlFor={field.name}>
+                    <T>Phone</T>
+                  </Label>
                   <Input
                     id={field.name}
                     value={field.state.value}
@@ -155,7 +169,7 @@ function CustomerForm({
               <form.Subscribe selector={(s) => [s.isDirty, s.isSubmitting] as const}>
                 {([isDirty, isSubmitting]) => (
                   <Button type="submit" disabled={!isDirty || isSubmitting}>
-                    {isSubmitting ? "Saving…" : "Save changes"}
+                    {isSubmitting ? <T>Saving…</T> : <T>Save changes</T>}
                   </Button>
                 )}
               </form.Subscribe>
@@ -166,11 +180,17 @@ function CustomerForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Redemption history</CardTitle>
-          <CardDescription>Vouchers redeemed by this customer.</CardDescription>
+          <CardTitle>
+            <T>Redemption history</T>
+          </CardTitle>
+          <CardDescription>
+            <T>Vouchers redeemed by this customer.</T>
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">Available in Phase 3 once redemptions ship.</p>
+          <p className="text-sm text-muted-foreground">
+            <T>Available in Phase 3 once redemptions ship.</T>
+          </p>
         </CardContent>
       </Card>
     </div>
@@ -181,6 +201,7 @@ export default function CustomerDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const router = useRouter();
   const queryClient = useQueryClient();
+  const gt = useGT();
 
   const { data, isLoading } = useQuery({
     queryKey: ["customers", id],
@@ -191,20 +212,27 @@ export default function CustomerDetailPage({ params }: PageProps) {
     mutationFn: () => ovx().customers.delete({ id }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["customers"] });
-      toast.success("Customer deleted");
+      toast.success(gt("Customer deleted"));
       router.push("/customers");
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : "Delete failed");
+      toast.error(err instanceof Error ? err.message : gt("Delete failed"));
     },
   });
 
-  if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
-  if (!data) return <p className="text-sm text-muted-foreground">Customer not found.</p>;
+  if (isLoading)
+    return (
+      <p className="text-sm text-muted-foreground">
+        <T>Loading…</T>
+      </p>
+    );
+  if (!data)
+    return (
+      <p className="text-sm text-muted-foreground">
+        <T>Customer not found.</T>
+      </p>
+    );
 
-  // Re-key on updatedAt so the form re-mounts with fresh defaults after every
-  // successful edit. This is the canonical TanStack Form pattern for
-  // hydrating from server data without setState-in-effect.
   return (
     <CustomerForm
       key={data.updatedAt}

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { T, useGT } from "gt-next/client";
 import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ import {
 import { ovx } from "@/lib/sdk";
 
 export default function SegmentsPage() {
+  const gt = useGT();
   const [search, setSearch] = useState("");
   const { data, isLoading } = useQuery({
     queryKey: ["segments", { search }],
@@ -27,21 +29,23 @@ export default function SegmentsPage() {
     <div className="space-y-4">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Segments</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            <T>Segments</T>
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Reusable JSON Logic rules over customer attributes.
+            <T>Reusable JSON Logic rules over customer attributes.</T>
           </p>
         </div>
         <Button render={<Link href="/segments/new" />}>
           <Plus className="size-4" />
-          New segment
+          <T>New segment</T>
         </Button>
       </header>
 
       <div className="relative max-w-sm">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search by name"
+          placeholder={gt("Search by name")}
           className="pl-9"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -52,22 +56,28 @@ export default function SegmentsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead className="text-right">Updated</TableHead>
+              <TableHead>
+                <T>Name</T>
+              </TableHead>
+              <TableHead>
+                <T>Description</T>
+              </TableHead>
+              <TableHead className="text-right">
+                <T>Updated</T>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
-                  Loading…
+                  <T>Loading…</T>
                 </TableCell>
               </TableRow>
             ) : !data || data.data.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
-                  No segments yet.
+                  <T>No segments yet.</T>
                 </TableCell>
               </TableRow>
             ) : (
