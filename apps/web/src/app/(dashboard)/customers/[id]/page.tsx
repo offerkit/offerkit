@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { ovx } from "@/lib/sdk";
 
 interface PageProps {
@@ -26,7 +27,15 @@ interface CustomerData {
   updatedAt: string;
 }
 
-function CustomerForm({ data, onDelete, deletePending }: { data: CustomerData; onDelete: () => void; deletePending: boolean }) {
+function CustomerForm({
+  data,
+  onDelete,
+  deletePending,
+}: {
+  data: CustomerData;
+  onDelete: () => void | Promise<void>;
+  deletePending: boolean;
+}) {
   const queryClient = useQueryClient();
 
   const update = useMutation({
@@ -76,10 +85,20 @@ function CustomerForm({ data, onDelete, deletePending }: { data: CustomerData; o
             </p>
           </div>
         </div>
-        <Button variant="outline" onClick={onDelete} disabled={deletePending}>
-          <Trash2 className="size-4" />
-          Delete
-        </Button>
+        <ConfirmDialog
+          trigger={
+            <Button variant="outline" disabled={deletePending}>
+              <Trash2 className="size-4" />
+              Delete
+            </Button>
+          }
+          title="Delete this customer?"
+          description="The customer will be soft-deleted. Their redemption history is kept for audit, but they will no longer appear in lists or be reachable through the API."
+          confirmLabel="Delete customer"
+          destructive
+          pending={deletePending}
+          onConfirm={onDelete}
+        />
       </header>
 
       <Card>
@@ -191,9 +210,7 @@ export default function CustomerDetailPage({ params }: PageProps) {
       key={data.updatedAt}
       data={data}
       deletePending={remove.isPending}
-      onDelete={() => {
-        if (window.confirm("Delete this customer? They'll be soft-deleted.")) remove.mutate();
-      }}
+      onDelete={() => remove.mutate()}
     />
   );
 }

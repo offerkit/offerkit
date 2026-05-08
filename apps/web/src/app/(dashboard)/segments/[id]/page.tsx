@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { SegmentForm } from "@/components/dashboard/segment-form";
 import { ovx } from "@/lib/sdk";
 
@@ -76,16 +77,20 @@ export default function SegmentDetailPage({ params }: PageProps) {
             </p>
           </div>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => {
-            if (window.confirm("Delete this segment?")) remove.mutate();
-          }}
-          disabled={remove.isPending}
-        >
-          <Trash2 className="size-4" />
-          Delete
-        </Button>
+        <ConfirmDialog
+          trigger={
+            <Button variant="outline" disabled={remove.isPending}>
+              <Trash2 className="size-4" />
+              Delete
+            </Button>
+          }
+          title="Delete this segment?"
+          description="The segment will be soft-deleted. Existing campaigns referencing it will fail validation until re-pointed."
+          confirmLabel="Delete segment"
+          destructive
+          pending={remove.isPending}
+          onConfirm={() => remove.mutate()}
+        />
       </header>
       <SegmentForm
         key={data.updatedAt}
