@@ -64,7 +64,7 @@ const sections: { label: string; items: NavItem[] }[] = [
     label: "Programs",
     items: [
       { href: "/loyalty", label: "Loyalty", icon: Coins },
-      { href: "/referrals", label: "Referrals", icon: UserPlus, comingPhase: 6 },
+      { href: "/referrals", label: "Referrals", icon: UserPlus },
     ],
   },
   {

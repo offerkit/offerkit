@@ -7,6 +7,7 @@ export * from "./gift-card-transaction.ts";
 export * from "./idempotency.ts";
 export * from "./job.ts";
 export * from "./loyalty.ts";
+export * from "./referral.ts";
 export * from "./redemption.ts";
 export * from "./reward-type.ts";
 export * from "./segment.ts";

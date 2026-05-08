@@ -43,6 +43,13 @@
       "when": 1778279703094,
       "tag": "0005_magical_korg",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1778279887218,
+      "tag": "0006_lucky_eternity",
+      "breakpoints": true
     }
   ]
 }

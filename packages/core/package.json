@@ -11,6 +11,7 @@
     "./redemption": "./src/redemption/index.ts",
     "./discount": "./src/discount/index.ts",
     "./loyalty": "./src/loyalty/index.ts",
+    "./referrals": "./src/referrals/index.ts",
     "./observability": "./src/observability/index.ts",
     "./email": "./src/email/index.ts"
   },

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { campaigns } from "./routes/campaigns.ts";
 import { customers } from "./routes/customers.ts";
 import { loyalty } from "./routes/loyalty.ts";
+import { referrals } from "./routes/referrals.ts";
 import { rewardTypes } from "./routes/reward-types.ts";
 import { segments } from "./routes/segments.ts";
 import { validationRules } from "./routes/validation-rules.ts";
@@ -35,6 +36,7 @@ export const contract = {
   validationRules,
   rewardTypes,
   loyalty,
+  referrals,
 };
 
 export type Contract = typeof contract;
