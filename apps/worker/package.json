@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@open-voucherify/core": "workspace:*",
-    "@open-voucherify/db": "workspace:*"
+    "@open-voucherify/db": "workspace:*",
+    "@opentelemetry/api": "^1.9.1"
   },
   "devDependencies": {
     "@open-voucherify/config": "workspace:*",

@@ -9,6 +9,7 @@ import { rewardTypes } from "./routes/reward-types.ts";
 import { segments } from "./routes/segments.ts";
 import { validationRules } from "./routes/validation-rules.ts";
 import { vouchers } from "./routes/vouchers.ts";
+import { events, webhooks } from "./routes/webhooks.ts";
 
 const healthOutput = z.object({
   status: z.literal("ok"),
@@ -39,6 +40,8 @@ export const contract = {
   loyalty,
   referrals,
   apiKeys,
+  webhooks,
+  events,
 };
 
 export type Contract = typeof contract;

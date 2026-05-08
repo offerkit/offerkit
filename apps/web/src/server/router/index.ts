@@ -12,6 +12,7 @@ import { rewardTypesRouter } from "./reward-types";
 import { segmentsRouter } from "./segments";
 import { validationRulesRouter } from "./validation-rules";
 import { vouchersRouter } from "./vouchers";
+import { eventsRouter, webhooksRouter } from "./webhooks";
 
 const os = implement(contract).$context<RequestContext>();
 
@@ -46,4 +47,6 @@ export const router = os.router({
   loyalty: loyaltyRouter,
   referrals: referralsRouter,
   apiKeys: apiKeysRouter,
+  webhooks: webhooksRouter,
+  events: eventsRouter,
 });

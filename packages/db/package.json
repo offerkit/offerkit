@@ -17,6 +17,7 @@
     "studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.9.1",
     "drizzle-orm": "^0.45.2",
     "pg": "^8.20.0"
   },

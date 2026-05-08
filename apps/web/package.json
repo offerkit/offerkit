@@ -16,6 +16,7 @@
     "@open-voucherify/core": "workspace:*",
     "@open-voucherify/db": "workspace:*",
     "@open-voucherify/sdk": "workspace:*",
+    "@opentelemetry/api": "^1.9.1",
     "@orpc/contract": "^1.14.2",
     "@orpc/openapi": "^1.14.2",
     "@orpc/server": "^1.14.2",

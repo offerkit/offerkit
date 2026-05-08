@@ -8,6 +8,7 @@ import {
   reclaimStaleJobs,
   runWorker,
 } from "@open-voucherify/core/jobs";
+import { deliverWebhook } from "@open-voucherify/core/events";
 import { expirePoints } from "@open-voucherify/core/loyalty";
 import { initOtel, logger } from "@open-voucherify/core/observability";
 
@@ -22,6 +23,15 @@ const registry = createJobRegistry();
 // Boot calls ensureScheduled() so a freshly-deployed db gets the first
 // row; from then on the queue is the source of truth for cadence.
 const LOYALTY_EXPIRE_INTERVAL_MS = 24 * 60 * 60_000;
+registry.register("webhook.deliver", async ({ jobId, payload }) => {
+  const deliveryId = (payload as { deliveryId?: string }).deliveryId;
+  if (!deliveryId) {
+    log.warn({ jobId }, "webhook.deliver job missing deliveryId");
+    return;
+  }
+  await deliverWebhook(db, { deliveryId });
+});
+
 registry.register("loyalty.points.expire", async ({ jobId }) => {
   const result = await expirePoints(db);
   log.info({ jobId, expired: result.expired }, "loyalty points expired");

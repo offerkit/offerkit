@@ -72,8 +72,8 @@ const sections: { label: string; items: NavItem[] }[] = [
     items: [
       { href: "/rules", label: "Validation rules", icon: ClipboardList },
       { href: "/rewards", label: "Reward types", icon: Gift },
-      { href: "/events", label: "Events", icon: ScrollText, comingPhase: 9 },
-      { href: "/webhooks", label: "Webhooks", icon: Webhook, comingPhase: 9 },
+      { href: "/events", label: "Events", icon: ScrollText },
+      { href: "/webhooks", label: "Webhooks", icon: Webhook },
     ],
   },
   {

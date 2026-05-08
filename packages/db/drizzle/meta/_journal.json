@@ -71,6 +71,13 @@
       "when": 1778281962058,
       "tag": "0009_remarkable_sleepwalker",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1778282793903,
+      "tag": "0010_round_norrin_radd",
+      "breakpoints": true
     }
   ]
 }

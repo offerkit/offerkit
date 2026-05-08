@@ -2,7 +2,8 @@ import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { schema, type Db } from "@open-voucherify/db";
 import { calculateDiscount, type DiscountOrder, type DiscountResult } from "../discount/index.ts";
-import { logger } from "../observability/index.ts";
+import { emitEvent } from "../events/index.ts";
+import { logger, withSpan } from "../observability/index.ts";
 
 const log = logger.child({ component: "redemption" });
 
@@ -145,7 +146,15 @@ function previewDiscount(v: VoucherRow, order: DiscountOrder | undefined): Disco
   });
 }
 
-export async function validate(db: Db, input: ValidateInput): Promise<ValidateResult> {
+export function validate(db: Db, input: ValidateInput): Promise<ValidateResult> {
+  return withSpan(
+    "voucher.validate",
+    () => validateImpl(db, input),
+    { "voucher.code": input.voucherCode, ...(input.customerId ? { "customer.id": input.customerId } : {}) },
+  );
+}
+
+async function validateImpl(db: Db, input: ValidateInput): Promise<ValidateResult> {
   const row = (await db
     .select()
     .from(schema.voucher)
@@ -199,7 +208,19 @@ function messageFor(code: RedemptionFailureCode): string {
   }
 }
 
-export async function redeem(db: Db, input: RedeemInput): Promise<RedeemResult> {
+export function redeem(db: Db, input: RedeemInput): Promise<RedeemResult> {
+  return withSpan(
+    "voucher.redeem",
+    () => redeemImpl(db, input),
+    {
+      "voucher.code": input.voucherCode,
+      ...(input.customerId ? { "customer.id": input.customerId } : {}),
+      ...(input.idempotencyKey ? { "redemption.idempotency_key": input.idempotencyKey } : {}),
+    },
+  );
+}
+
+function redeemImpl(db: Db, input: RedeemInput): Promise<RedeemResult> {
   return db.transaction(async (tx) => {
     const locked = (await tx
       .select()
@@ -337,6 +358,20 @@ export async function redeem(db: Db, input: RedeemInput): Promise<RedeemResult> 
       .returning({ id: schema.redemption.id });
     if (!row) throw new Error("redemption insert failed");
 
+    await emitEvent(tx, {
+      type: "voucher.redeemed",
+      entityId: voucher.id,
+      payload: {
+        redemptionId: row.id,
+        voucherId: voucher.id,
+        voucherCode: voucher.code,
+        customerId: input.customerId ?? null,
+        orderId: input.orderId ?? null,
+        amount,
+        finalOrder: preview.finalOrder,
+      },
+    });
+
     return {
       ok: true,
       redemptionId: row.id,
@@ -380,7 +415,21 @@ export type StackRedeemResult = StackRedeemSuccess | RedeemFailure;
  * none do. Vouchers are locked in code-sorted order to avoid deadlocks
  * across concurrent stack calls that share codes.
  */
-export async function stackRedeem(
+export function stackRedeem(
+  db: Db,
+  input: StackRedeemInput,
+): Promise<StackRedeemResult> {
+  return withSpan(
+    "voucher.stack_redeem",
+    () => stackRedeemImpl(db, input),
+    {
+      "voucher.code_count": input.voucherCodes.length,
+      ...(input.customerId ? { "customer.id": input.customerId } : {}),
+    },
+  );
+}
+
+async function stackRedeemImpl(
   db: Db,
   input: StackRedeemInput,
 ): Promise<StackRedeemResult> {
@@ -518,10 +567,24 @@ export async function stackRedeem(
       });
     }
 
+    const totalAmount = result.appliedDiscounts.reduce((s, a) => s + a.amount, 0);
+    await emitEvent(tx, {
+      type: "voucher.stack.redeemed",
+      entityId: batchId,
+      payload: {
+        batchId,
+        customerId: input.customerId ?? null,
+        orderId: input.orderId ?? null,
+        amount: totalAmount,
+        finalOrder: result.finalOrder,
+        entries,
+      },
+    });
+
     return {
       ok: true,
       batchId,
-      amount: result.appliedDiscounts.reduce((s, a) => s + a.amount, 0),
+      amount: totalAmount,
       finalOrder: result.finalOrder,
       breakdown: result.breakdown,
       entries,
@@ -587,6 +650,17 @@ export async function rollback(db: Db, redemptionId: string): Promise<RedeemResu
         reason: "ROLLBACK",
       });
     }
+
+    await emitEvent(tx, {
+      type: "voucher.redeemed.rolled_back",
+      entityId: original.voucherId,
+      payload: {
+        rollbackRedemptionId: row.id,
+        originalRedemptionId: original.id,
+        voucherId: original.voucherId,
+        amount: original.amount ?? 0,
+      },
+    });
 
     return {
       ok: true,

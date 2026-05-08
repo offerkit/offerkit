@@ -2,6 +2,7 @@ import { ORPCError, implement } from "@orpc/server";
 import { and, eq, ilike, isNull, or } from "drizzle-orm";
 import { schema } from "@open-voucherify/db";
 import { contract } from "@open-voucherify/contract/router";
+import { emitEvent } from "@open-voucherify/core/events";
 import type { RequestContext } from "@/server/context";
 import { db } from "@/lib/db";
 import { requireSession } from "@/server/middleware/auth";
@@ -49,17 +50,25 @@ const get = os.customers.get
 const create = os.customers.create
   .use(requireSession)
   .handler(async ({ input }) => {
-    const [row] = await db()
-      .insert(schema.customer)
-      .values({
-        email: input.email ?? null,
-        name: input.name ?? null,
-        phone: input.phone ?? null,
-        address: input.address ?? null,
-        metadata: input.metadata ?? {},
-      })
-      .returning();
-    if (!row) throw new ORPCError("INTERNAL_SERVER_ERROR", { message: "Insert failed" });
+    const row = await db().transaction(async (tx) => {
+      const [r] = await tx
+        .insert(schema.customer)
+        .values({
+          email: input.email ?? null,
+          name: input.name ?? null,
+          phone: input.phone ?? null,
+          address: input.address ?? null,
+          metadata: input.metadata ?? {},
+        })
+        .returning();
+      if (!r) throw new ORPCError("INTERNAL_SERVER_ERROR", { message: "Insert failed" });
+      await emitEvent(tx, {
+        type: "customer.created",
+        entityId: r.id,
+        payload: { customerId: r.id, email: r.email, name: r.name },
+      });
+      return r;
+    });
     return toCustomer(row);
   });
 

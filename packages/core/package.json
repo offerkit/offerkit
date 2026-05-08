@@ -10,6 +10,7 @@
     "./rules": "./src/rules/index.ts",
     "./redemption": "./src/redemption/index.ts",
     "./discount": "./src/discount/index.ts",
+    "./events": "./src/events/index.ts",
     "./loyalty": "./src/loyalty/index.ts",
     "./referrals": "./src/referrals/index.ts",
     "./observability": "./src/observability/index.ts",
@@ -22,6 +23,7 @@
   "dependencies": {
     "@open-voucherify/contract": "workspace:*",
     "@open-voucherify/db": "workspace:*",
+    "@opentelemetry/api": "^1.9.1",
     "drizzle-orm": "^0.45.2",
     "json-logic-js": "^2.0.5",
     "pg": "^8.20.0",
