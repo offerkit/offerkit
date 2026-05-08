@@ -96,36 +96,48 @@ const create = os.vouchers.create
       throw new ORPCError("CONFLICT", { message: "Voucher code already exists" });
     }
 
-    const [row] = await db()
-      .insert(schema.voucher)
-      .values({
-        code,
-        campaignId: input.campaignId ?? null,
-        type: input.type,
-        discount: input.discount ?? null,
-        customRewards: input.customRewards ?? [],
-        giftBalance: input.giftBalance ?? null,
-        loyaltyPoints: input.loyaltyPoints ?? null,
-        redemptionLimit: input.redemptionLimit ?? null,
-        priority: input.priority ?? 0,
-        exclusive: input.exclusive ?? false,
-        startDate: input.startDate ? new Date(input.startDate) : null,
-        endDate: input.endDate ? new Date(input.endDate) : null,
-        customerId: input.customerId ?? null,
-        metadata: input.metadata ?? {},
-      })
-      .returning();
-    if (!row) throw new ORPCError("INTERNAL_SERVER_ERROR", { message: "Insert failed" });
-
-    if (input.campaignId) {
-      await db()
-        .update(schema.campaign)
-        .set({
-          voucherCount: sql`${schema.campaign.voucherCount} + 1`,
-          updatedAt: new Date(),
+    const row = await db().transaction(async (tx) => {
+      const [v] = await tx
+        .insert(schema.voucher)
+        .values({
+          code,
+          campaignId: input.campaignId ?? null,
+          type: input.type,
+          discount: input.discount ?? null,
+          customRewards: input.customRewards ?? [],
+          giftBalance: input.giftBalance ?? null,
+          loyaltyPoints: input.loyaltyPoints ?? null,
+          redemptionLimit: input.redemptionLimit ?? null,
+          priority: input.priority ?? 0,
+          exclusive: input.exclusive ?? false,
+          startDate: input.startDate ? new Date(input.startDate) : null,
+          endDate: input.endDate ? new Date(input.endDate) : null,
+          customerId: input.customerId ?? null,
+          metadata: input.metadata ?? {},
         })
-        .where(eq(schema.campaign.id, input.campaignId));
-    }
+        .returning();
+      if (!v) throw new ORPCError("INTERNAL_SERVER_ERROR", { message: "Insert failed" });
+
+      if (input.type === "GIFT_CARD" && input.giftBalance != null && input.giftBalance > 0) {
+        await tx.insert(schema.giftCardTransaction).values({
+          voucherId: v.id,
+          delta: input.giftBalance,
+          balanceAfter: input.giftBalance,
+          reason: "CREDIT",
+        });
+      }
+
+      if (input.campaignId) {
+        await tx
+          .update(schema.campaign)
+          .set({
+            voucherCount: sql`${schema.campaign.voucherCount} + 1`,
+            updatedAt: new Date(),
+          })
+          .where(eq(schema.campaign.id, input.campaignId));
+      }
+      return v;
+    });
 
     return toVoucher(row);
   });
@@ -133,31 +145,62 @@ const create = os.vouchers.create
 const update = os.vouchers.update
   .use(requireSession)
   .handler(async ({ input }) => {
-    const patch: Partial<typeof schema.voucher.$inferInsert> = { updatedAt: new Date() };
-    if (input.patch.campaignId !== undefined) patch.campaignId = input.patch.campaignId ?? null;
-    if (input.patch.discount !== undefined) patch.discount = input.patch.discount ?? null;
-    if (input.patch.customRewards !== undefined) patch.customRewards = input.patch.customRewards;
-    if (input.patch.giftBalance !== undefined) patch.giftBalance = input.patch.giftBalance ?? null;
-    if (input.patch.loyaltyPoints !== undefined)
-      patch.loyaltyPoints = input.patch.loyaltyPoints ?? null;
-    if (input.patch.redemptionLimit !== undefined)
-      patch.redemptionLimit = input.patch.redemptionLimit ?? null;
-    if (input.patch.priority !== undefined) patch.priority = input.patch.priority;
-    if (input.patch.exclusive !== undefined) patch.exclusive = input.patch.exclusive;
-    if (input.patch.active !== undefined) patch.active = input.patch.active;
-    if (input.patch.startDate !== undefined)
-      patch.startDate = input.patch.startDate ? new Date(input.patch.startDate) : null;
-    if (input.patch.endDate !== undefined)
-      patch.endDate = input.patch.endDate ? new Date(input.patch.endDate) : null;
-    if (input.patch.customerId !== undefined) patch.customerId = input.patch.customerId ?? null;
-    if (input.patch.metadata !== undefined) patch.metadata = input.patch.metadata;
+    const row = await db().transaction(async (tx) => {
+      const [existing] = (await tx
+        .select()
+        .from(schema.voucher)
+        .where(and(eq(schema.voucher.code, input.code), isNull(schema.voucher.deletedAt)))
+        .limit(1)
+        .for("update")) as (typeof schema.voucher.$inferSelect)[];
+      if (!existing) throw new ORPCError("NOT_FOUND", { message: "Voucher not found" });
 
-    const [row] = await db()
-      .update(schema.voucher)
-      .set(patch)
-      .where(and(eq(schema.voucher.code, input.code), isNull(schema.voucher.deletedAt)))
-      .returning();
-    if (!row) throw new ORPCError("NOT_FOUND", { message: "Voucher not found" });
+      const patch: Partial<typeof schema.voucher.$inferInsert> = { updatedAt: new Date() };
+      if (input.patch.campaignId !== undefined) patch.campaignId = input.patch.campaignId ?? null;
+      if (input.patch.discount !== undefined) patch.discount = input.patch.discount ?? null;
+      if (input.patch.customRewards !== undefined) patch.customRewards = input.patch.customRewards;
+      if (input.patch.giftBalance !== undefined) patch.giftBalance = input.patch.giftBalance ?? null;
+      if (input.patch.loyaltyPoints !== undefined)
+        patch.loyaltyPoints = input.patch.loyaltyPoints ?? null;
+      if (input.patch.redemptionLimit !== undefined)
+        patch.redemptionLimit = input.patch.redemptionLimit ?? null;
+      if (input.patch.priority !== undefined) patch.priority = input.patch.priority;
+      if (input.patch.exclusive !== undefined) patch.exclusive = input.patch.exclusive;
+      if (input.patch.active !== undefined) patch.active = input.patch.active;
+      if (input.patch.startDate !== undefined)
+        patch.startDate = input.patch.startDate ? new Date(input.patch.startDate) : null;
+      if (input.patch.endDate !== undefined)
+        patch.endDate = input.patch.endDate ? new Date(input.patch.endDate) : null;
+      if (input.patch.customerId !== undefined) patch.customerId = input.patch.customerId ?? null;
+      if (input.patch.metadata !== undefined) patch.metadata = input.patch.metadata;
+
+      const [updated] = await tx
+        .update(schema.voucher)
+        .set(patch)
+        .where(eq(schema.voucher.id, existing.id))
+        .returning();
+      if (!updated) throw new ORPCError("INTERNAL_SERVER_ERROR", { message: "Update failed" });
+
+      if (
+        existing.type === "GIFT_CARD" &&
+        input.patch.giftBalance !== undefined &&
+        input.patch.giftBalance !== null
+      ) {
+        const oldBalance = existing.giftBalance ?? 0;
+        const newBalance = input.patch.giftBalance;
+        const delta = newBalance - oldBalance;
+        if (delta !== 0) {
+          await tx.insert(schema.giftCardTransaction).values({
+            voucherId: existing.id,
+            delta,
+            balanceAfter: newBalance,
+            reason: oldBalance === 0 ? "CREDIT" : "ADJUSTMENT",
+          });
+        }
+      }
+
+      return updated;
+    });
+
     return toVoucher(row);
   });
 
@@ -260,6 +303,33 @@ const redeemProc = os.vouchers.redeem
     return { ok: false, code: result.code, message: result.message };
   });
 
+const transactions = os.vouchers.transactions
+  .use(requireSession)
+  .handler(async ({ input }) => {
+    const voucher = await db().query.voucher.findFirst({
+      where: and(eq(schema.voucher.code, input.code), isNull(schema.voucher.deletedAt)),
+      columns: { id: true },
+    });
+    if (!voucher) throw new ORPCError("NOT_FOUND", { message: "Voucher not found" });
+
+    const rows = await db().query.giftCardTransaction.findMany({
+      where: eq(schema.giftCardTransaction.voucherId, voucher.id),
+      orderBy: (t, { desc }) => desc(t.createdAt),
+      limit: 200,
+    });
+
+    return {
+      data: rows.map((r) => ({
+        id: r.id,
+        redemptionId: r.redemptionId,
+        delta: r.delta,
+        balanceAfter: r.balanceAfter,
+        reason: r.reason,
+        createdAt: r.createdAt.toISOString(),
+      })),
+    };
+  });
+
 export const vouchersRouter = {
   list,
   get,
@@ -269,4 +339,5 @@ export const vouchersRouter = {
   bulk,
   validate: validateProc,
   redeem: redeemProc,
+  transactions,
 };

@@ -10,7 +10,9 @@ export type RedemptionFailureCode =
   | "voucher_disabled"
   | "voucher_expired"
   | "redemption_limit_reached"
-  | "currency_mismatch";
+  | "currency_mismatch"
+  | "gift_balance_zero"
+  | "order_required";
 
 export interface RedeemInput {
   voucherCode: string;
@@ -56,6 +58,7 @@ interface VoucherRow extends Record<string, unknown> {
   campaignId: string | null;
   type: string;
   discount: { type: "AMOUNT" | "PERCENTAGE"; amount?: number; percent?: number; maxDiscountAmount?: number } | null;
+  giftBalance: number | null;
   redemptionLimit: number | null;
   redemptionCount: number;
   active: boolean;
@@ -74,7 +77,43 @@ function checkActivation(v: VoucherRow, now: Date): RedemptionFailureCode | null
   if (v.redemptionLimit != null && v.redemptionCount >= v.redemptionLimit) {
     return "redemption_limit_reached";
   }
+  if (v.type === "GIFT_CARD" && (v.giftBalance ?? 0) <= 0) {
+    return "gift_balance_zero";
+  }
   return null;
+}
+
+interface GiftPreview {
+  spend: number;
+  remainingBalance: number;
+  finalOrder: DiscountResult["finalOrder"];
+  breakdown: DiscountResult["breakdown"];
+}
+
+function previewGiftCard(v: VoucherRow, order: DiscountOrder | undefined): GiftPreview | null {
+  const balance = v.giftBalance ?? 0;
+  if (!order) {
+    return {
+      spend: 0,
+      remainingBalance: balance,
+      finalOrder: { amount: 0, currency: "USD" },
+      breakdown: [],
+    };
+  }
+  const spend = Math.min(balance, order.amount);
+  return {
+    spend,
+    remainingBalance: balance - spend,
+    finalOrder: { amount: order.amount - spend, currency: order.currency },
+    breakdown: [
+      {
+        voucherId: v.id,
+        code: v.code,
+        amount: spend,
+        type: "AMOUNT",
+      },
+    ],
+  };
 }
 
 function previewDiscount(v: VoucherRow, order: DiscountOrder | undefined): DiscountResult {
@@ -120,6 +159,15 @@ export async function validate(db: Db, input: ValidateInput): Promise<ValidateRe
     return { valid: false, code: failure, message: messageFor(failure) };
   }
 
+  if (voucher.type === "GIFT_CARD") {
+    const gp = previewGiftCard(voucher, input.order);
+    if (!gp) return { valid: false, code: "gift_balance_zero", message: messageFor("gift_balance_zero") };
+    return {
+      valid: true,
+      preview: { amount: gp.spend, finalOrder: gp.finalOrder, breakdown: gp.breakdown },
+    };
+  }
+
   const preview = previewDiscount(voucher, input.order);
   return {
     valid: true,
@@ -143,6 +191,10 @@ function messageFor(code: RedemptionFailureCode): string {
       return "Voucher has reached its redemption limit";
     case "currency_mismatch":
       return "Voucher currency does not match the order currency";
+    case "gift_balance_zero":
+      return "Gift card has no remaining balance";
+    case "order_required":
+      return "An order is required to redeem this voucher";
   }
 }
 
@@ -213,6 +265,55 @@ export async function redeem(db: Db, input: RedeemInput): Promise<RedeemResult> 
       return { ok: false, code: failure, message: messageFor(failure) };
     }
 
+    if (voucher.type === "GIFT_CARD") {
+      if (!input.order) {
+        return { ok: false, code: "order_required", message: messageFor("order_required") };
+      }
+      const gp = previewGiftCard(voucher, input.order);
+      if (!gp || gp.spend === 0) {
+        return { ok: false, code: "gift_balance_zero", message: messageFor("gift_balance_zero") };
+      }
+
+      await tx
+        .update(schema.voucher)
+        .set({
+          giftBalance: gp.remainingBalance,
+          redemptionCount: voucher.redemptionCount + 1,
+          updatedAt: now,
+        })
+        .where(eq(schema.voucher.id, voucher.id));
+
+      const [redemptionRow] = await tx
+        .insert(schema.redemption)
+        .values({
+          voucherId: voucher.id,
+          customerId: input.customerId ?? null,
+          orderId: input.orderId ?? null,
+          result: "SUCCESS",
+          amount: gp.spend,
+          breakdown: { breakdown: gp.breakdown, finalOrder: gp.finalOrder },
+          idempotencyKey: input.idempotencyKey ?? null,
+        })
+        .returning({ id: schema.redemption.id });
+      if (!redemptionRow) throw new Error("redemption insert failed");
+
+      await tx.insert(schema.giftCardTransaction).values({
+        voucherId: voucher.id,
+        redemptionId: redemptionRow.id,
+        delta: -gp.spend,
+        balanceAfter: gp.remainingBalance,
+        reason: "REDEMPTION",
+      });
+
+      return {
+        ok: true,
+        redemptionId: redemptionRow.id,
+        amount: gp.spend,
+        breakdown: gp.breakdown,
+        finalOrder: gp.finalOrder,
+      };
+    }
+
     const preview = previewDiscount(voucher, input.order);
     const amount = preview.appliedDiscounts.reduce((s, a) => s + a.amount, 0);
 
@@ -259,11 +360,26 @@ export async function rollback(db: Db, redemptionId: string): Promise<RedeemResu
       return { ok: false, code: "voucher_disabled", message: "Only SUCCESS redemptions can be rolled back" };
     }
 
-    // Lock the voucher row so the counter decrement is serialized.
-    await tx.execute(sql`SELECT 1 FROM ${schema.voucher} WHERE ${schema.voucher.id} = ${original.voucherId} FOR UPDATE`);
+    const [voucherRow] = (await tx
+      .select()
+      .from(schema.voucher)
+      .where(eq(schema.voucher.id, original.voucherId))
+      .limit(1)
+      .for("update")) as VoucherRow[];
+    if (!voucherRow) throw new Error("voucher missing during rollback");
+
+    const isGiftCard = voucherRow.type === "GIFT_CARD";
+    const restoredBalance = isGiftCard
+      ? (voucherRow.giftBalance ?? 0) + (original.amount ?? 0)
+      : null;
+
     await tx
       .update(schema.voucher)
-      .set({ redemptionCount: sql`${schema.voucher.redemptionCount} - 1`, updatedAt: new Date() })
+      .set({
+        redemptionCount: sql`${schema.voucher.redemptionCount} - 1`,
+        ...(isGiftCard ? { giftBalance: restoredBalance } : {}),
+        updatedAt: new Date(),
+      })
       .where(eq(schema.voucher.id, original.voucherId));
 
     const [row] = await tx
@@ -278,6 +394,16 @@ export async function rollback(db: Db, redemptionId: string): Promise<RedeemResu
       })
       .returning({ id: schema.redemption.id });
     if (!row) throw new Error("rollback insert failed");
+
+    if (isGiftCard && original.amount && restoredBalance != null) {
+      await tx.insert(schema.giftCardTransaction).values({
+        voucherId: original.voucherId,
+        redemptionId: row.id,
+        delta: original.amount,
+        balanceAfter: restoredBalance,
+        reason: "ROLLBACK",
+      });
+    }
 
     return {
       ok: true,

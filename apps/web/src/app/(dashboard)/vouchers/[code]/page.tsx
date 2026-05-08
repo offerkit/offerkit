@@ -52,18 +52,24 @@ export default function VoucherDetailPage({ params }: PageProps) {
       ovx().vouchers.update({
         code,
         patch: {
-          discount: {
-            type: state.discountKind,
-            ...(state.discountKind === "AMOUNT"
-              ? { amount: state.discountValue }
-              : { percent: state.discountValue }),
-            ...(state.maxDiscountAmount !== ""
-              ? { maxDiscountAmount: state.maxDiscountAmount }
-              : {}),
-          },
+          ...(state.type === "GIFT_CARD"
+            ? {
+                giftBalance: state.giftBalance === "" ? 0 : state.giftBalance,
+              }
+            : {
+                discount: {
+                  type: state.discountKind,
+                  ...(state.discountKind === "AMOUNT"
+                    ? { amount: state.discountValue }
+                    : { percent: state.discountValue }),
+                  ...(state.maxDiscountAmount !== ""
+                    ? { maxDiscountAmount: state.maxDiscountAmount }
+                    : {}),
+                },
+                priority: state.priority,
+                exclusive: state.exclusive,
+              }),
           redemptionLimit: state.redemptionLimit === "" ? undefined : state.redemptionLimit,
-          priority: state.priority,
-          exclusive: state.exclusive,
           active: state.active,
           startDate: toIsoOrUndefined(state.startDate),
           endDate: toIsoOrUndefined(state.endDate),
@@ -136,6 +142,7 @@ export default function VoucherDetailPage({ params }: PageProps) {
         ? (discount.amount ?? 0)
         : (discount?.percent ?? 0),
     maxDiscountAmount: discount?.maxDiscountAmount ?? "",
+    giftBalance: data.giftBalance ?? "",
     redemptionLimit: data.redemptionLimit ?? "",
     priority: data.priority,
     exclusive: data.exclusive,
@@ -143,6 +150,8 @@ export default function VoucherDetailPage({ params }: PageProps) {
     startDate: fromIso(data.startDate),
     endDate: fromIso(data.endDate),
   };
+
+  const isGift = data.type === "GIFT_CARD";
 
   return (
     <div className="space-y-4">
@@ -191,6 +200,8 @@ export default function VoucherDetailPage({ params }: PageProps) {
         pending={update.isPending}
         onSubmit={(state) => update.mutate(state)}
       />
+
+      {isGift ? <GiftCardLedger code={code} balance={data.giftBalance ?? 0} /> : null}
 
       <Card>
         <CardHeader>
@@ -260,5 +271,58 @@ export default function VoucherDetailPage({ params }: PageProps) {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function GiftCardLedger({ code, balance }: { code: string; balance: number }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["vouchers", "code", code, "transactions"],
+    queryFn: () => ovx().vouchers.transactions({ code }),
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <T>Gift card ledger</T>
+          <span className="text-sm font-normal text-muted-foreground">
+            <T>Current balance: {(balance / 100).toFixed(2)}</T>
+          </span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">
+            <T>Loading…</T>
+          </p>
+        ) : !data || data.data.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            <T>No transactions yet.</T>
+          </p>
+        ) : (
+          <ul className="divide-y rounded-md border text-sm">
+            {data.data.map((t) => (
+              <li key={t.id} className="flex items-center justify-between px-3 py-2">
+                <div>
+                  <Badge variant="secondary">{t.reason}</Badge>
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    {new Date(t.createdAt).toLocaleString()}
+                  </span>
+                </div>
+                <div className="font-mono text-sm">
+                  <span className={t.delta < 0 ? "text-red-500" : "text-emerald-500"}>
+                    {t.delta > 0 ? "+" : ""}
+                    {(t.delta / 100).toFixed(2)}
+                  </span>
+                  <span className="ml-3 text-muted-foreground">
+                    → {(t.balanceAfter / 100).toFixed(2)}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
   );
 }

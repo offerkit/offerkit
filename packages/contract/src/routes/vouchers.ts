@@ -64,4 +64,26 @@ export const vouchers = {
     })
     .input(redeemInput)
     .output(redeemOutput),
+
+  transactions: oc
+    .route({
+      method: "GET",
+      path: "/vouchers/{code}/transactions",
+      summary: "Gift card balance ledger",
+    })
+    .input(z.object({ code: z.string() }))
+    .output(
+      z.object({
+        data: z.array(
+          z.object({
+            id: z.string().uuid(),
+            redemptionId: z.string().uuid().nullable(),
+            delta: z.number().int(),
+            balanceAfter: z.number().int(),
+            reason: z.enum(["CREDIT", "REDEMPTION", "ROLLBACK", "ADJUSTMENT"]),
+            createdAt: z.string().datetime(),
+          }),
+        ),
+      }),
+    ),
 };

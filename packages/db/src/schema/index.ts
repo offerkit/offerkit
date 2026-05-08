@@ -3,6 +3,7 @@ export * from "./api-key.ts";
 export * from "./audit-log.ts";
 export * from "./campaign.ts";
 export * from "./customer.ts";
+export * from "./gift-card-transaction.ts";
 export * from "./idempotency.ts";
 export * from "./job.ts";
 export * from "./redemption.ts";

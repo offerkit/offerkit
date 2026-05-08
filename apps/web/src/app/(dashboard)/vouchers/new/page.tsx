@@ -26,18 +26,24 @@ export default function NewVoucherPage() {
         code: state.code || undefined,
         campaignId: state.campaignId || undefined,
         type: state.type,
-        discount: {
-          type: state.discountKind,
-          ...(state.discountKind === "AMOUNT"
-            ? { amount: state.discountValue }
-            : { percent: state.discountValue }),
-          ...(state.maxDiscountAmount !== ""
-            ? { maxDiscountAmount: state.maxDiscountAmount }
-            : {}),
-        },
+        ...(state.type === "GIFT_CARD"
+          ? {
+              giftBalance: state.giftBalance === "" ? 0 : state.giftBalance,
+            }
+          : {
+              discount: {
+                type: state.discountKind,
+                ...(state.discountKind === "AMOUNT"
+                  ? { amount: state.discountValue }
+                  : { percent: state.discountValue }),
+                ...(state.maxDiscountAmount !== ""
+                  ? { maxDiscountAmount: state.maxDiscountAmount }
+                  : {}),
+              },
+              priority: state.priority,
+              exclusive: state.exclusive,
+            }),
         redemptionLimit: state.redemptionLimit === "" ? undefined : state.redemptionLimit,
-        priority: state.priority,
-        exclusive: state.exclusive,
         startDate: toIsoOrUndefined(state.startDate),
         endDate: toIsoOrUndefined(state.endDate),
       }),
@@ -70,6 +76,7 @@ export default function NewVoucherPage() {
           discountKind: "AMOUNT",
           discountValue: 1000,
           maxDiscountAmount: "",
+          giftBalance: "",
           redemptionLimit: "",
           priority: 0,
           exclusive: false,

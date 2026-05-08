@@ -26,6 +26,7 @@ export interface VoucherFormState {
   // Cents for AMOUNT, basis points (0-10000) for PERCENTAGE.
   discountValue: number;
   maxDiscountAmount: number | "";
+  giftBalance: number | "";
   redemptionLimit: number | "";
   priority: number;
   exclusive: boolean;
@@ -150,6 +151,63 @@ export function VoucherForm({
         </CardContent>
       </Card>
 
+      <form.Subscribe selector={(s) => s.values.type}>
+        {(type) =>
+          type === "GIFT_CARD" ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  <T>Gift card balance</T>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4 sm:grid-cols-2">
+                <form.Field name="giftBalance">
+                  {(field) => (
+                    <div className="space-y-2">
+                      <Label htmlFor={field.name}>
+                        <T>Balance (cents)</T>
+                      </Label>
+                      <Input
+                        id={field.name}
+                        type="number"
+                        min={0}
+                        value={field.state.value}
+                        onChange={(e) =>
+                          field.handleChange(
+                            e.target.value === "" ? "" : Number(e.target.value),
+                          )
+                        }
+                        placeholder="10000"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        <T>10000 = $100.00. Each redemption deducts up to this much.</T>
+                      </p>
+                    </div>
+                  )}
+                </form.Field>
+                <form.Field name="active">
+                  {(field) => (
+                    <div className="flex items-center gap-3">
+                      <Switch
+                        id={field.name}
+                        checked={field.state.value}
+                        onCheckedChange={(v) => field.handleChange(v)}
+                      />
+                      <Label htmlFor={field.name} className="cursor-pointer">
+                        <T>Active</T>
+                      </Label>
+                    </div>
+                  )}
+                </form.Field>
+              </CardContent>
+            </Card>
+          ) : null
+        }
+      </form.Subscribe>
+
+      <form.Subscribe selector={(s) => s.values.type}>
+        {(type) =>
+          type === "GIFT_CARD" ? null : (
       <Card>
         <CardHeader>
           <CardTitle>
@@ -301,6 +359,9 @@ export function VoucherForm({
           </form.Field>
         </CardContent>
       </Card>
+          )
+        }
+      </form.Subscribe>
 
       <div className="flex justify-end gap-2">
         <form.Subscribe selector={(s) => s.isSubmitting}>
