@@ -1,15 +1,17 @@
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { ZodSmartCoercionPlugin } from "@orpc/zod";
 import { router } from "@/server/router";
+import type { RequestContext } from "@/server/context";
 
 const handler = new OpenAPIHandler(router, {
   plugins: [new ZodSmartCoercionPlugin()],
 });
 
 async function handle(request: Request): Promise<Response> {
+  const context: RequestContext = { request, headers: request.headers };
   const { response } = await handler.handle(request, {
     prefix: "/api/v1",
-    context: {},
+    context,
   });
   return response ?? new Response("Not Found", { status: 404 });
 }

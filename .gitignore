@@ -29,3 +29,6 @@ drizzle/.snapshots
 .source
 public/_gt
 .fallow/
+
+# TypeScript build cache
+*.tsbuildinfo

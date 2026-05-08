@@ -1,5 +1,7 @@
 import { oc } from "@orpc/contract";
 import { z } from "zod";
+import { customers } from "./routes/customers.ts";
+import { segments } from "./routes/segments.ts";
 
 const healthOutput = z.object({
   status: z.literal("ok"),
@@ -21,6 +23,8 @@ export const contract = {
         }),
       }),
     ),
+  customers,
+  segments,
 };
 
 export type Contract = typeof contract;

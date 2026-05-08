@@ -11,7 +11,9 @@
   },
   "dependencies": {
     "@open-voucherify/contract": "workspace:*",
-    "@orpc/client": "^1.14.2"
+    "@orpc/client": "^1.14.2",
+    "@orpc/contract": "^1.14.2",
+    "@orpc/openapi-client": "^1.14.2"
   },
   "devDependencies": {
     "@open-voucherify/config": "workspace:*",

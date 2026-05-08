@@ -1,9 +1,12 @@
 import { implement } from "@orpc/server";
 import { sql } from "drizzle-orm";
 import { contract } from "@open-voucherify/contract/router";
+import type { RequestContext } from "@/server/context";
 import { db } from "@/lib/db";
+import { customersRouter } from "./customers";
+import { segmentsRouter } from "./segments";
 
-const os = implement(contract);
+const os = implement(contract).$context<RequestContext>();
 
 const health = os.health.handler(() => ({
   status: "ok" as const,
@@ -24,4 +27,9 @@ const ready = os.ready.handler(async () => {
   };
 });
 
-export const router = os.router({ health, ready });
+export const router = os.router({
+  health,
+  ready,
+  customers: customersRouter,
+  segments: segmentsRouter,
+});
