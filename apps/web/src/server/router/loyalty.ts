@@ -3,6 +3,7 @@ import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { schema } from "@open-voucherify/db";
 import { contract } from "@open-voucherify/contract/router";
 import {
+  adjust as adjustPoints,
   earn as earnPoints,
   redeemReward,
   listHistory,
@@ -426,84 +427,37 @@ const membersEarn = os.loyalty.members.earn.use(requireSession).handler(async ({
     expiresAt: input.expiresAt ? new Date(input.expiresAt) : undefined,
     applyMultiplier: input.applyMultiplier,
   });
-  if (!result.ok || !result.data) {
-    return { ok: false, code: result.code, message: result.message };
-  }
+  if (!result.ok) return { ok: false, code: result.code, message: result.message };
   return {
     ok: true,
-    transactionId: result.data.transactionId,
-    delta: result.data.delta,
-    balance: result.data.balance,
-    lifetimePoints: result.data.lifetimePoints,
-    tierId: result.data.tierId,
+    transactionId: result.transactionId,
+    delta: result.delta,
+    balance: result.balance,
+    lifetimePoints: result.lifetimePoints,
+    tierId: result.tierId,
   };
 });
 
 const membersAdjust = os.loyalty.members.adjust
   .use(requireSession)
   .handler(async ({ input }) => {
-    if (input.delta === 0) {
-      return { ok: false, code: "validation_error", message: "delta must be non-zero" };
-    }
-    if (input.delta > 0) {
-      const result = await earnPoints(db(), {
-        memberId: input.memberId,
-        basePoints: input.delta,
-        reason: "ADJUSTMENT",
-        applyMultiplier: false,
-        note: input.note,
-      });
-      if (!result.ok || !result.data) {
-        return { ok: false, code: result.code, message: result.message };
-      }
-      return { ok: true, transactionId: result.data.transactionId, balance: result.data.balance };
-    }
-    // Negative adjustment uses rollback-style insert via earn with negative path.
-    // Implement directly via a manual ledger row.
-    const r = await db().transaction(async (tx) => {
-      const [member] = (await tx
-        .select()
-        .from(schema.loyaltyMember)
-        .where(eq(schema.loyaltyMember.id, input.memberId))
-        .limit(1)
-        .for("update")) as MemberRow[];
-      if (!member) return null;
-      const newBalance = member.balance + input.delta;
-      const [txRow] = await tx
-        .insert(schema.loyaltyTransaction)
-        .values({
-          memberId: member.id,
-          delta: input.delta,
-          balanceAfter: newBalance,
-          reason: "ADJUSTMENT",
-          note: input.note ?? null,
-        })
-        .returning({ id: schema.loyaltyTransaction.id });
-      if (!txRow) throw new Error("adjust insert failed");
-      await tx
-        .update(schema.loyaltyMember)
-        .set({ balance: newBalance, updatedAt: new Date() })
-        .where(eq(schema.loyaltyMember.id, member.id));
-      return { transactionId: txRow.id, balance: newBalance };
-    });
-    if (!r) return { ok: false, code: "member_not_found", message: "Member not found" };
-    return { ok: true, transactionId: r.transactionId, balance: r.balance };
+    const result = await adjustPoints(db(), input);
+    if (!result.ok) return { ok: false, code: result.code, message: result.message };
+    return { ok: true, transactionId: result.transactionId, balance: result.balance };
   });
 
 const membersRedeem = os.loyalty.members.redeem
   .use(requireSession)
   .handler(async ({ input }) => {
     const result = await redeemReward(db(), input);
-    if (!result.ok || !result.data) {
-      return { ok: false, code: result.code, message: result.message };
-    }
+    if (!result.ok) return { ok: false, code: result.code, message: result.message };
     return {
       ok: true,
-      transactionId: result.data.transactionId,
-      rewardId: result.data.rewardId,
-      cost: result.data.cost,
-      balance: result.data.balance,
-      payload: result.data.payload as unknown as Record<string, unknown>,
+      transactionId: result.transactionId,
+      rewardId: result.rewardId,
+      cost: result.cost,
+      balance: result.balance,
+      payload: result.payload,
     };
   });
 

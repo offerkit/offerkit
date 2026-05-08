@@ -18,11 +18,6 @@ const workerId = `worker-${randomUUID()}`;
 const db = getDb();
 const registry = createJobRegistry();
 
-registry.register("noop.heartbeat", ({ jobId }) => {
-  log.info({ jobId }, "heartbeat");
-  return Promise.resolve();
-});
-
 // Daily loyalty sweep that schedules its own next run after success.
 // Boot calls ensureScheduled() so a freshly-deployed db gets the first
 // row; from then on the queue is the source of truth for cadence.
@@ -68,23 +63,26 @@ createServer((req, res) => {
   log.info({ port: healthPort }, "worker health server listening");
 });
 
-// Reclaim orphaned jobs on boot, then heartbeat every minute.
+// Reclaim orphaned jobs on boot, then seed the recurring sweeps.
 async function bootstrap() {
   const reclaimed = await reclaimStaleJobs(db, 5 * 60_000);
   if (reclaimed > 0) log.info({ reclaimed }, "reclaimed orphaned jobs");
-
-  await enqueueJob(db, "noop.heartbeat", { ts: new Date().toISOString() });
-  setInterval(() => {
-    void enqueueJob(db, "noop.heartbeat", { ts: new Date().toISOString() }).then(() => {
-      lastHeartbeat = Date.now();
-    });
-  }, 60_000);
-
-  // Seed the recurring loyalty sweep. The handler reschedules itself,
-  // so boot only ensures one row exists; multiple replicas converge.
+  // Seed recurring jobs once. Their handlers reschedule themselves so
+  // multiple replicas converge to a single pending row per type.
   await ensureScheduled(db, "loyalty.points.expire", new Date());
 }
 
 void bootstrap();
 
-await runWorker({ db, registry, workerId, signal: controller.signal });
+await runWorker({
+  db,
+  registry,
+  workerId,
+  signal: controller.signal,
+  // Liveness: every poll cycle (whether or not work was claimed) proves
+  // the worker reached the DB and is making progress. /ready compares
+  // this against now() < 60s.
+  onTick: () => {
+    lastHeartbeat = Date.now();
+  },
+});

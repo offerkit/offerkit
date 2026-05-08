@@ -1,5 +1,5 @@
 import { schema, type Db } from "@open-voucherify/db";
-import { and, eq, lte, or, sql } from "drizzle-orm";
+import { and, eq, isNull, lte, or, sql } from "drizzle-orm";
 import { logger } from "../observability/index.ts";
 
 const log = logger.child({ component: "jobs" });
@@ -82,6 +82,12 @@ interface RunWorkerOptions {
   workerId: string;
   pollIntervalMs?: number;
   signal?: AbortSignal;
+  /**
+   * Called on every poll cycle (after a successful claim+process or
+   * after an empty poll). Use this to drive liveness signals — a
+   * tick proves the worker reached the DB and is making progress.
+   */
+  onTick?: () => void;
 }
 
 export async function runWorker(options: RunWorkerOptions): Promise<void> {
@@ -91,11 +97,11 @@ export async function runWorker(options: RunWorkerOptions): Promise<void> {
 
   while (!options.signal?.aborted) {
     const claimed = await claimNext(db, workerId);
-    if (!claimed) {
-      await sleep(pollMs, options.signal);
-      continue;
+    if (claimed) {
+      await processJob(db, registry, claimed);
     }
-    await processJob(db, registry, claimed);
+    options.onTick?.();
+    if (!claimed) await sleep(pollMs, options.signal);
   }
   log.info({ workerId }, "worker stopping");
 }
@@ -188,7 +194,7 @@ export async function reclaimStaleJobs(db: Db, ttlMs: number): Promise<number> {
     .where(
       and(
         eq(schema.job.status, "running"),
-        or(eq(schema.job.lockedAt, null as unknown as Date), lte(schema.job.lockedAt, cutoff)),
+        or(isNull(schema.job.lockedAt), lte(schema.job.lockedAt, cutoff)),
       ),
     )
     .returning({ id: schema.job.id });

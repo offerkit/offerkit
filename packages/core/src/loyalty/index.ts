@@ -10,14 +10,12 @@ export type LoyaltyFailureCode =
   | "reward_unavailable"
   | "insufficient_points"
   | "program_not_found"
-  | "transaction_not_found";
+  | "transaction_not_found"
+  | "validation_error";
 
-export interface LoyaltyResult<T> {
-  ok: boolean;
-  data?: T;
-  code?: LoyaltyFailureCode;
-  message?: string;
-}
+export type LoyaltyResult<T> =
+  | ({ ok: true } & T)
+  | { ok: false; code: LoyaltyFailureCode; message: string };
 
 interface MemberRow {
   id: string;
@@ -63,13 +61,15 @@ export interface EarnInput {
   applyMultiplier?: boolean;
 }
 
-export async function earn(db: Db, input: EarnInput): Promise<LoyaltyResult<{
+export interface EarnOutcome {
   transactionId: string;
   delta: number;
   balance: number;
   lifetimePoints: number;
   tierId: string | null;
-}>> {
+}
+
+export async function earn(db: Db, input: EarnInput): Promise<LoyaltyResult<EarnOutcome>> {
   if (input.basePoints <= 0) {
     return { ok: false, code: "insufficient_points", message: "Base points must be positive" };
   }
@@ -140,13 +140,11 @@ export async function earn(db: Db, input: EarnInput): Promise<LoyaltyResult<{
 
     return {
       ok: true,
-      data: {
-        transactionId: txRow.id,
-        delta,
-        balance: newBalance,
-        lifetimePoints: newLifetime,
-        tierId: nextTier?.id ?? null,
-      },
+      transactionId: txRow.id,
+      delta,
+      balance: newBalance,
+      lifetimePoints: newLifetime,
+      tierId: nextTier?.id ?? null,
     };
   });
 }
@@ -219,13 +217,11 @@ export async function redeemReward(
 
     return {
       ok: true,
-      data: {
-        transactionId: txRow.id,
-        rewardId: reward.id,
-        cost: reward.cost,
-        balance: newBalance,
-        payload: reward.payload,
-      },
+      transactionId: txRow.id,
+      rewardId: reward.id,
+      cost: reward.cost,
+      balance: newBalance,
+      payload: reward.payload,
     };
   });
 }
@@ -292,7 +288,66 @@ export async function rollbackTransaction(
       })
       .where(eq(schema.loyaltyMember.id, member.id));
 
-    return { ok: true, data: { transactionId: txRow.id, balance: newBalance } };
+    return { ok: true, transactionId: txRow.id, balance: newBalance };
+  });
+}
+
+/**
+ * Manual balance adjustment. Positive deltas use earn() so the tier
+ * recompute applies; negative deltas write an ADJUSTMENT ledger row
+ * directly without touching lifetime points.
+ */
+export interface AdjustInput {
+  memberId: string;
+  delta: number;
+  note?: string;
+}
+
+export async function adjust(
+  db: Db,
+  input: AdjustInput,
+): Promise<LoyaltyResult<{ transactionId: string; balance: number }>> {
+  if (input.delta === 0) {
+    return { ok: false, code: "validation_error", message: "delta must be non-zero" };
+  }
+  if (input.delta > 0) {
+    const result = await earn(db, {
+      memberId: input.memberId,
+      basePoints: input.delta,
+      reason: "ADJUSTMENT",
+      applyMultiplier: false,
+      note: input.note,
+    });
+    if (!result.ok) return result;
+    return { ok: true, transactionId: result.transactionId, balance: result.balance };
+  }
+  return db.transaction(async (tx) => {
+    const [member] = (await tx
+      .select()
+      .from(schema.loyaltyMember)
+      .where(eq(schema.loyaltyMember.id, input.memberId))
+      .limit(1)
+      .for("update")) as MemberRow[];
+    if (!member) {
+      return { ok: false, code: "member_not_found", message: "Loyalty member not found" };
+    }
+    const newBalance = member.balance + input.delta;
+    const [txRow] = await tx
+      .insert(schema.loyaltyTransaction)
+      .values({
+        memberId: member.id,
+        delta: input.delta,
+        balanceAfter: newBalance,
+        reason: "ADJUSTMENT",
+        note: input.note ?? null,
+      })
+      .returning({ id: schema.loyaltyTransaction.id });
+    if (!txRow) throw new Error("loyalty adjust insert failed");
+    await tx
+      .update(schema.loyaltyMember)
+      .set({ balance: newBalance, updatedAt: new Date() })
+      .where(eq(schema.loyaltyMember.id, member.id));
+    return { ok: true, transactionId: txRow.id, balance: newBalance };
   });
 }
 

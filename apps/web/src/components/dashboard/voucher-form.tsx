@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 
-export type VoucherType = "DISCOUNT" | "GIFT_CARD" | "LOYALTY_CARD";
+export type VoucherType = "DISCOUNT" | "GIFT_CARD";
 export type DiscountKind = "AMOUNT" | "PERCENTAGE";
 
 export interface VoucherFormState {
@@ -35,7 +35,7 @@ export interface VoucherFormState {
   endDate: string;
 }
 
-const TYPES: VoucherType[] = ["DISCOUNT", "GIFT_CARD", "LOYALTY_CARD"];
+const TYPES: VoucherType[] = ["DISCOUNT", "GIFT_CARD"];
 
 export function VoucherForm({
   initial,

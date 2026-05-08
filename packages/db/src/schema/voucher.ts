@@ -2,7 +2,7 @@ import { boolean, index, integer, jsonb, pgTable, text, timestamp, uuid } from "
 import { campaign } from "./campaign.ts";
 import { customer } from "./customer.ts";
 
-export type VoucherType = "DISCOUNT" | "GIFT_CARD" | "LOYALTY_CARD";
+export type VoucherType = "DISCOUNT" | "GIFT_CARD";
 
 // Numeric discount: AMOUNT (cents off) or PERCENTAGE (basis points 0-10000).
 // All other reward kinds (FREE_SHIPPING, etc.) live in customRewards as
@@ -26,11 +26,10 @@ export const voucher = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     code: text("code").notNull().unique(),
     campaignId: uuid("campaign_id").references(() => campaign.id, { onDelete: "cascade" }),
-    type: text("type", { enum: ["DISCOUNT", "GIFT_CARD", "LOYALTY_CARD"] }).notNull(),
+    type: text("type", { enum: ["DISCOUNT", "GIFT_CARD"] }).notNull(),
     discount: jsonb("discount").$type<VoucherDiscount>(),
     customRewards: jsonb("custom_rewards").$type<CustomReward[]>().notNull().default([]),
     giftBalance: integer("gift_balance"),
-    loyaltyPoints: integer("loyalty_points"),
     redemptionLimit: integer("redemption_limit"),
     redemptionCount: integer("redemption_count").notNull().default(0),
     priority: integer("priority").notNull().default(0),

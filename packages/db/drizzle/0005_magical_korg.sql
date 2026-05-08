@@ -1,0 +1,1 @@
+ALTER TABLE "voucher" DROP COLUMN "loyalty_points";

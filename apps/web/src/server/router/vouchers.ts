@@ -106,7 +106,6 @@ const create = os.vouchers.create
           discount: input.discount ?? null,
           customRewards: input.customRewards ?? [],
           giftBalance: input.giftBalance ?? null,
-          loyaltyPoints: input.loyaltyPoints ?? null,
           redemptionLimit: input.redemptionLimit ?? null,
           priority: input.priority ?? 0,
           exclusive: input.exclusive ?? false,
@@ -159,8 +158,6 @@ const update = os.vouchers.update
       if (input.patch.discount !== undefined) patch.discount = input.patch.discount ?? null;
       if (input.patch.customRewards !== undefined) patch.customRewards = input.patch.customRewards;
       if (input.patch.giftBalance !== undefined) patch.giftBalance = input.patch.giftBalance ?? null;
-      if (input.patch.loyaltyPoints !== undefined)
-        patch.loyaltyPoints = input.patch.loyaltyPoints ?? null;
       if (input.patch.redemptionLimit !== undefined)
         patch.redemptionLimit = input.patch.redemptionLimit ?? null;
       if (input.patch.priority !== undefined) patch.priority = input.patch.priority;
@@ -236,18 +233,20 @@ const bulk = os.vouchers.bulk
     });
     if (!campaign) throw new ORPCError("NOT_FOUND", { message: "Campaign not found" });
 
+    if (campaign.type === "LOYALTY_PROGRAM") {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Loyalty programs use members + points, not voucher codes",
+      });
+    }
+
     const codes = await generateUniqueCodes(
       input.count,
       (campaign.codeConfig ?? {}) as Record<string, unknown>,
       codeExists,
     );
 
-    const type: "DISCOUNT" | "GIFT_CARD" | "LOYALTY_CARD" =
-      campaign.type === "GIFT_VOUCHERS"
-        ? "GIFT_CARD"
-        : campaign.type === "LOYALTY_PROGRAM"
-          ? "LOYALTY_CARD"
-          : "DISCOUNT";
+    const type: "DISCOUNT" | "GIFT_CARD" =
+      campaign.type === "GIFT_VOUCHERS" ? "GIFT_CARD" : "DISCOUNT";
 
     await db()
       .insert(schema.voucher)

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const voucherType = z.enum(["DISCOUNT", "GIFT_CARD", "LOYALTY_CARD"]);
+export const voucherType = z.enum(["DISCOUNT", "GIFT_CARD"]);
 
 export const voucherDiscount = z.object({
   type: z.enum(["AMOUNT", "PERCENTAGE"]),
@@ -28,7 +28,6 @@ export const voucherOutput = z.object({
   discount: voucherDiscount.nullable(),
   customRewards: z.array(customReward),
   giftBalance: z.number().int().nullable(),
-  loyaltyPoints: z.number().int().nullable(),
   redemptionLimit: z.number().int().nullable(),
   redemptionCount: z.number().int(),
   priority: z.number().int(),
@@ -49,7 +48,6 @@ export const voucherCreateInput = z.object({
   discount: voucherDiscount.optional(),
   customRewards: z.array(customReward).optional(),
   giftBalance: z.number().int().min(0).optional(),
-  loyaltyPoints: z.number().int().min(0).optional(),
   redemptionLimit: z.number().int().min(1).optional(),
   priority: z.number().int().optional(),
   exclusive: z.boolean().optional(),

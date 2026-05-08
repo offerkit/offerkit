@@ -86,7 +86,6 @@ export function toVoucher(row: VoucherRow) {
     discount: row.discount,
     customRewards: row.customRewards,
     giftBalance: row.giftBalance,
-    loyaltyPoints: row.loyaltyPoints,
     redemptionLimit: row.redemptionLimit,
     redemptionCount: row.redemptionCount,
     priority: row.priority,
