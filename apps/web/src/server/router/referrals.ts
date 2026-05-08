@@ -43,7 +43,6 @@ function toReferral(row: ReferralRow) {
     conversionEventId: row.conversionEventId,
     referrerRedemptionId: row.referrerRedemptionId,
     refereeRedemptionId: row.refereeRedemptionId,
-    metadata: row.metadata,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

@@ -81,7 +81,6 @@ export const referral = pgTable(
     refereeRedemptionId: uuid("referee_redemption_id").references(() => redemption.id, {
       onDelete: "set null",
     }),
-    metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

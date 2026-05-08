@@ -53,7 +53,6 @@ export const referralOutput = z.object({
   conversionEventId: z.string().nullable(),
   referrerRedemptionId: z.string().uuid().nullable(),
   refereeRedemptionId: z.string().uuid().nullable(),
-  metadata: z.record(z.string(), z.unknown()),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

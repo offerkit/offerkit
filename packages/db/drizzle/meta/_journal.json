@@ -50,6 +50,13 @@
       "when": 1778279887218,
       "tag": "0006_lucky_eternity",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1778281029949,
+      "tag": "0007_slow_sebastian_shaw",
+      "breakpoints": true
     }
   ]
 }

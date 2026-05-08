@@ -181,19 +181,24 @@ export async function convert(
       "referral converted",
     );
 
-    const { ok: _r1, ...rrIssued } = referrer;
-    const { ok: _r2, ...reIssued } = referee;
-    void _r1;
-    void _r2;
     return {
       ok: true,
       referralId: r.id,
       referrerCustomerId: r.referrerCustomerId,
       refereeCustomerId: input.refereeCustomerId,
-      referrerReward: rrIssued as ReferralIssued,
-      refereeReward: reIssued as ReferralIssued,
+      referrerReward: pickIssued(referrer),
+      refereeReward: pickIssued(referee),
     };
   });
+}
+
+function pickIssued(r: { ok: true } & ReferralIssued): ReferralIssued {
+  return {
+    kind: r.kind,
+    voucherCode: r.voucherCode,
+    loyaltyTransactionId: r.loyaltyTransactionId,
+    payload: r.payload,
+  };
 }
 
 async function issueReward(
@@ -204,106 +209,125 @@ async function issueReward(
 ): Promise<ReferralResult<ReferralIssued>> {
   const reward = side === "referrer" ? program.referrerReward : program.refereeReward;
 
-  if (reward.kind === "discount" && reward.discount) {
-    const code = generateReferralCode("REF", { length: 10 });
-    const [voucher] = await tx
-      .insert(schema.voucher)
-      .values({
-        code,
-        campaignId: program.campaignId,
-        type: "DISCOUNT",
-        discount: reward.discount,
-        customerId,
-        redemptionLimit: 1,
-      })
-      .returning({ id: schema.voucher.id, code: schema.voucher.code });
-    if (!voucher) throw new Error("voucher insert failed");
-    await tx
-      .update(schema.campaign)
-      .set({
-        voucherCount: sql`${schema.campaign.voucherCount} + 1`,
-        updatedAt: new Date(),
-      })
-      .where(eq(schema.campaign.id, program.campaignId));
-    return { ok: true, kind: "discount", voucherCode: voucher.code };
-  }
-
-  if (reward.kind === "gift_card" && reward.creditCents != null && reward.creditCents > 0) {
-    const code = generateReferralCode("GIFT", { length: 10 });
-    const [voucher] = await tx
-      .insert(schema.voucher)
-      .values({
-        code,
-        campaignId: program.campaignId,
-        type: "GIFT_CARD",
-        giftBalance: reward.creditCents,
-        customerId,
-      })
-      .returning({ id: schema.voucher.id, code: schema.voucher.code });
-    if (!voucher) throw new Error("voucher insert failed");
-    await tx.insert(schema.giftCardTransaction).values({
-      voucherId: voucher.id,
-      delta: reward.creditCents,
-      balanceAfter: reward.creditCents,
-      reason: "CREDIT",
-    });
-    await tx
-      .update(schema.campaign)
-      .set({
-        voucherCount: sql`${schema.campaign.voucherCount} + 1`,
-        updatedAt: new Date(),
-      })
-      .where(eq(schema.campaign.id, program.campaignId));
-    return { ok: true, kind: "gift_card", voucherCode: voucher.code };
-  }
-
-  if (
-    reward.kind === "loyalty_points" &&
-    reward.loyaltyProgramId &&
-    reward.loyaltyPoints != null &&
-    reward.loyaltyPoints > 0
-  ) {
-    const [member] = (await tx
-      .select()
-      .from(schema.loyaltyMember)
-      .where(
-        and(
-          eq(schema.loyaltyMember.customerId, customerId),
-          eq(schema.loyaltyMember.programId, reward.loyaltyProgramId),
-        ),
-      )
-      .limit(1)
-      .for("update")) as (typeof schema.loyaltyMember.$inferSelect)[];
-    if (!member) {
-      return {
-        ok: false,
-        code: "missing_loyalty_member",
-        message: `Customer ${customerId} is not enrolled in the loyalty program`,
-      };
+  switch (reward.kind) {
+    case "discount": {
+      if (!reward.discount) {
+        return {
+          ok: false,
+          code: "validation_error",
+          message: `${side} reward kind=discount is missing its discount config`,
+        };
+      }
+      const code = generateReferralCode("REF", { length: 10 });
+      const [voucher] = await tx
+        .insert(schema.voucher)
+        .values({
+          code,
+          campaignId: program.campaignId,
+          type: "DISCOUNT",
+          discount: reward.discount,
+          customerId,
+          redemptionLimit: 1,
+        })
+        .returning({ id: schema.voucher.id, code: schema.voucher.code });
+      if (!voucher) throw new Error("voucher insert failed");
+      await tx
+        .update(schema.campaign)
+        .set({
+          voucherCount: sql`${schema.campaign.voucherCount} + 1`,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.campaign.id, program.campaignId));
+      return { ok: true, kind: "discount", voucherCode: voucher.code };
     }
-    const newBalance = member.balance + reward.loyaltyPoints;
-    const [txRow] = await tx
-      .insert(schema.loyaltyTransaction)
-      .values({
-        memberId: member.id,
-        delta: reward.loyaltyPoints,
-        balanceAfter: newBalance,
-        reason: "ADJUSTMENT",
-        note: `referral ${side}`,
-      })
-      .returning({ id: schema.loyaltyTransaction.id });
-    if (!txRow) throw new Error("loyalty transaction insert failed");
-    await tx
-      .update(schema.loyaltyMember)
-      .set({ balance: newBalance, updatedAt: new Date() })
-      .where(eq(schema.loyaltyMember.id, member.id));
-    return { ok: true, kind: "loyalty_points", loyaltyTransactionId: txRow.id };
+    case "gift_card": {
+      if (reward.creditCents == null || reward.creditCents <= 0) {
+        return {
+          ok: false,
+          code: "validation_error",
+          message: `${side} reward kind=gift_card requires creditCents > 0`,
+        };
+      }
+      const code = generateReferralCode("GIFT", { length: 10 });
+      const [voucher] = await tx
+        .insert(schema.voucher)
+        .values({
+          code,
+          campaignId: program.campaignId,
+          type: "GIFT_CARD",
+          giftBalance: reward.creditCents,
+          customerId,
+        })
+        .returning({ id: schema.voucher.id, code: schema.voucher.code });
+      if (!voucher) throw new Error("voucher insert failed");
+      await tx.insert(schema.giftCardTransaction).values({
+        voucherId: voucher.id,
+        delta: reward.creditCents,
+        balanceAfter: reward.creditCents,
+        reason: "CREDIT",
+      });
+      await tx
+        .update(schema.campaign)
+        .set({
+          voucherCount: sql`${schema.campaign.voucherCount} + 1`,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.campaign.id, program.campaignId));
+      return { ok: true, kind: "gift_card", voucherCode: voucher.code };
+    }
+    case "loyalty_points": {
+      if (!reward.loyaltyProgramId || reward.loyaltyPoints == null || reward.loyaltyPoints <= 0) {
+        return {
+          ok: false,
+          code: "validation_error",
+          message: `${side} reward kind=loyalty_points requires loyaltyProgramId and loyaltyPoints > 0`,
+        };
+      }
+      const [member] = (await tx
+        .select()
+        .from(schema.loyaltyMember)
+        .where(
+          and(
+            eq(schema.loyaltyMember.customerId, customerId),
+            eq(schema.loyaltyMember.programId, reward.loyaltyProgramId),
+          ),
+        )
+        .limit(1)
+        .for("update")) as (typeof schema.loyaltyMember.$inferSelect)[];
+      if (!member) {
+        return {
+          ok: false,
+          code: "missing_loyalty_member",
+          message: `Customer ${customerId} is not enrolled in the loyalty program`,
+        };
+      }
+      const newBalance = member.balance + reward.loyaltyPoints;
+      const [txRow] = await tx
+        .insert(schema.loyaltyTransaction)
+        .values({
+          memberId: member.id,
+          delta: reward.loyaltyPoints,
+          balanceAfter: newBalance,
+          reason: "ADJUSTMENT",
+          note: `referral ${side}`,
+        })
+        .returning({ id: schema.loyaltyTransaction.id });
+      if (!txRow) throw new Error("loyalty transaction insert failed");
+      await tx
+        .update(schema.loyaltyMember)
+        .set({ balance: newBalance, updatedAt: new Date() })
+        .where(eq(schema.loyaltyMember.id, member.id));
+      return { ok: true, kind: "loyalty_points", loyaltyTransactionId: txRow.id };
+    }
+    case "custom": {
+      if (!reward.typeKey) {
+        return {
+          ok: false,
+          code: "validation_error",
+          message: `${side} reward kind=custom requires a typeKey`,
+        };
+      }
+      return { ok: true, kind: "custom", payload: reward.payload ?? {} };
+    }
   }
-
-  // Custom: just emit the payload; integrator handles delivery.
-  return {
-    ok: true,
-    kind: "custom",
-    payload: reward.payload ?? {},
-  };
 }
