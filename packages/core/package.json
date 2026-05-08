@@ -1,0 +1,33 @@
+{
+  "name": "@open-voucherify/core",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    "./jobs": "./src/jobs/index.ts",
+    "./rules": "./src/rules/index.ts",
+    "./redemption": "./src/redemption/index.ts",
+    "./discount": "./src/discount/index.ts",
+    "./observability": "./src/observability/index.ts",
+    "./email": "./src/email/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@open-voucherify/contract": "workspace:*",
+    "@open-voucherify/db": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.20.0",
+    "pino": "^10.3.1"
+  },
+  "devDependencies": {
+    "@open-voucherify/config": "workspace:*",
+    "@types/node": "^25.6.2",
+    "@types/pg": "^8.20.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
+  }
+}

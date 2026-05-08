@@ -1,0 +1,23 @@
+# Railway service config — two services from the same repo Dockerfile.
+# Provision a Postgres service alongside in the same project; reference
+# its DATABASE_URL into both web and worker.
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "node apps/web/server.js"
+healthcheckPath = "/api/v1/ready"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
+
+# Worker service: same repo, same Dockerfile, different start command.
+# In Railway, add a second service in the same project pointing at this repo
+# and set its start command to the value below. Healthcheck on :9091/health.
+[services.worker]
+target = "worker"
+startCommand = "pnpm --filter @open-voucherify/worker start"
+healthcheckPath = "/health"
+healthcheckTimeout = 30

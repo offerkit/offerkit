@@ -1,0 +1,24 @@
+{
+  "name": "@open-voucherify/mcp",
+  "version": "0.0.0",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "ovx-mcp": "./src/index.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@open-voucherify/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@open-voucherify/config": "workspace:*",
+    "@types/node": "^20.19.40",
+    "typescript": "^6.0.3"
+  }
+}

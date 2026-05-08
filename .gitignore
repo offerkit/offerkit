@@ -1,0 +1,31 @@
+node_modules
+.next
+.turbo
+dist
+out
+build
+coverage
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.vscode
+.idea
+*.swp
+.DS_Store
+
+# Drizzle
+drizzle/.snapshots
+.source
+public/_gt
+.fallow/

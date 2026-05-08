@@ -1,0 +1,56 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  "entry": [
+    "src/index.{js,jsx,mjs,ts,tsx}",
+    "src/main.{js,jsx,mjs,ts,tsx}",
+    "src/app/**/page.{ts,tsx}",
+    "src/app/**/layout.{ts,tsx}",
+    "src/app/**/route.{ts,tsx}",
+    "src/instrumentation.{ts,tsx}",
+    "src/proxy.{ts,tsx}",
+    "src/middleware.{ts,tsx}",
+    "next.config.{js,mjs,ts}",
+    "source.config.{js,mjs,ts}",
+    "drizzle.config.{js,mjs,ts}",
+    "content/**/*.{md,mdx}"
+  ],
+  "workspaces": {
+    "packages": ["apps/*", "packages/*"]
+  },
+  "ignorePatterns": [
+    "**/.next/**",
+    "**/.turbo/**",
+    "**/.source/**",
+    "**/dist/**",
+    "**/drizzle/**",
+    "**/node_modules/**"
+  ],
+  "ignoreDependencies": [
+    "@base-ui/react",
+    "class-variance-authority",
+    "clsx",
+    "tailwind-merge",
+    "tw-animate-css",
+    "lucide-react",
+    "next-themes",
+    "fumadocs-mdx",
+    "@tailwindcss/postcss",
+    "tailwindcss",
+    "shadcn",
+    "eslint-config-next",
+    "@modelcontextprotocol/sdk",
+    "@open-voucherify/sdk",
+    "@orpc/openapi",
+    "@orpc/server"
+  ],
+  "duplicates": {
+    "minLines": 30
+  },
+  "health": {
+    "thresholds": {
+      "complexity": 25,
+      "cognitive": 30,
+      "crap": 60
+    }
+  }
+}

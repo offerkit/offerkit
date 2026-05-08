@@ -1,0 +1,27 @@
+{
+  "name": "@open-voucherify/contract",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./errors": "./src/errors.ts",
+    "./router": "./src/router.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@orpc/contract": "^1.14.2",
+    "@orpc/openapi": "^1.14.2",
+    "@orpc/server": "^1.14.2",
+    "@orpc/zod": "^1.14.2",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@open-voucherify/config": "workspace:*",
+    "@types/node": "^25.6.2",
+    "typescript": "^6.0.3"
+  }
+}

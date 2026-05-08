@@ -1,0 +1,24 @@
+{
+  "name": "open-voucherify",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "packageManager": "pnpm@10.23.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "fallow": "pnpm dlx fallow",
+    "prepare": "lefthook install || true"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.4",
+    "lefthook": "^2.1.6",
+    "turbo": "^2.9.10"
+  }
+}
