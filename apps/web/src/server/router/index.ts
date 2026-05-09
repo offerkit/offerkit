@@ -16,6 +16,7 @@ import { eventsRouter, webhooksRouter } from "./webhooks";
 import { insightsRouter } from "./insights";
 import { usersRouter } from "./users";
 import { ordersRouter } from "./orders";
+import { auditLogRouter } from "./audit-log";
 
 const os = implement(contract).$context<RequestContext>();
 
@@ -55,4 +56,5 @@ export const router = os.router({
   insights: insightsRouter,
   users: usersRouter,
   orders: ordersRouter,
+  auditLog: auditLogRouter,
 });
