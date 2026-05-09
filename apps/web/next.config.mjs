@@ -17,4 +17,11 @@ const nextConfig = {
   },
 };
 
-export default withGTConfig(withMDX(nextConfig));
+// Runtime-only at launch: no GT cloud project / API key. Pass empty
+// runtimeUrl + cacheUrl so I18nManager picks the "disabled" path
+// instead of falling through to "custom" against the default GT URL,
+// which logs projectId/apiKey-required warnings on every boot.
+export default withGTConfig(withMDX(nextConfig), {
+  runtimeUrl: "",
+  cacheUrl: "",
+});

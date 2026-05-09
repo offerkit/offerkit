@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { T, useGT } from "gt-next/client";
+import { T } from "gt-next/client";
 import {
   BarChart3,
   Boxes,
@@ -36,7 +36,6 @@ interface NavItem {
   // `label` and `groupLabel` are stable English source strings; <T> wraps them at render.
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  comingPhase?: number;
 }
 
 const sections: { label: string; items: NavItem[] }[] = [
@@ -89,7 +88,6 @@ const sections: { label: string; items: NavItem[] }[] = [
 
 export function DashboardNav() {
   const pathname = usePathname();
-  const gt = useGT();
   return (
     <>
       {sections.map((section) => (
@@ -102,22 +100,9 @@ export function DashboardNav() {
               {section.items.map((item) => {
                 const Icon = item.icon;
                 const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-                const disabled = item.comingPhase != null;
                 return (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      isActive={active}
-                      tooltip={
-                        disabled
-                          ? gt("Available in Phase {phase}").replace(
-                              "{phase}",
-                              String(item.comingPhase),
-                            )
-                          : undefined
-                      }
-                      className={disabled ? "pointer-events-none opacity-50" : undefined}
-                      render={disabled ? <span /> : <Link href={item.href} />}
-                    >
+                    <SidebarMenuButton isActive={active} render={<Link href={item.href} />}>
                       <Icon className="size-4" />
                       <span>
                         <T>{item.label}</T>
