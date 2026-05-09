@@ -16,3 +16,4 @@ export * from "./segment.ts";
 export * from "./validation-rule.ts";
 export * from "./voucher.ts";
 export * from "./webhook.ts";
+export * from "./workspace.ts";

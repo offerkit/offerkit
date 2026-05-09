@@ -82,7 +82,7 @@ const sections: { label: string; items: NavItem[] }[] = [
       { href: "/settings/api-keys", label: "API keys", icon: Key },
       { href: "/settings/audit-log", label: "Audit log", icon: FileText },
       { href: "/settings/users", label: "Users", icon: Boxes },
-      { href: "/settings", label: "Workspace", icon: Settings, comingPhase: 8 },
+      { href: "/settings", label: "Workspace", icon: Settings },
     ],
   },
 ];

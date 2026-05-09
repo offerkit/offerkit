@@ -17,6 +17,7 @@ import { insightsRouter } from "./insights";
 import { usersRouter } from "./users";
 import { ordersRouter } from "./orders";
 import { auditLogRouter } from "./audit-log";
+import { workspaceRouter } from "./workspace";
 
 const os = implement(contract).$context<RequestContext>();
 
@@ -57,4 +58,5 @@ export const router = os.router({
   users: usersRouter,
   orders: ordersRouter,
   auditLog: auditLogRouter,
+  workspace: workspaceRouter,
 });

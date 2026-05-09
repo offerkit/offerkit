@@ -14,6 +14,7 @@ import { insights } from "./routes/insights.ts";
 import { users } from "./routes/users.ts";
 import { orders } from "./routes/orders.ts";
 import { auditLog } from "./routes/audit-log.ts";
+import { workspace } from "./routes/workspace.ts";
 
 const healthOutput = z.object({
   status: z.literal("ok"),
@@ -50,6 +51,7 @@ export const contract = {
   users,
   orders,
   auditLog,
+  workspace,
 };
 
 export type Contract = typeof contract;

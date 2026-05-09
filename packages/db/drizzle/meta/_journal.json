@@ -85,6 +85,13 @@
       "when": 1778301169791,
       "tag": "0011_massive_mariko_yashida",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1778301694513,
+      "tag": "0012_worried_starbolt",
+      "breakpoints": true
     }
   ]
 }
