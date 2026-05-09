@@ -76,7 +76,9 @@ process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 
 // Tiny health server for Railway / docker healthcheck.
-const healthPort = Number(process.env["WORKER_HEALTH_PORT"] ?? 9091);
+// Honor PORT first (Railway and most PaaS assign it dynamically),
+// then WORKER_HEALTH_PORT for explicit overrides, then 9091 default.
+const healthPort = Number(process.env["PORT"] ?? process.env["WORKER_HEALTH_PORT"] ?? 9091);
 let lastHeartbeat = Date.now();
 createServer((req, res) => {
   if (req.url === "/health") {
@@ -92,7 +94,7 @@ createServer((req, res) => {
   }
   res.writeHead(404);
   res.end();
-}).listen(healthPort, () => {
+}).listen(healthPort, "0.0.0.0", () => {
   log.info({ port: healthPort }, "worker health server listening");
 });
 
