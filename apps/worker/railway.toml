@@ -1,0 +1,19 @@
+# Railway config for the `worker` service.
+# In Railway: Service → Settings → Source → Config-as-Code Path → apps/worker/railway.toml
+#
+# The Dockerfile Build Stage (`worker`) is set in the dashboard
+# (Settings → Build → Dockerfile Build Stage). One-time click per service.
+#
+# The worker doesn't need a public domain — remove it via
+# Settings → Networking → (delete the generated domain).
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "pnpm --filter @offerkit/worker start"
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5

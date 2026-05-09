@@ -67,7 +67,7 @@ The `docker-compose.yml` brings up `web` + `worker` + `postgres`. Migrations run
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new)
 
-The repo ships a `railway.toml` with a `web` service (Dockerfile builder, healthcheck `/api/v1/ready`) and a `worker` service. Provision a Postgres in the same Railway project; reference its `DATABASE_URL` into both services.
+In one Railway project, create three services: a Postgres add-on, a `web` service (Config-as-Code Path: `apps/web/railway.toml`, Dockerfile Build Stage: `web`), and a `worker` service (Config-as-Code Path: `apps/worker/railway.toml`, Dockerfile Build Stage: `worker`, no public domain). Reference Postgres's `DATABASE_URL` into both. Set `BETTER_AUTH_SECRET`, `OFFERKIT_PUBLIC_URL`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` on the `web` service.
 
 ## 📦 SDK & CLI & MCP
 

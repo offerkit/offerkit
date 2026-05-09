@@ -1,0 +1,17 @@
+# Railway config for the `web` service.
+# In Railway: Service → Settings → Source → Config-as-Code Path → apps/web/railway.toml
+#
+# The Dockerfile Build Stage (`web`) is set in the dashboard
+# (Settings → Build → Dockerfile Build Stage) — Railway does not expose
+# this in railway.toml as of writing. One-time click per service.
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "node apps/web/server.js"
+healthcheckPath = "/api/v1/ready"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
