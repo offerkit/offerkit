@@ -44,10 +44,19 @@ registry.register("loyalty.points.expire", async ({ jobId }) => {
 });
 
 const controller = new AbortController();
+const SHUTDOWN_GRACE_MS = Number(process.env["WORKER_SHUTDOWN_GRACE_MS"] ?? 30_000);
+let shuttingDown = false;
 const shutdown = (signal: string) => {
-  log.info({ signal }, "shutting down");
+  if (shuttingDown) return;
+  shuttingDown = true;
+  log.info({ signal, graceMs: SHUTDOWN_GRACE_MS }, "draining worker");
   controller.abort();
-  setTimeout(() => process.exit(0), 1000);
+  // Safety net: if an in-flight handler hangs past the grace window, force exit.
+  const forceExit = setTimeout(() => {
+    log.warn({ signal }, "grace period elapsed, forcing exit");
+    process.exit(1);
+  }, SHUTDOWN_GRACE_MS);
+  forceExit.unref();
 };
 process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
@@ -96,3 +105,6 @@ await runWorker({
     lastHeartbeat = Date.now();
   },
 });
+
+log.info({ workerId }, "worker drained, exiting");
+process.exit(0);
