@@ -1,12 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { Pool } from "pg";
-import { drizzle } from "drizzle-orm/node-postgres";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { schema, type Db } from "@open-voucherify/db";
 import { redeem } from "./index.ts";
+import { getTestDb } from "./_test-db.ts";
 
 // Concurrency test exercises the FOR UPDATE lock against a real Postgres.
 // Skips gracefully without a DATABASE_URL so the default workspace test
@@ -15,22 +11,18 @@ import { redeem } from "./index.ts";
 const url = process.env["TEST_DATABASE_URL"] ?? process.env["DATABASE_URL"];
 const enabled = Boolean(url);
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const migrationsFolder = path.resolve(here, "..", "..", "..", "db", "drizzle");
-
-let pool: Pool | undefined;
 let db: Db | undefined;
+let close: (() => Promise<void>) | undefined;
 
 beforeAll(async () => {
   if (!enabled || !url) return;
-  pool = new Pool({ connectionString: url });
-  const migrator = drizzle(pool);
-  await migrate(migrator, { migrationsFolder });
-  db = drizzle(pool, { schema, casing: "snake_case" });
+  const handle = await getTestDb(url);
+  db = handle.db;
+  close = handle.close;
 }, 30_000);
 
 afterAll(async () => {
-  await pool?.end();
+  await close?.();
 });
 
 describe.skipIf(!enabled)("redeem concurrency", () => {
