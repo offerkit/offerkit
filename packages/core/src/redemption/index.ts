@@ -19,7 +19,10 @@ export type RedemptionFailureCode =
 export interface RedeemInput {
   voucherCode: string;
   customerId?: string;
+  /** uuid of an `order` row created in this system. */
   orderId?: string;
+  /** Integrator's free-form order reference (Shopify id, internal sale id, etc). */
+  externalOrderId?: string;
   order?: DiscountOrder;
   idempotencyKey?: string;
 }
@@ -277,7 +280,7 @@ function redeemImpl(db: Db, input: RedeemInput): Promise<RedeemResult> {
         .values({
           voucherId: voucher.id,
           customerId: input.customerId ?? null,
-          orderId: input.orderId ?? null,
+          orderId: input.orderId ?? null, externalOrderId: input.externalOrderId ?? null,
           result: "FAILURE",
           failureReason: failure,
           idempotencyKey: input.idempotencyKey ?? null,
@@ -310,7 +313,7 @@ function redeemImpl(db: Db, input: RedeemInput): Promise<RedeemResult> {
         .values({
           voucherId: voucher.id,
           customerId: input.customerId ?? null,
-          orderId: input.orderId ?? null,
+          orderId: input.orderId ?? null, externalOrderId: input.externalOrderId ?? null,
           result: "SUCCESS",
           amount: gp.spend,
           breakdown: { breakdown: gp.breakdown, finalOrder: gp.finalOrder },
@@ -349,7 +352,7 @@ function redeemImpl(db: Db, input: RedeemInput): Promise<RedeemResult> {
       .values({
         voucherId: voucher.id,
         customerId: input.customerId ?? null,
-        orderId: input.orderId ?? null,
+        orderId: input.orderId ?? null, externalOrderId: input.externalOrderId ?? null,
         result: "SUCCESS",
         amount,
         breakdown: { breakdown: preview.breakdown, finalOrder: preview.finalOrder },
@@ -366,7 +369,7 @@ function redeemImpl(db: Db, input: RedeemInput): Promise<RedeemResult> {
         voucherId: voucher.id,
         voucherCode: voucher.code,
         customerId: input.customerId ?? null,
-        orderId: input.orderId ?? null,
+        orderId: input.orderId ?? null, externalOrderId: input.externalOrderId ?? null,
         amount,
         finalOrder: preview.finalOrder,
       },
@@ -386,6 +389,7 @@ export interface StackRedeemInput {
   voucherCodes: string[];
   customerId?: string;
   orderId?: string;
+  externalOrderId?: string;
   order: DiscountOrder;
   idempotencyKey?: string;
 }
@@ -549,7 +553,7 @@ async function stackRedeemImpl(
         .values({
           voucherId: voucher.id,
           customerId: input.customerId ?? null,
-          orderId: input.orderId ?? null,
+          orderId: input.orderId ?? null, externalOrderId: input.externalOrderId ?? null,
           result: "SUCCESS",
           amount: applied.amount,
           breakdown: { breakdown: result.breakdown, finalOrder: result.finalOrder },
@@ -574,7 +578,7 @@ async function stackRedeemImpl(
       payload: {
         batchId,
         customerId: input.customerId ?? null,
-        orderId: input.orderId ?? null,
+        orderId: input.orderId ?? null, externalOrderId: input.externalOrderId ?? null,
         amount: totalAmount,
         finalOrder: result.finalOrder,
         entries,
@@ -634,6 +638,7 @@ export async function rollback(db: Db, redemptionId: string): Promise<RedeemResu
         voucherId: original.voucherId,
         customerId: original.customerId,
         orderId: original.orderId,
+        externalOrderId: original.externalOrderId,
         result: "ROLLBACK",
         amount: original.amount,
         parentRedemptionId: original.id,

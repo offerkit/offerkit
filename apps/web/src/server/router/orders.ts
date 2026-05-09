@@ -96,4 +96,46 @@ const remove = os.orders.delete.use(requireSession).handler(async ({ input }) =>
   return { ok: true as const };
 });
 
-export const ordersRouter = { list, get, create, update, cancel, fulfill, delete: remove };
+const redemptionsList = os.orders.redemptions
+  .use(requireSession)
+  .handler(async ({ input }) => {
+    const rows = await db()
+      .select({
+        id: schema.redemption.id,
+        voucherCode: schema.voucher.code,
+        voucherId: schema.redemption.voucherId,
+        customerId: schema.redemption.customerId,
+        result: schema.redemption.result,
+        failureReason: schema.redemption.failureReason,
+        amount: schema.redemption.amount,
+        createdAt: schema.redemption.createdAt,
+      })
+      .from(schema.redemption)
+      .innerJoin(schema.voucher, eq(schema.voucher.id, schema.redemption.voucherId))
+      .where(eq(schema.redemption.orderId, input.id))
+      .orderBy(schema.redemption.createdAt);
+
+    return {
+      data: rows.map((r) => ({
+        id: r.id,
+        voucherCode: r.voucherCode,
+        voucherId: r.voucherId,
+        customerId: r.customerId,
+        result: r.result,
+        failureReason: r.failureReason,
+        amount: r.amount,
+        createdAt: r.createdAt.toISOString(),
+      })),
+    };
+  });
+
+export const ordersRouter = {
+  list,
+  get,
+  create,
+  update,
+  cancel,
+  fulfill,
+  delete: remove,
+  redemptions: redemptionsList,
+};

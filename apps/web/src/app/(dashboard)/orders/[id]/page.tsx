@@ -37,6 +37,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     queryFn: () => ovx().orders.get({ id }),
   });
 
+  const { data: redemptions } = useQuery({
+    queryKey: ["order", id, "redemptions"],
+    queryFn: () => ovx().orders.redemptions({ id }),
+  });
+
   const fulfill = useMutation({
     mutationFn: () => ovx().orders.fulfill({ id }),
     onSuccess: async () => {
@@ -192,6 +197,68 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                     <TableCell className="text-right">{item.quantity}</TableCell>
                     <TableCell className="text-right font-mono">
                       {formatCents(item.unitPrice, data.currency)}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <T>Redemptions</T>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>
+                  <T>Voucher</T>
+                </TableHead>
+                <TableHead>
+                  <T>Result</T>
+                </TableHead>
+                <TableHead className="text-right">
+                  <T>Amount</T>
+                </TableHead>
+                <TableHead className="text-right">
+                  <T>When</T>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {!redemptions || redemptions.data.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
+                    <T>No redemptions attached to this order.</T>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                redemptions.data.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-mono text-xs">{r.voucherCode}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          r.result === "SUCCESS"
+                            ? "default"
+                            : r.result === "ROLLBACK"
+                              ? "secondary"
+                              : "destructive"
+                        }
+                      >
+                        {r.result}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
+                      {r.amount != null ? formatCents(r.amount, data.currency) : "—"}
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground text-xs">
+                      {new Date(r.createdAt).toLocaleString()}
                     </TableCell>
                   </TableRow>
                 ))

@@ -281,6 +281,7 @@ const redeemProc = os.vouchers.redeem
       customerId: input.customerId,
       order: input.order,
       orderId: input.orderId,
+      externalOrderId: input.externalOrderId,
       idempotencyKey: input.idempotencyKey,
     });
     if (result.ok) {
@@ -330,6 +331,7 @@ const stackRedeemProc = os.vouchers.stackRedeem
       voucherCodes: input.codes,
       customerId: input.customerId,
       orderId: input.orderId,
+      externalOrderId: input.externalOrderId,
       order: input.order,
       idempotencyKey: input.idempotencyKey,
     });

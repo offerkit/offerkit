@@ -20,7 +20,10 @@ export const validateInput = z.object({
 });
 
 export const redeemInput = validateInput.extend({
-  orderId: z.string().optional(),
+  /** uuid of an `order` row created via the orders API. */
+  orderId: z.string().uuid().optional(),
+  /** Free-form integrator order reference (Shopify id, etc). */
+  externalOrderId: z.string().min(1).max(120).optional(),
   idempotencyKey: z.string().min(1).max(128).optional(),
 });
 
@@ -59,7 +62,8 @@ export const redeemOutput = z.object({
 export const stackRedeemInput = z.object({
   codes: z.array(z.string().min(1)).min(1).max(20),
   customerId: z.string().uuid().optional(),
-  orderId: z.string().optional(),
+  orderId: z.string().uuid().optional(),
+  externalOrderId: z.string().min(1).max(120).optional(),
   order: orderInput,
   idempotencyKey: z.string().min(1).max(128).optional(),
 });

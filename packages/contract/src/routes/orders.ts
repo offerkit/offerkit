@@ -37,4 +37,27 @@ export const orders = {
     .route({ method: "DELETE", path: "/orders/{id}", summary: "Soft-delete an order" })
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ ok: z.literal(true) })),
+  redemptions: oc
+    .route({
+      method: "GET",
+      path: "/orders/{id}/redemptions",
+      summary: "List redemptions attached to an order",
+    })
+    .input(z.object({ id: z.string().uuid() }))
+    .output(
+      z.object({
+        data: z.array(
+          z.object({
+            id: z.string().uuid(),
+            voucherCode: z.string(),
+            voucherId: z.string().uuid(),
+            customerId: z.string().uuid().nullable(),
+            result: z.enum(["SUCCESS", "FAILURE", "ROLLBACK"]),
+            failureReason: z.string().nullable(),
+            amount: z.number().int().nullable(),
+            createdAt: z.string().datetime(),
+          }),
+        ),
+      }),
+    ),
 };
