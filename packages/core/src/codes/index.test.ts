@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import fc from "fast-check";
 import { generateCode, generateReferralCode, generateUniqueCodes } from "./index.ts";
 
 describe("generateCode", () => {
@@ -43,6 +44,43 @@ describe("generateCode", () => {
 
   it("rejects length < 1", () => {
     expect(() => generateCode({ length: 0 })).toThrow();
+  });
+
+  it("property: prefix and suffix appear verbatim, body is from the alphabet", () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1, max: 24 }),
+        fc.stringMatching(/^[A-Z]{0,8}$/),
+        fc.stringMatching(/^[A-Z]{0,4}$/),
+        fc.constantFrom(
+          "alphanumeric" as const,
+          "uppercase" as const,
+          "lowercase" as const,
+          "numeric" as const,
+        ),
+        (length, prefix, suffix, charset) => {
+          const code = generateCode({ length, prefix, suffix, charset });
+          expect(code.startsWith(prefix)).toBe(true);
+          expect(code.endsWith(suffix)).toBe(true);
+          expect(code.length).toBe(prefix.length + length + suffix.length);
+          const body = code.slice(prefix.length, prefix.length + length);
+          if (charset === "numeric") expect(body).toMatch(/^[2-9]+$/);
+          if (charset === "uppercase") expect(body).toMatch(/^[A-HJ-NP-Z2-9]+$/);
+          if (charset === "lowercase") expect(body).toMatch(/^[a-km-z2-9]+$/);
+        },
+      ),
+      { numRuns: 50 },
+    );
+  });
+
+  it("property: excludeConfusable strips 0,O,1,l,I from the body", () => {
+    fc.assert(
+      fc.property(fc.integer({ min: 1, max: 32 }), (length) => {
+        const code = generateCode({ length, excludeConfusable: true });
+        expect(code).not.toMatch(/[0O1lI]/);
+      }),
+      { numRuns: 50 },
+    );
   });
 });
 
