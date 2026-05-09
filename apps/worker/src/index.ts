@@ -10,6 +10,7 @@ import {
 } from "@open-voucherify/core/jobs";
 import { deliverWebhook } from "@open-voucherify/core/events";
 import { expirePoints } from "@open-voucherify/core/loyalty";
+import { bulkGenerateCodes, type BulkCodesPayload } from "@open-voucherify/core/codes";
 import { initOtel, logger } from "@open-voucherify/core/observability";
 
 initOtel({ serviceName: "open-voucherify-worker" });
@@ -30,6 +31,19 @@ registry.register("webhook.deliver", async ({ jobId, payload }) => {
     return;
   }
   await deliverWebhook(db, { deliveryId });
+});
+
+registry.register("bulk_codes.generate", async ({ jobId, payload }) => {
+  const typed = payload as Partial<BulkCodesPayload>;
+  if (!typed.campaignId || typeof typed.count !== "number") {
+    log.warn({ jobId }, "bulk_codes.generate job missing campaignId/count");
+    return;
+  }
+  const result = await bulkGenerateCodes(db, {
+    campaignId: typed.campaignId,
+    count: typed.count,
+  });
+  log.info({ jobId, generated: result.generated }, "bulk codes generated");
 });
 
 registry.register("loyalty.points.expire", async ({ jobId }) => {

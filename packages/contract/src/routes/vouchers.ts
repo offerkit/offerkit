@@ -47,7 +47,15 @@ export const vouchers = {
   bulk: oc
     .route({ method: "POST", path: "/vouchers/bulk", summary: "Generate vouchers in bulk" })
     .input(voucherBulkCreateInput)
-    .output(z.object({ campaignId: z.string().uuid(), generated: z.number().int() })),
+    .output(
+      z.object({
+        campaignId: z.string().uuid(),
+        // Number generated synchronously; 0 when the work was queued.
+        generated: z.number().int(),
+        // Set when count exceeds the inline threshold and the job is queued.
+        jobId: z.string().uuid().optional(),
+      }),
+    ),
 
   // Hot path
   validate: oc

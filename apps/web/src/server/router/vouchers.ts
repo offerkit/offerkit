@@ -2,7 +2,8 @@ import { ORPCError, implement } from "@orpc/server";
 import { and, eq, ilike, isNull, sql } from "drizzle-orm";
 import { schema } from "@open-voucherify/db";
 import { contract } from "@open-voucherify/contract/router";
-import { generateUniqueCodes } from "@open-voucherify/core/codes";
+import { generateUniqueCodes, BULK_INLINE_THRESHOLD } from "@open-voucherify/core/codes";
+import { enqueueJob } from "@open-voucherify/core/jobs";
 import { redeem, stackRedeem, validate } from "@open-voucherify/core/redemption";
 import type { RequestContext } from "@/server/context";
 import { db } from "@/lib/db";
@@ -222,6 +223,14 @@ const bulk = os.vouchers.bulk
       throw new ORPCError("BAD_REQUEST", {
         message: "Loyalty programs use members + points, not voucher codes",
       });
+    }
+
+    if (input.count > BULK_INLINE_THRESHOLD) {
+      const jobId = await enqueueJob(db(), "bulk_codes.generate", {
+        campaignId: campaign.id,
+        count: input.count,
+      });
+      return { campaignId: campaign.id, generated: 0, jobId };
     }
 
     const codes = await generateUniqueCodes(

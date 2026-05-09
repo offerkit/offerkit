@@ -36,6 +36,8 @@ interface NavItem {
   // `label` and `groupLabel` are stable English source strings; <T> wraps them at render.
   label: string;
   icon: React.ComponentType<{ className?: string }>;
+  /** Render only for users with role=admin. */
+  adminOnly?: boolean;
 }
 
 const sections: { label: string; items: NavItem[] }[] = [
@@ -79,42 +81,46 @@ const sections: { label: string; items: NavItem[] }[] = [
     label: "Settings",
     items: [
       { href: "/settings/api-keys", label: "API keys", icon: Key },
-      { href: "/settings/audit-log", label: "Audit log", icon: FileText },
-      { href: "/settings/users", label: "Users", icon: Boxes },
+      { href: "/settings/audit-log", label: "Audit log", icon: FileText, adminOnly: true },
+      { href: "/settings/users", label: "Users", icon: Boxes, adminOnly: true },
       { href: "/settings", label: "Workspace", icon: Settings },
     ],
   },
 ];
 
-export function DashboardNav() {
+export function DashboardNav({ role }: { role: "admin" | "member" }) {
   const pathname = usePathname();
   return (
     <>
-      {sections.map((section) => (
-        <SidebarGroup key={section.label}>
-          <SidebarGroupLabel>
-            <T>{section.label}</T>
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {section.items.map((item) => {
-                const Icon = item.icon;
-                const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-                return (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton isActive={active} render={<Link href={item.href} />}>
-                      <Icon className="size-4" />
-                      <span>
-                        <T>{item.label}</T>
-                      </span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      ))}
+      {sections.map((section) => {
+        const items = section.items.filter((it) => !it.adminOnly || role === "admin");
+        if (items.length === 0) return null;
+        return (
+          <SidebarGroup key={section.label}>
+            <SidebarGroupLabel>
+              <T>{section.label}</T>
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {items.map((item) => {
+                  const Icon = item.icon;
+                  const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton isActive={active} render={<Link href={item.href} />}>
+                        <Icon className="size-4" />
+                        <span>
+                          <T>{item.label}</T>
+                        </span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        );
+      })}
     </>
   );
 }

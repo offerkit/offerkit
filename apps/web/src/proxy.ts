@@ -11,6 +11,9 @@ const PUBLIC_PATHS = [
 ];
 const CHANGE_PASSWORD_PATH = "/change-password";
 
+// Routes that require role=admin. Matched as path prefixes.
+const ADMIN_PATHS = ["/settings/users", "/settings/audit-log"];
+
 export async function proxy(req: NextRequest): Promise<NextResponse> {
   const { pathname } = req.nextUrl;
 
@@ -32,6 +35,13 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
   if (mustChange && pathname !== CHANGE_PASSWORD_PATH) {
     const url = req.nextUrl.clone();
     url.pathname = CHANGE_PASSWORD_PATH;
+    return NextResponse.redirect(url);
+  }
+
+  const role = (session.user as { role?: "admin" | "member" }).role ?? "member";
+  if (role !== "admin" && ADMIN_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/dashboard";
     return NextResponse.redirect(url);
   }
 

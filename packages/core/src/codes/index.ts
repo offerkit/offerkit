@@ -1,5 +1,7 @@
 import { randomInt } from "node:crypto";
 
+export { BULK_INLINE_THRESHOLD, bulkGenerateCodes, type BulkCodesPayload } from "./bulk-job.ts";
+
 export interface CodeConfig {
   length?: number;
   prefix?: string;

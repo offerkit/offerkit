@@ -39,7 +39,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </div>
         </SidebarHeader>
         <SidebarContent>
-          <DashboardNav />
+          <DashboardNav
+            role={(session.user as { role?: "admin" | "member" }).role ?? "member"}
+          />
         </SidebarContent>
         <SidebarFooter>
           <SidebarMenu>
