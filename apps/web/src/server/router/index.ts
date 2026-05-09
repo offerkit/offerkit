@@ -14,6 +14,7 @@ import { validationRulesRouter } from "./validation-rules";
 import { vouchersRouter } from "./vouchers";
 import { eventsRouter, webhooksRouter } from "./webhooks";
 import { insightsRouter } from "./insights";
+import { usersRouter } from "./users";
 
 const os = implement(contract).$context<RequestContext>();
 
@@ -51,4 +52,5 @@ export const router = os.router({
   webhooks: webhooksRouter,
   events: eventsRouter,
   insights: insightsRouter,
+  users: usersRouter,
 });

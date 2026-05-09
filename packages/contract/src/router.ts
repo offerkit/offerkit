@@ -11,6 +11,7 @@ import { validationRules } from "./routes/validation-rules.ts";
 import { vouchers } from "./routes/vouchers.ts";
 import { events, webhooks } from "./routes/webhooks.ts";
 import { insights } from "./routes/insights.ts";
+import { users } from "./routes/users.ts";
 
 const healthOutput = z.object({
   status: z.literal("ok"),
@@ -44,6 +45,7 @@ export const contract = {
   webhooks,
   events,
   insights,
+  users,
 };
 
 export type Contract = typeof contract;
