@@ -1,39 +1,145 @@
-# offerkit
+<p align="center">
+  <img src="https://www.openplaceholder.com/1200x400/OfferKit" alt="OfferKit" width="800" />
+</p>
 
-Self-hostable, MIT-licensed open-source alternative to Voucherify. Promotion engine: coupons, discounts, gift cards, loyalty programs, referrals, customer segments, validation rules. Surfaces: dashboard + REST API + TypeScript SDK + CLI + MCP server.
+<h1 align="center">OfferKit</h1>
 
-> **Status:** v1.0 in active development. Phase 1 (foundation) is complete: monorepo, auth, DB schema, observability, worker queue, embedded docs site, oRPC + OpenAPI surface. Promotion features land in Phase 2+.
+<p align="center">
+  <strong>Agent-first, dev-friendly, open-source promotion engine you self-host.</strong>
+</p>
 
-## Quick start (local dev)
+<p align="center">
+  <a href="#-why-offerkit">Why OfferKit</a> ·
+  <a href="#-quick-start">Quick Start</a> ·
+  <a href="#-self-host">Self-Host</a> ·
+  <a href="#-sdk--cli--mcp">SDK &amp; CLI</a> ·
+  <a href="#-docs">Docs</a> ·
+  <a href="#-license">License</a>
+</p>
 
-Requirements: Docker.
+OfferKit is a complete promotion engine — coupons, gift cards, loyalty, referrals, customer segments, validation rules — surfaced as a dashboard, a typed REST API, a TypeScript SDK, a CLI, and a curated MCP server. One Docker compose or one Railway click and you have it running on your own infra. Strict TypeScript, MIT throughout, agentic from day one.
+
+## 🤖 Why OfferKit
+
+**Agent-first.** The MCP server is a first-class surface, not bolted on. Every mutating endpoint declares its risk level (`safe` / `mutating` / `destructive`) so LLM hosts can render the right confirmation. New procedures opt into MCP exposure declaratively via `.meta()` — no separate package to update.
+
+**Dev-friendly.** The typed SDK is derived directly from the oRPC contract, so client types stay in lockstep with the server with zero codegen. Strict TypeScript, no `any`, no `as` casts. The `/docs` site lives inside the app (Fumadocs). Local-first dev — Docker compose, no CI, lefthook is the only quality gate.
+
+**Open source.** MIT throughout the monorepo. No CLA at v1.0. No commercial features paywalled. Built entirely on top of MIT/Apache OSS.
+
+**Self-hostable.** One `docker compose up` brings up web + worker + Postgres. One Railway click does the same in production. Postgres-backed everything (no Redis, no separate queue infra). OpenTelemetry-ready out of the box for any OTLP backend.
+
+## ✨ Features
+
+- 🎟️ Discount engine — fixed-amount, percentage, with optional caps, scoped to products or collections
+- 🧾 Stackable redemptions — apply N codes to one order atomically, all-or-nothing
+- 💳 Gift cards — full ledger, partial spend, atomic rollback
+- 🏆 Loyalty — programs, tiers, earning rules, points ledger, expiration
+- 👥 Referrals — `{PREFIX}-{code}` codes, dual-reward conversions
+- 🧩 Customer segments — JSON Logic rules with live preview
+- ✅ Validation rules — debuggable, traceable; tested on every redemption
+- ⚙️ Background jobs — Postgres-backed queue, no Redis required
+- 🔭 Observability — OpenTelemetry traces, metrics, logs out of the box
+- 🔐 Audit log — every mutation with actor, before/after, IP, user agent
+- 🤖 MCP server — declaratively-exposed tools with risk-level metadata
+- 📜 MIT — every package, every dependency
+
+## 🚀 Quick Start
+
+Requires Docker.
 
 ```bash
+git clone https://github.com/offerkit/offerkit.git
+cd offerkit
 cp .env.example .env
 docker compose up
 ```
 
-Then open <http://localhost:3000> and sign in with the `ADMIN_EMAIL` / `ADMIN_PASSWORD` you set in `.env`. You'll be prompted to change the password on first sign-in.
+Visit <http://localhost:3000> and sign in with the `ADMIN_EMAIL` / `ADMIN_PASSWORD` you set in `.env`. The first sign-in forces a password change.
 
-## Quick start (Node + pnpm)
+## 🏠 Self-Host
 
-Requirements: Node 24+, pnpm 10+, a running Postgres.
+### Docker compose
 
-```bash
-pnpm install
-cp .env.example .env  # edit DATABASE_URL etc.
-pnpm --filter @offerkit/db push
-pnpm --filter @offerkit/web dev          # web on :3000
-pnpm --filter @offerkit/worker dev       # worker on :9091
-```
+The `docker-compose.yml` brings up `web` + `worker` + `postgres`. Migrations run automatically on web boot. See [`/docs/self-host`](apps/web/content/docs/self-host.mdx) for env vars and tuning.
 
-## Deploy on Railway
+### Railway
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new)
 
 The repo ships a `railway.toml` with a `web` service (Dockerfile builder, healthcheck `/api/v1/ready`) and a `worker` service. Provision a Postgres in the same Railway project; reference its `DATABASE_URL` into both services.
 
-## Repo layout
+## 📦 SDK & CLI & MCP
+
+### TypeScript SDK
+
+```bash
+pnpm add @offerkit/sdk
+```
+
+```ts
+import { createClient } from "@offerkit/sdk";
+
+const client = createClient({
+  baseUrl: "https://your-offerkit-deployment",
+  apiKey: process.env.OFFERKIT_API_KEY!,
+});
+
+const result = await client.vouchers.redeem({
+  code: "SUMMER10",
+  order: { amount: 9999, currency: "USD" },
+});
+```
+
+### CLI
+
+```bash
+pnpm add -g @offerkit/cli
+offerkit login --url https://your-offerkit-deployment --api-key offerkit_…
+offerkit vouchers list
+offerkit vouchers redeem SUMMER10 --amount 9999
+```
+
+### MCP server
+
+```jsonc
+{
+  "mcpServers": {
+    "offerkit": {
+      "command": "npx",
+      "args": ["-y", "@offerkit/mcp"],
+      "env": {
+        "OFFERKIT_API_URL": "https://your-offerkit-deployment",
+        "OFFERKIT_API_KEY": "offerkit_…"
+      }
+    }
+  }
+}
+```
+
+## 🛠️ Built With
+
+- **Next.js 16** (App Router, React 19) — dashboard + REST API
+- **Postgres 17** + **Drizzle ORM** — schema, migrations, typed client
+- **Better Auth** — sessions for the dashboard, API keys for programmatic access
+- **oRPC** + **Zod** — single contract for RPC, REST, and OpenAPI
+- **Tailwind v4** + **shadcn/ui** — dashboard UI
+- **gt-next** — i18n runtime
+- **Fumadocs** — `/docs` embedded in the app
+- **OpenTelemetry** — traces, metrics, logs
+- **TypeScript** strict, **MIT** throughout
+
+## 🏗️ Development
+
+Requires Node 24+, pnpm 10+, a running Postgres.
+
+```bash
+pnpm install
+cp .env.example .env             # edit DATABASE_URL etc.
+pnpm --filter @offerkit/db push
+pnpm --filter @offerkit/web dev          # web on :3000
+pnpm --filter @offerkit/worker dev       # worker on :9091
+```
 
 ```
 apps/web         Next.js dashboard + REST API + /docs (Fumadocs embedded)
@@ -48,19 +154,47 @@ packages/ui      Shared UI primitives
 packages/config  ESLint + TS + Tailwind shared configs
 ```
 
-## Quality gate
+```bash
+pnpm -r typecheck
+pnpm -r lint
+pnpm -r test
+```
+
+## ✅ Quality Gate
 
 No CI. Local-only enforcement via [lefthook](https://github.com/evilmartians/lefthook):
 
 ```bash
 pnpm install            # auto-runs `lefthook install`
-git commit              # pre-commit runs eslint + typecheck + fallow + test
+git commit              # pre-commit runs eslint + typecheck + test
 ```
 
-## Stack
+## 📖 Docs
 
-Next.js 16 (App Router) · React 19 · Postgres 17 · Drizzle ORM · Better Auth · oRPC · gt-next (i18n runtime) · Fumadocs (embedded at `/docs`) · OpenTelemetry · Tailwind v4 · shadcn/ui · TypeScript strict · MIT license throughout.
+The full reference lives inside the app at <http://localhost:3000/docs> (Fumadocs-rendered). Source MDX at [`apps/web/content/docs/`](apps/web/content/docs/).
 
-## License
+## 🤝 Contributing
+
+1. Fork and branch off `main`
+2. `pnpm install` (hooks auto-install)
+3. Make your change; the lefthook pre-commit gate runs eslint + typecheck + test
+4. Open a PR
+
+No CLA at v1.0.
+
+## 📄 License
 
 [MIT](./LICENSE)
+
+## 🙏 Acknowledgments
+
+Banner generated with [Open Placeholder](https://github.com/akshitkrnagpal/open-placeholder). Built on top of [Next.js](https://nextjs.org/), [Drizzle ORM](https://orm.drizzle.team/), [Better Auth](https://better-auth.com/), [oRPC](https://orpc.dev/), [Fumadocs](https://fumadocs.dev/), [gt-next](https://generaltranslation.com/), and the rest of the OSS world.
+
+<p align="center">
+  <a href="./LICENSE"><img src="https://img.shields.io/github/license/offerkit/offerkit?style=flat-square" alt="MIT License" /></a>
+  <a href="https://github.com/offerkit/offerkit/stargazers"><img src="https://img.shields.io/github/stars/offerkit/offerkit?style=flat-square" alt="GitHub stars" /></a>
+  <a href="https://github.com/offerkit/offerkit/network/members"><img src="https://img.shields.io/github/forks/offerkit/offerkit?style=flat-square" alt="GitHub forks" /></a>
+  <!-- npm version (uncomment after publishing @offerkit/sdk):
+  <a href="https://www.npmjs.com/package/@offerkit/sdk"><img src="https://img.shields.io/npm/v/@offerkit/sdk?style=flat-square" alt="npm version" /></a>
+  -->
+</p>
