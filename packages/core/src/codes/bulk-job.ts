@@ -1,7 +1,7 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { schema, type Db } from "@open-voucherify/db";
 import { logger } from "../observability/index.ts";
-import { generateUniqueCodes } from "./index.ts";
+import { generateUniqueCodes } from "./generate.ts";
 
 const log = logger.child({ component: "bulk-codes" });
 
