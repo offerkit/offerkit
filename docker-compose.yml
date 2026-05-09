@@ -19,7 +19,7 @@ services:
   web:
     build:
       context: .
-      target: web
+      dockerfile: apps/web/Dockerfile
     restart: unless-stopped
     depends_on:
       postgres:
@@ -39,7 +39,7 @@ services:
   worker:
     build:
       context: .
-      target: worker
+      dockerfile: apps/worker/Dockerfile
     restart: unless-stopped
     depends_on:
       postgres:

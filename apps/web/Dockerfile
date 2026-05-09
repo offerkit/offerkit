@@ -1,13 +1,20 @@
 # syntax=docker/dockerfile:1.7
+#
+# Self-contained Dockerfile for the @offerkit/web service.
+# Build context is the repo root.
+#
+# Per-service Dockerfile (instead of a single multi-stage with `target`)
+# because Railway's config-as-code does not expose a Dockerfile target
+# selector — the only reliable way to pick which runtime image is
+# produced is to use a different file per service.
 
 FROM node:24-alpine AS base
 RUN corepack enable && corepack prepare pnpm@10.23.0 --activate
 WORKDIR /app
 
-# ---------- deps stage: install workspace deps ----------
+# ---------- deps: install workspace deps from lockfile ----------
 FROM base AS deps
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
-COPY turbo.json ./
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json ./
 COPY apps/web/package.json apps/web/
 COPY apps/worker/package.json apps/worker/
 COPY packages/config/package.json packages/config/
@@ -20,7 +27,7 @@ COPY packages/mcp/package.json packages/mcp/
 COPY packages/ui/package.json packages/ui/
 RUN pnpm install --frozen-lockfile
 
-# ---------- builder stage: build the web app ----------
+# ---------- builder: build the web app ----------
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -28,8 +35,8 @@ COPY . .
 RUN pnpm install --frozen-lockfile --offline
 RUN pnpm --filter @offerkit/web build
 
-# ---------- web runtime ----------
-FROM node:24-alpine AS web
+# ---------- runtime ----------
+FROM node:24-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
@@ -40,12 +47,3 @@ COPY --from=builder /app/apps/web/public ./apps/web/public
 COPY --from=builder /app/packages/db/drizzle ./packages/db/drizzle
 EXPOSE 3000
 CMD ["node", "apps/web/server.js"]
-
-# ---------- worker runtime ----------
-FROM base AS worker
-ENV NODE_ENV=production
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-RUN pnpm install --frozen-lockfile --offline
-EXPOSE 9091
-CMD ["pnpm", "--filter", "@offerkit/worker", "start"]
