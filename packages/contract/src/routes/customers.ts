@@ -1,5 +1,6 @@
 import { oc } from "@orpc/contract";
 import { z } from "zod";
+import { mcpMeta } from "../mcp.ts";
 import {
   customerCreateInput,
   customerOutput,
@@ -9,10 +10,12 @@ import { paginatedOutput, paginationInput } from "../schemas/pagination.ts";
 
 export const customers = {
   list: oc
+    .meta(mcpMeta({ expose: true, riskLevel: "safe" }))
     .route({ method: "GET", path: "/customers", summary: "List customers" })
     .input(paginationInput.extend({ search: z.string().optional() }))
     .output(paginatedOutput(customerOutput)),
   get: oc
+    .meta(mcpMeta({ expose: true, riskLevel: "safe" }))
     .route({ method: "GET", path: "/customers/{id}", summary: "Get customer" })
     .input(z.object({ id: z.string().uuid() }))
     .output(customerOutput),

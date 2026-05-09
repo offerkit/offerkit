@@ -1,5 +1,6 @@
 import { oc } from "@orpc/contract";
 import { z } from "zod";
+import { mcpMeta } from "../mcp.ts";
 import { paginatedOutput, paginationInput } from "../schemas/pagination.ts";
 import {
   voucherBulkCreateInput,
@@ -18,6 +19,7 @@ import {
 
 export const vouchers = {
   list: oc
+    .meta(mcpMeta({ expose: true, riskLevel: "safe" }))
     .route({ method: "GET", path: "/vouchers", summary: "List vouchers" })
     .input(
       paginationInput.extend({
@@ -29,6 +31,7 @@ export const vouchers = {
     )
     .output(paginatedOutput(voucherOutput)),
   get: oc
+    .meta(mcpMeta({ expose: true, riskLevel: "safe" }))
     .route({ method: "GET", path: "/vouchers/{code}", summary: "Get voucher by code" })
     .input(z.object({ code: z.string() }))
     .output(voucherOutput),
@@ -59,6 +62,7 @@ export const vouchers = {
 
   // Hot path
   validate: oc
+    .meta(mcpMeta({ expose: true, riskLevel: "safe" }))
     .route({
       method: "POST",
       path: "/vouchers/{code}/validate",
@@ -67,6 +71,14 @@ export const vouchers = {
     .input(validateInput)
     .output(validateOutput),
   redeem: oc
+    .meta(
+      mcpMeta({
+        expose: true,
+        riskLevel: "mutating",
+        description:
+          "Commit a redemption against an order. Confirm with the user before calling. Use idempotencyKey to safely retry.",
+      }),
+    )
     .route({
       method: "POST",
       path: "/vouchers/{code}/redemption",
@@ -76,6 +88,14 @@ export const vouchers = {
     .output(redeemOutput),
 
   stackRedeem: oc
+    .meta(
+      mcpMeta({
+        expose: true,
+        riskLevel: "mutating",
+        description:
+          "Apply N codes to one order atomically. Either every voucher commits or none. Confirm with the user before calling.",
+      }),
+    )
     .route({
       method: "POST",
       path: "/redemptions/stack",

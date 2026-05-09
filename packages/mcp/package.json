@@ -14,7 +14,9 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "@open-voucherify/contract": "workspace:*",
     "@open-voucherify/sdk": "workspace:*",
+    "@orpc/contract": "^1.14.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {

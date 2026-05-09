@@ -1,0 +1,204 @@
+import { and, eq, inArray, isNull } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
+import { schema, type Db } from "@open-voucherify/db";
+import { calculateDiscount, type DiscountResult } from "../discount/index.ts";
+import { emitEvent } from "../events/index.ts";
+import { logger, withSpan } from "../observability/index.ts";
+import { checkActivation, messageFor } from "./shared.ts";
+import type {
+  StackEntry,
+  StackRedeemInput,
+  StackRedeemResult,
+  VoucherRow,
+} from "./types.ts";
+
+const log = logger.child({ component: "redemption" });
+
+/**
+ * Redeem multiple voucher codes against one order in a single
+ * transaction. Either every redemption commits (with one batch_id) or
+ * none do. Vouchers are locked in code-sorted order to avoid deadlocks
+ * across concurrent stack calls that share codes.
+ */
+export function stackRedeem(
+  db: Db,
+  input: StackRedeemInput,
+): Promise<StackRedeemResult> {
+  return withSpan(
+    "voucher.stack_redeem",
+    () => stackRedeemImpl(db, input),
+    {
+      "voucher.code_count": input.voucherCodes.length,
+      ...(input.customerId ? { "customer.id": input.customerId } : {}),
+    },
+  );
+}
+
+type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+
+async function stackRedeemImpl(
+  db: Db,
+  input: StackRedeemInput,
+): Promise<StackRedeemResult> {
+  if (input.voucherCodes.length === 0) {
+    return { ok: false, code: "voucher_not_found", message: "No voucher codes supplied" };
+  }
+  // Dedupe + sort to make the lock acquisition order deterministic.
+  const codes = [...new Set(input.voucherCodes)].sort();
+
+  return db.transaction(async (tx) => {
+    if (input.idempotencyKey) {
+      const replay = await replayBatch(tx, input);
+      if (replay) return replay;
+    }
+
+    const lockedRows = (await tx
+      .select()
+      .from(schema.voucher)
+      .where(and(inArray(schema.voucher.code, codes), isNull(schema.voucher.deletedAt)))
+      .orderBy(schema.voucher.code)
+      .for("update")) as VoucherRow[];
+
+    if (lockedRows.length !== codes.length) {
+      const found = new Set(lockedRows.map((v) => v.code));
+      const missing = codes.find((c) => !found.has(c));
+      return {
+        ok: false,
+        code: "voucher_not_found",
+        message: `Voucher not found: ${String(missing)}`,
+      };
+    }
+
+    const now = new Date();
+    for (const v of lockedRows) {
+      const failure = checkActivation(v, now);
+      if (failure) {
+        return { ok: false, code: failure, message: messageFor(failure) };
+      }
+      // Stackable redemptions don't support gift cards yet — they need
+      // partial-spend semantics that don't compose with calculateDiscount.
+      if (v.type === "GIFT_CARD") {
+        return {
+          ok: false,
+          code: "voucher_disabled",
+          message: `Gift card ${v.code} cannot be stacked with discounts`,
+        };
+      }
+    }
+
+    const result = calculateDiscount({
+      order: input.order,
+      vouchers: lockedRows
+        .filter((v) => v.discount)
+        .map((v) => ({
+          id: v.id,
+          code: v.code,
+          type: v.discount!.type,
+          amount: v.discount!.amount,
+          percent: v.discount!.percent,
+          maxDiscountAmount: v.discount!.maxDiscountAmount,
+          priority: v.priority,
+          exclusive: v.exclusive,
+          createdAt: v.createdAt.toISOString(),
+        })),
+    });
+
+    const batchId = randomUUID();
+    const entries: StackEntry[] = [];
+    for (const applied of result.appliedDiscounts) {
+      const voucher = lockedRows.find((v) => v.id === applied.voucherId);
+      if (!voucher) throw new Error("calculateDiscount returned an unknown voucherId");
+
+      await tx
+        .update(schema.voucher)
+        .set({ redemptionCount: voucher.redemptionCount + 1, updatedAt: now })
+        .where(eq(schema.voucher.id, voucher.id));
+
+      const [row] = await tx
+        .insert(schema.redemption)
+        .values({
+          voucherId: voucher.id,
+          customerId: input.customerId ?? null,
+          orderId: input.orderId ?? null,
+          externalOrderId: input.externalOrderId ?? null,
+          result: "SUCCESS",
+          amount: applied.amount,
+          breakdown: { breakdown: result.breakdown, finalOrder: result.finalOrder },
+          idempotencyKey: input.idempotencyKey ?? null,
+          batchId,
+        })
+        .returning({ id: schema.redemption.id });
+      if (!row) throw new Error("stack redemption insert failed");
+
+      entries.push({
+        voucherCode: voucher.code,
+        voucherId: voucher.id,
+        redemptionId: row.id,
+        amount: applied.amount,
+      });
+    }
+
+    const totalAmount = result.appliedDiscounts.reduce((s, a) => s + a.amount, 0);
+    await emitEvent(tx, {
+      type: "voucher.stack.redeemed",
+      entityId: batchId,
+      payload: {
+        batchId,
+        customerId: input.customerId ?? null,
+        orderId: input.orderId ?? null,
+        externalOrderId: input.externalOrderId ?? null,
+        amount: totalAmount,
+        finalOrder: result.finalOrder,
+        entries,
+      },
+    });
+
+    return {
+      ok: true,
+      batchId,
+      amount: totalAmount,
+      finalOrder: result.finalOrder,
+      breakdown: result.breakdown,
+      entries,
+    };
+  });
+}
+
+async function replayBatch(tx: Tx, input: StackRedeemInput): Promise<StackRedeemResult | null> {
+  if (!input.idempotencyKey) return null;
+  const prior = await tx
+    .select()
+    .from(schema.redemption)
+    .where(
+      and(
+        eq(schema.redemption.idempotencyKey, input.idempotencyKey),
+        eq(schema.redemption.result, "SUCCESS"),
+      ),
+    );
+  const priorBatch = prior.find((r) => r.batchId !== null);
+  if (!priorBatch?.batchId) return null;
+
+  const batch = prior.filter((r) => r.batchId === priorBatch.batchId);
+  const breakdown =
+    (priorBatch.breakdown as { breakdown?: DiscountResult["breakdown"] })?.breakdown ?? [];
+  const finalOrder =
+    (priorBatch.breakdown as { finalOrder?: DiscountResult["finalOrder"] })?.finalOrder ?? {
+      amount: 0,
+      currency: input.order.currency,
+    };
+  log.info({ batchId: priorBatch.batchId, idempotent: true }, "replaying stack redemption");
+  return {
+    ok: true,
+    batchId: priorBatch.batchId,
+    amount: batch.reduce((s, r) => s + (r.amount ?? 0), 0),
+    finalOrder,
+    breakdown,
+    entries: batch.map((r) => ({
+      voucherCode: "",
+      voucherId: r.voucherId,
+      redemptionId: r.id,
+      amount: r.amount ?? 0,
+    })),
+    idempotent: true,
+  };
+}

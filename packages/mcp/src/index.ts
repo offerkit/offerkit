@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { z } from "zod";
+import { isContractProcedure, type AnyContractRouter } from "@orpc/contract";
+import { z, type ZodRawShape } from "zod";
+import { contract, type McpExposure, type ProcedureMeta } from "@open-voucherify/contract";
 import { createClient, type Client } from "@open-voucherify/sdk";
 
 const baseUrl = process.env["OVX_API_URL"] ?? "http://localhost:3000";
@@ -25,179 +27,106 @@ const server = new McpServer(
   { name: "open-voucherify", version: "0.0.0" },
   {
     instructions:
-      "Tools to manage promotions: validate/redeem vouchers, list customers and " +
-      "campaigns, query loyalty members. Mutating tools (redeem, stack-redeem) " +
-      "should be confirmed with the user before invocation.",
+      "Tools for managing promotions through open-voucherify. Each tool's risk level " +
+      "(`safe`, `mutating`, `destructive`) is in its description — confirm with the " +
+      "user before invoking anything mutating or destructive.",
   },
 );
 
-server.registerTool(
-  "vouchers_list",
-  {
-    title: "List vouchers",
-    description: "List vouchers, optionally filtered by code, campaign, or customer.",
-    inputSchema: {
-      search: z.string().optional(),
-      campaignId: z.string().uuid().optional(),
-      customerId: z.string().uuid().optional(),
-      limit: z.number().int().min(1).max(100).default(20),
+interface DiscoveredProc {
+  path: readonly string[];
+  inputShape: ZodRawShape | undefined;
+  exposure: McpExposure;
+  summary: string | undefined;
+}
+
+/** Walk the contract tree and yield every procedure tagged with `meta.mcp.expose`. */
+function* discover(node: AnyContractRouter, path: string[] = []): Generator<DiscoveredProc> {
+  if (isContractProcedure(node)) {
+    const def = (node as { "~orpc": { meta?: ProcedureMeta; inputSchema?: unknown; route?: { summary?: string } } })["~orpc"];
+    const exposure = def.meta?.mcp;
+    if (!exposure?.expose) return;
+    yield {
+      path,
+      inputShape: extractShape(def.inputSchema),
+      exposure,
+      summary: def.route?.summary,
+    };
+    return;
+  }
+  if (!node || typeof node !== "object") return;
+  for (const [key, child] of Object.entries(node as Record<string, AnyContractRouter>)) {
+    yield* discover(child, [...path, key]);
+  }
+}
+
+/**
+ * MCP's registerTool wants a `ZodRawShape` (field map), not a ZodObject.
+ * Procedures in the contract use `z.object({...})` for inputs. The shape
+ * lives on `.shape`. For non-ZodObject inputs (rare), fall back to `undefined`
+ * so MCP treats the tool as no-arg.
+ */
+function extractShape(input: unknown): ZodRawShape | undefined {
+  if (!input || typeof input !== "object") return undefined;
+  const candidate = (input as { shape?: unknown }).shape;
+  if (candidate && typeof candidate === "object") {
+    return candidate as ZodRawShape;
+  }
+  return undefined;
+}
+
+/**
+ * Reach into the typed SDK client by procedure path and invoke it. The
+ * `unknown`-everywhere shape is unavoidable for dynamic indexing — the
+ * type safety is provided by the contract's zod input schema, validated
+ * by oRPC at call time.
+ */
+async function callBySdkPath(path: readonly string[], args: unknown): Promise<unknown> {
+  let node: unknown = ovx;
+  for (const seg of path) {
+    if (!node || typeof node !== "object") {
+      throw new Error(`MCP tool path ${path.join(".")} not reachable on SDK client`);
+    }
+    node = (node as Record<string, unknown>)[seg];
+  }
+  if (typeof node !== "function") {
+    throw new Error(`MCP tool path ${path.join(".")} did not resolve to a callable`);
+  }
+  return (node as (input: unknown) => Promise<unknown>)(args);
+}
+
+const RISK_HINT: Record<McpExposure["riskLevel"], string> = {
+  safe: "Read-only.",
+  mutating: "Mutating — confirm with the user before calling. Use idempotencyKey to safely retry.",
+  destructive: "Destructive — cannot be undone. Confirm with the user.",
+};
+
+function description(d: DiscoveredProc): string {
+  const base = d.exposure.description ?? d.summary ?? d.path.join(".");
+  return `${base} (${d.exposure.riskLevel}) ${RISK_HINT[d.exposure.riskLevel]}`;
+}
+
+const exposed: string[] = [];
+for (const proc of discover(contract)) {
+  const toolName = proc.exposure.name ?? proc.path.join("_");
+  exposed.push(toolName);
+  server.registerTool(
+    toolName,
+    {
+      title: proc.summary ?? proc.path.join("."),
+      description: description(proc),
+      ...(proc.inputShape ? { inputSchema: proc.inputShape } : {}),
     },
-  },
-  async (args) => jsonContent(await ovx.vouchers.list(args)),
-);
-
-server.registerTool(
-  "vouchers_get",
-  {
-    title: "Get voucher by code",
-    description: "Look up a single voucher.",
-    inputSchema: { code: z.string() },
-  },
-  async ({ code }) => jsonContent(await ovx.vouchers.get({ code })),
-);
-
-server.registerTool(
-  "vouchers_validate",
-  {
-    title: "Validate a voucher (read-only preview)",
-    description: "Preview the discount a voucher would apply to a given order amount.",
-    inputSchema: {
-      code: z.string(),
-      orderAmount: z.number().int().min(0),
-      currency: z.string().length(3).default("USD"),
-      customerId: z.string().uuid().optional(),
-    },
-  },
-  async ({ code, orderAmount, currency, customerId }) =>
-    jsonContent(
-      await ovx.vouchers.validate({
-        code,
-        ...(customerId ? { customerId } : {}),
-        order: { amount: orderAmount, currency, items: [] },
-      }),
-    ),
-);
-
-server.registerTool(
-  "vouchers_redeem",
-  {
-    title: "Redeem a voucher (mutating)",
-    description:
-      "Commit a redemption against an order. Confirm with the user before calling. " +
-      "Use idempotencyKey to safely retry.",
-    inputSchema: {
-      code: z.string(),
-      orderAmount: z.number().int().min(0),
-      currency: z.string().length(3).default("USD"),
-      customerId: z.string().uuid().optional(),
-      idempotencyKey: z.string().min(1).max(128).optional(),
-    },
-  },
-  async ({ code, orderAmount, currency, customerId, idempotencyKey }) =>
-    jsonContent(
-      await ovx.vouchers.redeem({
-        code,
-        ...(customerId ? { customerId } : {}),
-        ...(idempotencyKey ? { idempotencyKey } : {}),
-        order: { amount: orderAmount, currency, items: [] },
-      }),
-    ),
-);
-
-server.registerTool(
-  "vouchers_stack_redeem",
-  {
-    title: "Redeem multiple vouchers in one batch (mutating)",
-    description:
-      "Apply N codes to one order atomically. Either every voucher commits or none. " +
-      "Confirm with the user before calling.",
-    inputSchema: {
-      codes: z.array(z.string()).min(1).max(20),
-      orderAmount: z.number().int().min(0),
-      currency: z.string().length(3).default("USD"),
-      customerId: z.string().uuid().optional(),
-      idempotencyKey: z.string().min(1).max(128).optional(),
-    },
-  },
-  async ({ codes, orderAmount, currency, customerId, idempotencyKey }) =>
-    jsonContent(
-      await ovx.vouchers.stackRedeem({
-        codes,
-        ...(customerId ? { customerId } : {}),
-        ...(idempotencyKey ? { idempotencyKey } : {}),
-        order: { amount: orderAmount, currency, items: [] },
-      }),
-    ),
-);
-
-server.registerTool(
-  "campaigns_list",
-  {
-    title: "List campaigns",
-    description: "List campaigns of any type.",
-    inputSchema: {
-      search: z.string().optional(),
-      limit: z.number().int().min(1).max(100).default(20),
-    },
-  },
-  async (args) => jsonContent(await ovx.campaigns.list(args)),
-);
-
-server.registerTool(
-  "campaigns_get",
-  {
-    title: "Get a campaign",
-    inputSchema: { id: z.string().uuid() },
-  },
-  async ({ id }) => jsonContent(await ovx.campaigns.get({ id })),
-);
-
-server.registerTool(
-  "customers_list",
-  {
-    title: "List customers",
-    inputSchema: {
-      search: z.string().optional(),
-      limit: z.number().int().min(1).max(100).default(20),
-    },
-  },
-  async (args) => jsonContent(await ovx.customers.list(args)),
-);
-
-server.registerTool(
-  "customers_get",
-  {
-    title: "Get a customer",
-    inputSchema: { id: z.string().uuid() },
-  },
-  async ({ id }) => jsonContent(await ovx.customers.get({ id })),
-);
-
-server.registerTool(
-  "loyalty_member_history",
-  {
-    title: "Loyalty member transaction history",
-    description: "List a member's loyalty ledger entries (earn / redeem / adjust / expiry).",
-    inputSchema: { memberId: z.string().uuid() },
-  },
-  async ({ memberId }) => jsonContent(await ovx.loyalty.members.history({ id: memberId })),
-);
-
-server.registerTool(
-  "segments_preview",
-  {
-    title: "Preview a segment rule against existing customers",
-    description:
-      "Run a JSON Logic rule against the customer table and report match count + a sample.",
-    inputSchema: {
-      rule: z.record(z.string(), z.unknown()),
-      sampleSize: z.number().int().min(0).max(50).default(10),
-    },
-  },
-  async ({ rule, sampleSize }) =>
-    jsonContent(await ovx.segments.preview({ rule, sampleSize })),
-);
+    async (args: unknown) => jsonContent(await callBySdkPath(proc.path, args ?? {})),
+  );
+}
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
-process.stderr.write(`ovx-mcp: connected to ${baseUrl}\n`);
+process.stderr.write(
+  `ovx-mcp: connected to ${baseUrl} with ${String(exposed.length)} tools (${exposed.join(", ")})\n`,
+);
+
+// Suppress unused-var warning: z is required for the registerTool generic type
+// inference even though we don't construct schemas directly here.
+void z;

@@ -1,5 +1,6 @@
 import { oc } from "@orpc/contract";
 import { z } from "zod";
+import { mcpMeta } from "../mcp.ts";
 import { paginatedOutput, paginationInput } from "../schemas/pagination.ts";
 import {
   loyaltyAdjustInput,
@@ -171,6 +172,13 @@ const members = {
       }),
     ),
   history: oc
+    .meta(
+      mcpMeta({
+        expose: true,
+        riskLevel: "safe",
+        description: "List a loyalty member's transaction history (earn / redeem / adjust / expiry).",
+      }),
+    )
     .route({
       method: "GET",
       path: "/loyalty/members/{id}/transactions",

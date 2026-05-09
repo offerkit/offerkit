@@ -1,5 +1,6 @@
 import { oc } from "@orpc/contract";
 import { z } from "zod";
+import { mcpMeta } from "../mcp.ts";
 import { customerOutput } from "../schemas/customer.ts";
 import { paginatedOutput, paginationInput } from "../schemas/pagination.ts";
 import {
@@ -31,6 +32,14 @@ export const segments = {
     .input(z.object({ id: z.string().uuid() }))
     .output(z.object({ ok: z.literal(true) })),
   preview: oc
+    .meta(
+      mcpMeta({
+        expose: true,
+        riskLevel: "safe",
+        description:
+          "Run a JSON Logic rule against existing customers and report match count plus a sample.",
+      }),
+    )
     .route({ method: "POST", path: "/segments/preview", summary: "Preview rule against customers" })
     .input(z.object({ rule: segmentRule, sampleSize: z.number().int().min(1).max(50).default(10) }))
     .output(

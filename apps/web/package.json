@@ -51,10 +51,12 @@
     "@tailwindcss/postcss": "^4",
     "@types/mdx": "^2.0.13",
     "@types/node": "^20",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "pg": "^8.20.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.5"
