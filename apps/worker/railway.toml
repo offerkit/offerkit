@@ -10,6 +10,7 @@
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
+dockerfileTarget = "worker"
 
 [deploy]
 startCommand = "pnpm --filter @offerkit/worker start"

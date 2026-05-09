@@ -8,6 +8,7 @@
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
+dockerfileTarget = "web"
 
 [deploy]
 startCommand = "node apps/web/server.js"
