@@ -61,7 +61,10 @@ export function writeAudit(args: WriteAuditArgs): void {
   if (!entity || rest.length === 0) return;
   const action = rest.join(".");
   const entityId = extractEntityId(args.input, args.output);
-  void db()
+  // Drizzle queries execute lazily — `.then()` / await is what triggers
+  // the SQL. Use a fire-and-forget `.catch` to keep the call non-blocking
+  // while still actually running the insert.
+  db()
     .insert(schema.auditLog)
     .values({
       actor: args.actor,
@@ -73,6 +76,9 @@ export function writeAudit(args: WriteAuditArgs): void {
       after: sanitizeJson(args.input),
       ip: args.ip,
       userAgent: args.userAgent,
+    })
+    .catch(() => {
+      // Audit failure must not break the request path.
     });
 }
 

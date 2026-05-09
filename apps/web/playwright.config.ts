@@ -8,10 +8,12 @@ export default defineConfig({
   retries: 0,
   workers: 1,
   reporter: [["list"]],
+  globalSetup: "./e2e/global-setup.ts",
   use: {
     baseURL,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
+    storageState: "./e2e/.storage-state.json",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 });

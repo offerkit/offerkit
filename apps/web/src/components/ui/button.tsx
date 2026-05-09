@@ -1,4 +1,4 @@
-import { Button as ButtonPrimitive } from "@base-ui/react/button"
+import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
@@ -40,18 +40,53 @@ const buttonVariants = cva(
   }
 )
 
+type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> &
+  VariantProps<typeof buttonVariants> & {
+    /**
+     * Render the button as a different element (e.g. a Next `<Link>`) while
+     * keeping the styling. Mirrors @base-ui/react's `render` API for
+     * compatibility with existing call sites.
+     */
+    render?: React.ReactElement
+  }
+
 function Button({
   className,
   variant = "default",
   size = "default",
+  type,
+  render,
+  children,
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+}: ButtonProps) {
+  const merged = cn(buttonVariants({ variant, size, className }))
+
+  if (render) {
+    const element = render as React.ReactElement<{
+      className?: string
+      children?: React.ReactNode
+    }>
+    return React.cloneElement(element, {
+      ...props,
+      ...element.props,
+      "data-slot": "button",
+      className: cn(merged, element.props.className),
+      children: element.props.children ?? children,
+    } as React.HTMLAttributes<HTMLElement>)
+  }
+
   return (
-    <ButtonPrimitive
+    <button
       data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
+      // Default to type="button" so a Button without an explicit type can't
+      // accidentally submit an enclosing form. Form-submit buttons opt in
+      // explicitly with `type="submit"`.
+      type={type ?? "button"}
+      className={merged}
       {...props}
-    />
+    >
+      {children}
+    </button>
   )
 }
 

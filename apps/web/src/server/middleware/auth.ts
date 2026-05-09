@@ -37,10 +37,13 @@ async function authenticateApiKey(authorization: string | null): Promise<AuthedU
   const computed = hashApiKeySecret(parsed.secret);
   if (!constantTimeEqualHex(computed, row.hashedSecret)) return null;
   // Best-effort lastUsedAt update; don't block the request on it.
-  void db()
+  // Drizzle queries are lazy — `.catch` triggers execution while keeping
+  // the call non-blocking.
+  db()
     .update(schema.apiKey)
     .set({ lastUsedAt: new Date(), updatedAt: new Date() })
-    .where(eq(schema.apiKey.id, row.id));
+    .where(eq(schema.apiKey.id, row.id))
+    .catch(() => {});
   return {
     id: row.id,
     email: `apikey:${row.prefix}`,
