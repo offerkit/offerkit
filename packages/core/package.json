@@ -1,5 +1,5 @@
 {
-  "name": "@open-voucherify/core",
+  "name": "@offerkit/core",
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
@@ -21,8 +21,8 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@open-voucherify/contract": "workspace:*",
-    "@open-voucherify/db": "workspace:*",
+    "@offerkit/contract": "workspace:*",
+    "@offerkit/db": "workspace:*",
     "@opentelemetry/api": "^1.9.1",
     "drizzle-orm": "^0.45.2",
     "json-logic-js": "^2.0.5",
@@ -30,7 +30,7 @@
     "pino": "^10.3.1"
   },
   "devDependencies": {
-    "@open-voucherify/config": "workspace:*",
+    "@offerkit/config": "workspace:*",
     "@types/json-logic-js": "^2.0.8",
     "@types/node": "^25.6.2",
     "@types/pg": "^8.20.0",

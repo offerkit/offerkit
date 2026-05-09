@@ -1,13 +1,13 @@
 ---
 title: Get started
-description: Spin up open-voucherify locally and run your first redemption.
+description: Spin up offerkit locally and run your first redemption.
 ---
 
 ## 1. Run the stack
 
 ```bash
-git clone https://github.com/akshitkrnagpal/open-voucherify
-cd open-voucherify
+git clone https://github.com/offerkit/offerkit
+cd offerkit
 cp .env.example .env  # set ADMIN_EMAIL, ADMIN_PASSWORD, BETTER_AUTH_SECRET
 docker compose up -d
 ```
@@ -19,7 +19,7 @@ The web app is at `http://localhost:3000`, the worker exposes a health endpoint 
 Sign in to `/sign-in`, change the password when prompted, then go to **Settings → API keys** and click **Mint key**. You'll see a token like:
 
 ```
-ovx_AbCdEfGhIjKl_mnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV
+offerkit_AbCdEfGhIjKl_mnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV
 ```
 
 It's shown once. Copy it.
@@ -27,34 +27,34 @@ It's shown once. Copy it.
 ## 3. Hit the API
 
 ```bash
-export OVX_API_URL=http://localhost:3000
-export OVX_API_KEY=ovx_…
+export OFFERKIT_API_URL=http://localhost:3000
+export OFFERKIT_API_KEY=offerkit_…
 
-curl -H "Authorization: Bearer $OVX_API_KEY" \
-  $OVX_API_URL/api/v1/customers?limit=5
+curl -H "Authorization: Bearer $OFFERKIT_API_KEY" \
+  $OFFERKIT_API_URL/api/v1/customers?limit=5
 ```
 
 ## 4. End-to-end redemption
 
 ```bash
 # Create a discount campaign
-curl -H "Authorization: Bearer $OVX_API_KEY" -H 'Content-Type: application/json' \
-  -X POST $OVX_API_URL/api/v1/campaigns \
+curl -H "Authorization: Bearer $OFFERKIT_API_KEY" -H 'Content-Type: application/json' \
+  -X POST $OFFERKIT_API_URL/api/v1/campaigns \
   -d '{"name":"Spring 2026","type":"DISCOUNT","currency":"USD"}'
 
 # Create a $10-off voucher inside it (use the campaignId from above)
-curl -H "Authorization: Bearer $OVX_API_KEY" -H 'Content-Type: application/json' \
-  -X POST $OVX_API_URL/api/v1/vouchers \
+curl -H "Authorization: Bearer $OFFERKIT_API_KEY" -H 'Content-Type: application/json' \
+  -X POST $OFFERKIT_API_URL/api/v1/vouchers \
   -d '{"campaignId":"…","type":"DISCOUNT","discount":{"type":"AMOUNT","amount":1000}}'
 
 # Validate (read-only preview)
-curl -H "Authorization: Bearer $OVX_API_KEY" -H 'Content-Type: application/json' \
-  -X POST $OVX_API_URL/api/v1/vouchers/<CODE>/validate \
+curl -H "Authorization: Bearer $OFFERKIT_API_KEY" -H 'Content-Type: application/json' \
+  -X POST $OFFERKIT_API_URL/api/v1/vouchers/<CODE>/validate \
   -d '{"order":{"amount":5000,"currency":"USD","items":[]}}'
 
 # Redeem (commits a row)
-curl -H "Authorization: Bearer $OVX_API_KEY" -H 'Content-Type: application/json' \
-  -X POST $OVX_API_URL/api/v1/vouchers/<CODE>/redemption \
+curl -H "Authorization: Bearer $OFFERKIT_API_KEY" -H 'Content-Type: application/json' \
+  -X POST $OFFERKIT_API_URL/api/v1/vouchers/<CODE>/redemption \
   -d '{"order":{"amount":5000,"currency":"USD","items":[]},"idempotencyKey":"order-123"}'
 ```
 

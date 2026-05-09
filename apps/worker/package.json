@@ -1,5 +1,5 @@
 {
-  "name": "@open-voucherify/worker",
+  "name": "@offerkit/worker",
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
@@ -11,12 +11,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@open-voucherify/core": "workspace:*",
-    "@open-voucherify/db": "workspace:*",
+    "@offerkit/core": "workspace:*",
+    "@offerkit/db": "workspace:*",
     "@opentelemetry/api": "^1.9.1"
   },
   "devDependencies": {
-    "@open-voucherify/config": "workspace:*",
+    "@offerkit/config": "workspace:*",
     "@types/node": "^25.6.2",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3"

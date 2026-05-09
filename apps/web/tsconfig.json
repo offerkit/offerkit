@@ -1,5 +1,5 @@
 {
-  "extends": "@open-voucherify/config/typescript/nextjs.json",
+  "extends": "@offerkit/config/typescript/nextjs.json",
   "compilerOptions": {
     "paths": {
       "@/*": ["./src/*"],

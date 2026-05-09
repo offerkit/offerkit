@@ -1,10 +1,10 @@
 import { ORPCError, implement } from "@orpc/server";
 import { and, eq, ilike, isNull, sql } from "drizzle-orm";
-import { schema } from "@open-voucherify/db";
-import { contract } from "@open-voucherify/contract/router";
-import { generateUniqueCodes, BULK_INLINE_THRESHOLD } from "@open-voucherify/core/codes";
-import { enqueueJob } from "@open-voucherify/core/jobs";
-import { redeem, stackRedeem, validate } from "@open-voucherify/core/redemption";
+import { schema } from "@offerkit/db";
+import { contract } from "@offerkit/contract/router";
+import { generateUniqueCodes, BULK_INLINE_THRESHOLD } from "@offerkit/core/codes";
+import { enqueueJob } from "@offerkit/core/jobs";
+import { redeem, stackRedeem, validate } from "@offerkit/core/redemption";
 import type { RequestContext } from "@/server/context";
 import { db } from "@/lib/db";
 import { requireSession } from "@/server/middleware/auth";

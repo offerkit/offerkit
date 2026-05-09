@@ -1,6 +1,6 @@
 import { implement } from "@orpc/server";
 import { sql } from "drizzle-orm";
-import { contract } from "@open-voucherify/contract/router";
+import { contract } from "@offerkit/contract/router";
 import type { RequestContext } from "@/server/context";
 import { db } from "@/lib/db";
 import { requireSession } from "@/server/middleware/auth";

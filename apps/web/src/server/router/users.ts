@@ -1,9 +1,9 @@
 import { ORPCError, implement } from "@orpc/server";
 import { and, desc, eq, isNotNull } from "drizzle-orm";
 import { hashPassword } from "better-auth/crypto";
-import { schema } from "@open-voucherify/db";
-import { contract } from "@open-voucherify/contract/router";
-import { sendEmail } from "@open-voucherify/core/email";
+import { schema } from "@offerkit/db";
+import { contract } from "@offerkit/contract/router";
+import { sendEmail } from "@offerkit/core/email";
 import type { RequestContext } from "@/server/context";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -112,7 +112,7 @@ const create = os.users.create.use(requireSession).handler(async ({ context, inp
   const row = await findUserOrThrow(result.user.id);
   await sendEmail({
     to: input.email,
-    subject: "Your open-voucherify account",
+    subject: "Your Offerkit account",
     html: `<p>Your account has been created. Sign in with the temporary password: <code>${password}</code></p>`,
     text: `Your temporary password: ${password}`,
   });
@@ -133,7 +133,7 @@ const resetPassword = os.users.resetPassword
     const updated = await findUserOrThrow(row.id);
     await sendEmail({
       to: row.email,
-      subject: "Your open-voucherify password was reset",
+      subject: "Your Offerkit password was reset",
       html: `<p>Your password has been reset. New temporary password: <code>${password}</code></p>`,
       text: `New temporary password: ${password}`,
     });

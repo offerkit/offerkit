@@ -1,4 +1,4 @@
-# open-voucherify
+# offerkit
 
 Self-hostable, MIT-licensed open-source alternative to Voucherify. Promotion engine: coupons, discounts, gift cards, loyalty programs, referrals, customer segments, validation rules. Surfaces: dashboard + REST API + TypeScript SDK + CLI + MCP server.
 
@@ -22,9 +22,9 @@ Requirements: Node 24+, pnpm 10+, a running Postgres.
 ```bash
 pnpm install
 cp .env.example .env  # edit DATABASE_URL etc.
-pnpm --filter @open-voucherify/db push
-pnpm --filter @open-voucherify/web dev          # web on :3000
-pnpm --filter @open-voucherify/worker dev       # worker on :9091
+pnpm --filter @offerkit/db push
+pnpm --filter @offerkit/web dev          # web on :3000
+pnpm --filter @offerkit/worker dev       # worker on :9091
 ```
 
 ## Deploy on Railway
@@ -41,9 +41,9 @@ apps/worker      Long-running Node process — runs the Postgres job queue
 packages/contract  oRPC router contract + Zod schemas (single source of truth)
 packages/core    Domain logic (rules, redemption, discount, jobs, observability, email)
 packages/db      Drizzle schema + client + migrations
-packages/sdk     @open-voucherify/sdk — typed TS client
-packages/cli     @open-voucherify/cli — `ovx` CLI
-packages/mcp     @open-voucherify/mcp — MCP server (stdio + http)
+packages/sdk     @offerkit/sdk — typed TS client
+packages/cli     @offerkit/cli — `offerkit` CLI
+packages/mcp     @offerkit/mcp — MCP server (stdio + http)
 packages/ui      Shared UI primitives
 packages/config  ESLint + TS + Tailwind shared configs
 ```

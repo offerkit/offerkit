@@ -3,19 +3,19 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { readFile, writeFile, chmod, mkdir } from "node:fs/promises";
 import { Command } from "commander";
-import { createClient, type Client } from "@open-voucherify/sdk";
+import { createClient, type Client } from "@offerkit/sdk";
 
 interface Config {
   baseUrl: string;
   apiKey?: string;
 }
 
-const RC_PATH = join(homedir(), ".ovxrc");
+const RC_PATH = join(homedir(), ".offerkitrc");
 
 async function loadConfig(): Promise<Config> {
   const fromEnv: Config = {
-    baseUrl: process.env["OVX_API_URL"] ?? "http://localhost:3000",
-    ...(process.env["OVX_API_KEY"] ? { apiKey: process.env["OVX_API_KEY"] } : {}),
+    baseUrl: process.env["OFFERKIT_API_URL"] ?? "http://localhost:3000",
+    ...(process.env["OFFERKIT_API_KEY"] ? { apiKey: process.env["OFFERKIT_API_KEY"] } : {}),
   };
   try {
     const raw = await readFile(RC_PATH, "utf8");
@@ -35,7 +35,9 @@ async function saveConfig(cfg: Config): Promise<void> {
 async function client(): Promise<Client> {
   const cfg = await loadConfig();
   if (!cfg.apiKey) {
-    process.stderr.write("No API key configured. Run `ovx login` or set OVX_API_KEY.\n");
+    process.stderr.write(
+      "No API key configured. Run `offerkit login` or set OFFERKIT_API_KEY.\n",
+    );
     process.exit(2);
   }
   return createClient({ baseUrl: cfg.baseUrl, apiKey: cfg.apiKey });
@@ -51,13 +53,13 @@ function fail(err: unknown): never {
 }
 
 const program = new Command();
-program.name("ovx").description("open-voucherify CLI").version("0.0.0");
+program.name("offerkit").description("Offerkit CLI").version("0.0.0");
 
 program
   .command("login")
-  .description("Save the API base URL + key to ~/.ovxrc")
+  .description("Save the API base URL + key to ~/.offerkitrc")
   .requiredOption("--url <url>", "Deployment base URL")
-  .requiredOption("--api-key <key>", "API key (ovx_<prefix>_<secret>)")
+  .requiredOption("--api-key <key>", "API key (offerkit_<prefix>_<secret>)")
   .action(async (opts: { url: string; apiKey: string }) => {
     await saveConfig({ baseUrl: opts.url, apiKey: opts.apiKey });
     process.stdout.write(`Saved to ${RC_PATH}\n`);

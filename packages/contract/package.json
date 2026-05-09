@@ -1,5 +1,5 @@
 {
-  "name": "@open-voucherify/contract",
+  "name": "@offerkit/contract",
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
@@ -20,7 +20,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@open-voucherify/config": "workspace:*",
+    "@offerkit/config": "workspace:*",
     "@types/node": "^25.6.2",
     "typescript": "^6.0.3"
   }

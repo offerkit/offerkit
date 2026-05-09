@@ -39,7 +39,7 @@
     "shadcn",
     "eslint-config-next",
     "@modelcontextprotocol/sdk",
-    "@open-voucherify/sdk",
+    "@offerkit/sdk",
     "@orpc/openapi",
     "@orpc/server"
   ],

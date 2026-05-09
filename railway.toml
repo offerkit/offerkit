@@ -18,6 +18,6 @@ restartPolicyMaxRetries = 5
 # and set its start command to the value below. Healthcheck on :9091/health.
 [services.worker]
 target = "worker"
-startCommand = "pnpm --filter @open-voucherify/worker start"
+startCommand = "pnpm --filter @offerkit/worker start"
 healthcheckPath = "/health"
 healthcheckTimeout = 30

@@ -1,4 +1,4 @@
-import { schema, type Db } from "@open-voucherify/db";
+import { schema, type Db } from "@offerkit/db";
 import { and, eq, isNull, lte, or, sql } from "drizzle-orm";
 import { logger } from "../observability/index.ts";
 

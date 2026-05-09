@@ -23,16 +23,16 @@ importers:
       '@base-ui/react':
         specifier: ^1.4.1
         version: 1.4.1(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      '@open-voucherify/contract':
+      '@offerkit/contract':
         specifier: workspace:*
         version: link:../../packages/contract
-      '@open-voucherify/core':
+      '@offerkit/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@open-voucherify/db':
+      '@offerkit/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@open-voucherify/sdk':
+      '@offerkit/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
       '@opentelemetry/api':
@@ -114,7 +114,7 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
-      '@open-voucherify/config':
+      '@offerkit/config':
         specifier: workspace:*
         version: link:../../packages/config
       '@playwright/test':
@@ -159,17 +159,17 @@ importers:
 
   apps/worker:
     dependencies:
-      '@open-voucherify/core':
+      '@offerkit/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@open-voucherify/db':
+      '@offerkit/db':
         specifier: workspace:*
         version: link:../../packages/db
       '@opentelemetry/api':
         specifier: ^1.9.1
         version: 1.9.1
     devDependencies:
-      '@open-voucherify/config':
+      '@offerkit/config':
         specifier: workspace:*
         version: link:../../packages/config
       '@types/node':
@@ -184,14 +184,14 @@ importers:
 
   packages/cli:
     dependencies:
-      '@open-voucherify/sdk':
+      '@offerkit/sdk':
         specifier: workspace:*
         version: link:../sdk
       commander:
         specifier: ^14.0.3
         version: 14.0.3
     devDependencies:
-      '@open-voucherify/config':
+      '@offerkit/config':
         specifier: workspace:*
         version: link:../config
       '@types/node':
@@ -249,7 +249,7 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
-      '@open-voucherify/config':
+      '@offerkit/config':
         specifier: workspace:*
         version: link:../config
       '@types/node':
@@ -261,10 +261,10 @@ importers:
 
   packages/core:
     dependencies:
-      '@open-voucherify/contract':
+      '@offerkit/contract':
         specifier: workspace:*
         version: link:../contract
-      '@open-voucherify/db':
+      '@offerkit/db':
         specifier: workspace:*
         version: link:../db
       '@opentelemetry/api':
@@ -283,7 +283,7 @@ importers:
         specifier: ^10.3.1
         version: 10.3.1
     devDependencies:
-      '@open-voucherify/config':
+      '@offerkit/config':
         specifier: workspace:*
         version: link:../config
       '@types/json-logic-js':
@@ -317,7 +317,7 @@ importers:
         specifier: ^8.20.0
         version: 8.20.0
     devDependencies:
-      '@open-voucherify/config':
+      '@offerkit/config':
         specifier: workspace:*
         version: link:../config
       '@types/node':
@@ -338,10 +338,10 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0
         version: 1.29.0(zod@4.4.3)
-      '@open-voucherify/contract':
+      '@offerkit/contract':
         specifier: workspace:*
         version: link:../contract
-      '@open-voucherify/sdk':
+      '@offerkit/sdk':
         specifier: workspace:*
         version: link:../sdk
       '@orpc/contract':
@@ -351,7 +351,7 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
-      '@open-voucherify/config':
+      '@offerkit/config':
         specifier: workspace:*
         version: link:../config
       '@types/node':
@@ -366,7 +366,7 @@ importers:
 
   packages/sdk:
     dependencies:
-      '@open-voucherify/contract':
+      '@offerkit/contract':
         specifier: workspace:*
         version: link:../contract
       '@orpc/client':
@@ -379,7 +379,7 @@ importers:
         specifier: ^1.14.2
         version: 1.14.2(@opentelemetry/api@1.9.1)
     devDependencies:
-      '@open-voucherify/config':
+      '@offerkit/config':
         specifier: workspace:*
         version: link:../config
       '@types/node':
@@ -394,7 +394,7 @@ importers:
 
   packages/ui:
     devDependencies:
-      '@open-voucherify/config':
+      '@offerkit/config':
         specifier: workspace:*
         version: link:../config
       '@types/node':

@@ -1,9 +1,9 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
-// API keys are presented as `ovx_<prefix12>_<secret40>`. The prefix is
-// stored in plaintext for fast lookup; the secret is HMAC-SHA256'd with
-// BETTER_AUTH_SECRET (already a required env var) so the database alone
-// can't authenticate a request.
+// API keys are presented as `offerkit_<prefix12>_<secret40>`. The prefix
+// is stored in plaintext for fast lookup; the secret is HMAC-SHA256'd
+// with BETTER_AUTH_SECRET (already a required env var) so the database
+// alone can't authenticate a request.
 
 const PREFIX_LEN = 12;
 const SECRET_LEN = 40;
@@ -40,7 +40,7 @@ export function mintApiKey(): MintedKey {
   const prefix = randString(PREFIX_LEN);
   const secret = randString(SECRET_LEN);
   return {
-    token: `ovx_${prefix}_${secret}`,
+    token: `offerkit_${prefix}_${secret}`,
     prefix,
     hashedSecret: hashApiKeySecret(secret),
   };
@@ -58,7 +58,7 @@ export function parseApiKeyHeader(authorization: string | null): ParsedApiKey | 
   if (!m) return null;
   const token = m[1] ?? "";
   const parts = token.split("_");
-  if (parts.length !== 3 || parts[0] !== "ovx") return null;
+  if (parts.length !== 3 || parts[0] !== "offerkit") return null;
   const prefix = parts[1] ?? "";
   const secret = parts[2] ?? "";
   if (prefix.length !== PREFIX_LEN || secret.length !== SECRET_LEN) return null;

@@ -1,6 +1,6 @@
 import { ORPCError, os } from "@orpc/server";
 import { and, eq, isNull } from "drizzle-orm";
-import { schema } from "@open-voucherify/db";
+import { schema } from "@offerkit/db";
 import type { RequestContext } from "@/server/context";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";

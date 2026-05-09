@@ -1,5 +1,5 @@
 import { eq, sql } from "drizzle-orm";
-import { schema, type Db } from "@open-voucherify/db";
+import { schema, type Db } from "@offerkit/db";
 import { emitEvent } from "../events/index.ts";
 import type { RedeemResult, VoucherRow } from "./types.ts";
 

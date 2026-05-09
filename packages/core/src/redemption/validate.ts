@@ -1,5 +1,5 @@
 import { and, eq, isNull } from "drizzle-orm";
-import { schema, type Db } from "@open-voucherify/db";
+import { schema, type Db } from "@offerkit/db";
 import { withSpan } from "../observability/index.ts";
 import { checkActivation, messageFor, previewDiscount, previewGiftCard } from "./shared.ts";
 import type { ValidateInput, ValidateResult, VoucherRow } from "./types.ts";

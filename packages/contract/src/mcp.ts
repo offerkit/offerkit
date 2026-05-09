@@ -1,6 +1,6 @@
 // Declarative MCP-exposure metadata. Attach via `.meta(mcpMeta({...}))`
 // on a contract procedure to make it appear as a tool in the
-// @open-voucherify/mcp server. Metadata is read at server boot — new
+// @offerkit/mcp server. Metadata is read at server boot — new
 // procedures opt in (or stay hidden) by tagging this `mcp` field
 // without touching the MCP package.
 

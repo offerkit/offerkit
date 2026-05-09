@@ -1,6 +1,6 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { eq, isNull } from "drizzle-orm";
-import { schema, type Db } from "@open-voucherify/db";
+import { schema, type Db } from "@offerkit/db";
 import { logger } from "../observability/index.ts";
 import { enqueueJob } from "../jobs/index.ts";
 
@@ -175,9 +175,9 @@ export async function deliverWebhook(db: Db, input: DeliverInput): Promise<void>
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-ovx-signature": signature,
-        "x-ovx-event-id": ev.id,
-        "x-ovx-event-type": ev.type,
+        "x-offerkit-signature": signature,
+        "x-offerkit-event-id": ev.id,
+        "x-offerkit-event-type": ev.type,
       },
       body,
     });

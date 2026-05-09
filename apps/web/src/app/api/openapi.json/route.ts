@@ -19,7 +19,7 @@ const generator = new OpenAPIGenerator({
 // For now we emit a stub spec with an honest description pointing to the
 // human-readable reference. The typed SDK derives its types from the
 // oRPC contract directly, not from the OpenAPI document, so consumers of
-// `@open-voucherify/sdk` are unaffected. External tools that need the
+// `@offerkit/sdk` are unaffected. External tools that need the
 // full spec should follow the migration path linked in the description.
 export function GET(): NextResponse {
   void generator;
@@ -28,10 +28,10 @@ export function GET(): NextResponse {
     {
       openapi: "3.1.0",
       info: {
-        title: "open-voucherify",
+        title: "offerkit",
         version: "0.0.0",
         description:
-          "The typed SDK in @open-voucherify/sdk derives from the oRPC contract directly. " +
+          "The typed SDK in @offerkit/sdk derives from the oRPC contract directly. " +
           "The auto-generated OpenAPI document is currently disabled pending a migration of " +
           "path-bearing procedures to oRPC's 'detailed' input structure. See /docs/api-reference " +
           "for the canonical surface.",

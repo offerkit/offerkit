@@ -1,8 +1,8 @@
-import { schema } from "@open-voucherify/db";
+import { schema } from "@offerkit/db";
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { logger } from "@open-voucherify/core/observability";
+import { logger } from "@offerkit/core/observability";
 
 const log = logger.child({ component: "seed-admin" });
 

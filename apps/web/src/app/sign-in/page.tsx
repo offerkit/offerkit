@@ -38,7 +38,7 @@ export default function SignInPage() {
             <T>Sign in</T>
           </CardTitle>
           <CardDescription>
-            <T>Welcome to open-voucherify</T>
+            <T>Welcome to Offerkit</T>
           </CardDescription>
         </CardHeader>
         <CardContent>

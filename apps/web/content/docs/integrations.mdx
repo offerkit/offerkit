@@ -3,23 +3,23 @@ title: SDK, CLI, and MCP
 description: Three programmatic surfaces over the same typed contract.
 ---
 
-All three call the same `/api/v1/...` REST API and authenticate with the same `OVX_API_KEY`.
+All three call the same `/api/v1/...` REST API and authenticate with the same `OFFERKIT_API_KEY`.
 
 ## TypeScript SDK
 
 ```bash
-pnpm add @open-voucherify/sdk
+pnpm add @offerkit/sdk
 ```
 
 ```ts
-import { createClient, verifyWebhook } from "@open-voucherify/sdk";
+import { createClient, verifyWebhook } from "@offerkit/sdk";
 
-const ovx = createClient({
-  baseUrl: "https://your-ovx-deployment",
-  apiKey: process.env.OVX_API_KEY!,
+const offerkit = createClient({
+  baseUrl: "https://your-offerkit-deployment",
+  apiKey: process.env.OFFERKIT_API_KEY!,
 });
 
-const result = await ovx.vouchers.redeem({
+const result = await offerkit.vouchers.redeem({
   code: "SUMMER10",
   order: { amount: 9999, currency: "USD", items: [] },
   idempotencyKey: "order-42",
@@ -28,37 +28,37 @@ const result = await ovx.vouchers.redeem({
 
 Types flow directly from the oRPC contract — no codegen step. Edge-runtime safe (`node:crypto` is only used for the optional `verifyWebhook` helper).
 
-## CLI (`ovx`)
+## CLI (`offerkit`)
 
 ```bash
-pnpm add -g @open-voucherify/cli
-ovx login --url https://your-ovx-deployment --api-key ovx_…
+pnpm add -g @offerkit/cli
+offerkit login --url https://your-offerkit-deployment --api-key offerkit_…
 
-ovx vouchers list
-ovx vouchers validate SUMMER10 --amount 9999
-ovx vouchers redeem SUMMER10 --amount 9999 --idempotency-key order-42
+offerkit vouchers list
+offerkit vouchers validate SUMMER10 --amount 9999
+offerkit vouchers redeem SUMMER10 --amount 9999 --idempotency-key order-42
 
-ovx campaigns create --name "Spring 2026" --type DISCOUNT --currency USD
-ovx customers list --search alice
+offerkit campaigns create --name "Spring 2026" --type DISCOUNT --currency USD
+offerkit customers list --search alice
 ```
 
-Config is stored in `~/.ovxrc` (chmod 0600). `OVX_API_URL` / `OVX_API_KEY` env vars override the file.
+Config is stored in `~/.offerkitrc` (chmod 0600). `OFFERKIT_API_URL` / `OFFERKIT_API_KEY` env vars override the file.
 
 ## MCP server
 
-`ovx-mcp` is a stdio MCP server exposing 11 curated tools (the curation is intentional — destructive verbs are explicitly listed so an agent can't accidentally invoke procedures we'd rather it not). Mutating tools (`vouchers_redeem`, `vouchers_stack_redeem`) carry "confirm with the user" guidance in their description.
+`offerkit-mcp` is a stdio MCP server exposing 11 curated tools (the curation is intentional — destructive verbs are explicitly listed so an agent can't accidentally invoke procedures we'd rather it not). Mutating tools (`vouchers_redeem`, `vouchers_stack_redeem`) carry "confirm with the user" guidance in their description.
 
 Add to your MCP host (Claude Desktop, Cursor, …):
 
 ```json
 {
   "mcpServers": {
-    "open-voucherify": {
+    "offerkit": {
       "command": "npx",
-      "args": ["-y", "@open-voucherify/mcp"],
+      "args": ["-y", "@offerkit/mcp"],
       "env": {
-        "OVX_API_URL": "https://your-ovx-deployment",
-        "OVX_API_KEY": "ovx_…"
+        "OFFERKIT_API_URL": "https://your-offerkit-deployment",
+        "OFFERKIT_API_KEY": "offerkit_…"
       }
     }
   }

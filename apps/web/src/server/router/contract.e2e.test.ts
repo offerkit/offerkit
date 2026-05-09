@@ -7,12 +7,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { ZodSmartCoercionPlugin } from "@orpc/zod";
-import { schema, type Db } from "@open-voucherify/db";
-import { createClient } from "@open-voucherify/sdk";
+import { schema, type Db } from "@offerkit/db";
+import { createClient } from "@offerkit/sdk";
 import { mintApiKey } from "@/lib/api-key";
 import { router } from "./index";
 
-// SDK contract end-to-end test. Drives the typed @open-voucherify/sdk
+// SDK contract end-to-end test. Drives the typed @offerkit/sdk
 // client against the live oRPC router via a fake fetch — no HTTP
 // server needed, no Next.js boot. Skips without TEST_DATABASE_URL so
 // the default workspace test run stays infra-free.
@@ -133,7 +133,7 @@ describe.skipIf(!enabled)("SDK contract e2e", () => {
     // Bulk-minted vouchers have no discount jsonb, so the calculation
     // legitimately returns 0. The point of this test is the round trip
     // through SDK -> oRPC -> router -> DB; the discount math is covered
-    // by the unit + property tests in @open-voucherify/core.
+    // by the unit + property tests in @offerkit/core.
     expect(redeemed.redemptionId).toMatch(/^[0-9a-f-]{36}$/);
   }, 30_000);
 });

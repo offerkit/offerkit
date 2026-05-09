@@ -1,5 +1,5 @@
 {
-  "name": "@open-voucherify/web",
+  "name": "@offerkit/web",
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
@@ -14,10 +14,10 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
-    "@open-voucherify/contract": "workspace:*",
-    "@open-voucherify/core": "workspace:*",
-    "@open-voucherify/db": "workspace:*",
-    "@open-voucherify/sdk": "workspace:*",
+    "@offerkit/contract": "workspace:*",
+    "@offerkit/core": "workspace:*",
+    "@offerkit/db": "workspace:*",
+    "@offerkit/sdk": "workspace:*",
     "@opentelemetry/api": "^1.9.1",
     "@orpc/contract": "^1.14.2",
     "@orpc/openapi": "^1.14.2",
@@ -46,7 +46,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@open-voucherify/config": "workspace:*",
+    "@offerkit/config": "workspace:*",
     "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4",
     "@types/mdx": "^2.0.13",

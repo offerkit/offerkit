@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { ORPCError } from "@orpc/server";
 import { and, eq, gt } from "drizzle-orm";
-import { schema } from "@open-voucherify/db";
+import { schema } from "@offerkit/db";
 import { db } from "@/lib/db";
 
 const IDEMPOTENCY_TTL_HOURS = 24;

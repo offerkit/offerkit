@@ -1,5 +1,5 @@
 import { and, eq, isNull } from "drizzle-orm";
-import { schema, type Db } from "@open-voucherify/db";
+import { schema, type Db } from "@offerkit/db";
 import type { DiscountResult } from "../discount/index.ts";
 import { emitEvent } from "../events/index.ts";
 import { logger, withSpan } from "../observability/index.ts";

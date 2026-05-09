@@ -1,19 +1,19 @@
 import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
-import { getDb } from "@open-voucherify/db";
+import { getDb } from "@offerkit/db";
 import {
   createJobRegistry,
   enqueueJob,
   ensureScheduled,
   reclaimStaleJobs,
   runWorker,
-} from "@open-voucherify/core/jobs";
-import { deliverWebhook } from "@open-voucherify/core/events";
-import { expirePoints } from "@open-voucherify/core/loyalty";
-import { bulkGenerateCodes, type BulkCodesPayload } from "@open-voucherify/core/codes";
-import { initOtel, logger } from "@open-voucherify/core/observability";
+} from "@offerkit/core/jobs";
+import { deliverWebhook } from "@offerkit/core/events";
+import { expirePoints } from "@offerkit/core/loyalty";
+import { bulkGenerateCodes, type BulkCodesPayload } from "@offerkit/core/codes";
+import { initOtel, logger } from "@offerkit/core/observability";
 
-initOtel({ serviceName: "open-voucherify-worker" });
+initOtel({ serviceName: "offerkit-worker" });
 const log = logger.child({ component: "worker" });
 
 const workerId = `worker-${randomUUID()}`;

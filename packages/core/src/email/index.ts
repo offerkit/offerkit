@@ -57,7 +57,7 @@ class ResendAdapter implements EmailAdapter {
 
 export function createEmailAdapter(env: NodeJS.ProcessEnv = process.env): EmailAdapter {
   const apiKey = env["RESEND_API_KEY"];
-  const from = env["RESEND_FROM"] ?? "open-voucherify <onboarding@resend.dev>";
+  const from = env["RESEND_FROM"] ?? "Offerkit <onboarding@resend.dev>";
   if (apiKey) {
     return new ResendAdapter(apiKey, from);
   }

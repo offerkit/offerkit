@@ -1,4 +1,4 @@
-import { schema } from "@open-voucherify/db";
+import { schema } from "@offerkit/db";
 import { db } from "@/lib/db";
 
 const MUTATION_ACTIONS = new Set([

@@ -3,19 +3,19 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { isContractProcedure, type AnyContractRouter } from "@orpc/contract";
 import { z, type ZodRawShape } from "zod";
-import { contract, type McpExposure, type ProcedureMeta } from "@open-voucherify/contract";
-import { createClient, type Client } from "@open-voucherify/sdk";
+import { contract, type McpExposure, type ProcedureMeta } from "@offerkit/contract";
+import { createClient, type Client } from "@offerkit/sdk";
 
-const baseUrl = process.env["OVX_API_URL"] ?? "http://localhost:3000";
-const apiKey = process.env["OVX_API_KEY"];
+const baseUrl = process.env["OFFERKIT_API_URL"] ?? "http://localhost:3000";
+const apiKey = process.env["OFFERKIT_API_KEY"];
 if (!apiKey) {
   process.stderr.write(
-    "OVX_API_KEY is required. Mint one in the dashboard at /settings/api-keys.\n",
+    "OFFERKIT_API_KEY is required. Mint one in the dashboard at /settings/api-keys.\n",
   );
   process.exit(2);
 }
 
-const ovx: Client = createClient({ baseUrl, apiKey });
+const offerkit: Client = createClient({ baseUrl, apiKey });
 
 function jsonContent(value: unknown) {
   return {
@@ -24,10 +24,10 @@ function jsonContent(value: unknown) {
 }
 
 const server = new McpServer(
-  { name: "open-voucherify", version: "0.0.0" },
+  { name: "offerkit", version: "0.0.0" },
   {
     instructions:
-      "Tools for managing promotions through open-voucherify. Each tool's risk level " +
+      "Tools for managing promotions through Offerkit. Each tool's risk level " +
       "(`safe`, `mutating`, `destructive`) is in its description — confirm with the " +
       "user before invoking anything mutating or destructive.",
   },
@@ -82,7 +82,7 @@ function extractShape(input: unknown): ZodRawShape | undefined {
  * by oRPC at call time.
  */
 async function callBySdkPath(path: readonly string[], args: unknown): Promise<unknown> {
-  let node: unknown = ovx;
+  let node: unknown = offerkit;
   for (const seg of path) {
     if (!node || typeof node !== "object") {
       throw new Error(`MCP tool path ${path.join(".")} not reachable on SDK client`);
@@ -124,7 +124,7 @@ for (const proc of discover(contract)) {
 const transport = new StdioServerTransport();
 await server.connect(transport);
 process.stderr.write(
-  `ovx-mcp: connected to ${baseUrl} with ${String(exposed.length)} tools (${exposed.join(", ")})\n`,
+  `offerkit-mcp: connected to ${baseUrl} with ${String(exposed.length)} tools (${exposed.join(", ")})\n`,
 );
 
 // Suppress unused-var warning: z is required for the registerTool generic type

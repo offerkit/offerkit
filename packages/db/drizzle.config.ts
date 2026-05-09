@@ -6,6 +6,6 @@ export default defineConfig({
   out: "./drizzle",
   casing: "snake_case",
   dbCredentials: {
-    url: process.env["DATABASE_URL"] ?? "postgres://localhost:5432/openvoucherify",
+    url: process.env["DATABASE_URL"] ?? "postgres://localhost:5432/offerkit",
   },
 });

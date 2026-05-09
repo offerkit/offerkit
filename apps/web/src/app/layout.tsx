@@ -20,7 +20,7 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "open-voucherify",
+  title: "offerkit",
   description: "Self-hostable open-source promotion engine",
 };
 

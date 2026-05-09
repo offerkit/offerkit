@@ -1,13 +1,13 @@
 import { ORPCError, implement } from "@orpc/server";
 import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
-import { schema } from "@open-voucherify/db";
-import { contract } from "@open-voucherify/contract/router";
+import { schema } from "@offerkit/db";
+import { contract } from "@offerkit/contract/router";
 import {
   adjust as adjustPoints,
   earn as earnPoints,
   redeemReward,
   listHistory,
-} from "@open-voucherify/core/loyalty";
+} from "@offerkit/core/loyalty";
 import type { RequestContext } from "@/server/context";
 import { db } from "@/lib/db";
 import { requireSession } from "@/server/middleware/auth";

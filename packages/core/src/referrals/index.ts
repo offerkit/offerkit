@@ -1,5 +1,5 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
-import { schema, type Db } from "@open-voucherify/db";
+import { schema, type Db } from "@offerkit/db";
 import { generateReferralCode } from "../codes/index.ts";
 import { logger } from "../observability/index.ts";
 

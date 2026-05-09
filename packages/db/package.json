@@ -1,5 +1,5 @@
 {
-  "name": "@open-voucherify/db",
+  "name": "@offerkit/db",
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
@@ -22,7 +22,7 @@
     "pg": "^8.20.0"
   },
   "devDependencies": {
-    "@open-voucherify/config": "workspace:*",
+    "@offerkit/config": "workspace:*",
     "@types/node": "^25.6.2",
     "@types/pg": "^8.20.0",
     "drizzle-kit": "^0.31.10",

@@ -167,7 +167,7 @@ export default function ApiKeysPage() {
                   <TableRow key={k.id}>
                     <TableCell>{k.name}</TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground">
-                      ovx_{k.prefix}_…
+                      offerkit_{k.prefix}_…
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">

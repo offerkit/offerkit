@@ -1,4 +1,4 @@
-import type { schema } from "@open-voucherify/db";
+import type { schema } from "@offerkit/db";
 
 export type CustomerRow = typeof schema.customer.$inferSelect;
 export type SegmentRow = typeof schema.segment.$inferSelect;

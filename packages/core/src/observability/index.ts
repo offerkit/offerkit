@@ -6,7 +6,7 @@ export interface InitOtelOptions {
   version?: string;
 }
 
-const tracer = trace.getTracer("open-voucherify");
+const tracer = trace.getTracer("offerkit");
 
 /**
  * Wrap a hot-path async operation in an OpenTelemetry span. The span

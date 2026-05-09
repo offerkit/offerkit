@@ -1,4 +1,4 @@
-import { getDb as getRawDb, type Db } from "@open-voucherify/db";
+import { getDb as getRawDb, type Db } from "@offerkit/db";
 
 let cached: Db | undefined;
 

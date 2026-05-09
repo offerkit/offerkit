@@ -28,10 +28,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <SidebarHeader>
           <div className="flex items-center gap-2 px-2 py-1.5">
             <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground text-xs font-semibold">
-              ov
+              ok
             </div>
             <div className="flex flex-col leading-none">
-              <span className="text-sm font-semibold">open-voucherify</span>
+              <span className="text-sm font-semibold">Offerkit</span>
               <span className="text-xs text-muted-foreground">
                 <T>Self-hosted</T>
               </span>

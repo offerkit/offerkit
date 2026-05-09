@@ -1,13 +1,13 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { schema } from "@open-voucherify/db";
-import { sendEmail } from "@open-voucherify/core/email";
+import { schema } from "@offerkit/db";
+import { sendEmail } from "@offerkit/core/email";
 import { db } from "./db.ts";
 
 let cached: ReturnType<typeof build> | undefined;
 
 function build() {
-  const baseURL = process.env["OVX_PUBLIC_URL"] ?? "http://localhost:3000";
+  const baseURL = process.env["OFFERKIT_PUBLIC_URL"] ?? "http://localhost:3000";
   const secret = process.env["BETTER_AUTH_SECRET"];
   if (!secret) {
     throw new Error("BETTER_AUTH_SECRET is not set");
@@ -30,7 +30,7 @@ function build() {
       sendResetPassword: async ({ user, url }) => {
         await sendEmail({
           to: user.email,
-          subject: "Reset your open-voucherify password",
+          subject: "Reset your Offerkit password",
           html: `<p>Open this link to reset your password: <a href="${url}">${url}</a></p>`,
           text: `Reset your password: ${url}`,
         });

@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, gt, isNull, lt, sql } from "drizzle-orm";
-import { schema, type Db } from "@open-voucherify/db";
+import { schema, type Db } from "@offerkit/db";
 import { logger } from "../observability/index.ts";
 
 const log = logger.child({ component: "loyalty" });

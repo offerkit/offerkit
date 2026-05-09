@@ -1,7 +1,7 @@
 import { ORPCError, implement } from "@orpc/server";
 import { and, desc, eq, sql, type SQL } from "drizzle-orm";
-import { schema } from "@open-voucherify/db";
-import { contract } from "@open-voucherify/contract/router";
+import { schema } from "@offerkit/db";
+import { contract } from "@offerkit/contract/router";
 import type { RequestContext } from "@/server/context";
 import { db } from "@/lib/db";
 import { requireSession } from "@/server/middleware/auth";

@@ -22,21 +22,21 @@ Every delivery is a `POST` with a JSON body:
 
 Headers:
 
-- `X-OVX-Event-Type` — convenience copy of `type`
-- `X-OVX-Event-Id` — copy of `id`
-- `X-OVX-Signature: t=<unix>,v1=<hex>` — HMAC signature
+- `X-Offerkit-Event-Type` — convenience copy of `type`
+- `X-Offerkit-Event-Id` — copy of `id`
+- `X-Offerkit-Signature: t=<unix>,v1=<hex>` — HMAC signature
 
 ## Verify
 
 `v1` = `HMAC-SHA256(secret, "<t>.<rawBody>")`. The TS SDK ships `verifyWebhook`:
 
 ```ts
-import { verifyWebhook } from "@open-voucherify/sdk";
+import { verifyWebhook } from "@offerkit/sdk";
 
-app.post("/ovx-webhook", async (req, res) => {
+app.post("/offerkit-webhook", async (req, res) => {
   const raw = await readRawBody(req);
-  const sig = req.headers["x-ovx-signature"] as string;
-  if (!verifyWebhook(raw, sig, process.env.OVX_WEBHOOK_SECRET!)) {
+  const sig = req.headers["x-offerkit-signature"] as string;
+  if (!verifyWebhook(raw, sig, process.env.OFFERKIT_WEBHOOK_SECRET!)) {
     return res.status(401).end();
   }
   const ev = JSON.parse(raw);

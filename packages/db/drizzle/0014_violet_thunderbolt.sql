@@ -1,0 +1,1 @@
+ALTER TABLE "workspace_setting" ALTER COLUMN "name" SET DEFAULT 'offerkit';

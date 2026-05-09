@@ -2,10 +2,10 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { createORPCClient } from "@orpc/client";
 import { OpenAPILink } from "@orpc/openapi-client/fetch";
 import type { ContractRouterClient } from "@orpc/contract";
-import { contract, type Contract } from "@open-voucherify/contract";
+import { contract, type Contract } from "@offerkit/contract";
 
 export interface SdkOptions {
-  /** Base URL of the open-voucherify deployment, e.g. https://ovx.example.com */
+  /** Base URL of the Offerkit deployment, e.g. https://offerkit.example.com */
   baseUrl: string;
   /** API key for programmatic access. Optional for browser callers using cookie auth. */
   apiKey?: string;
@@ -36,7 +36,7 @@ export interface VerifyWebhookOptions {
 }
 
 /**
- * Verify the X-OVX-Signature header against the raw request body.
+ * Verify the X-Offerkit-Signature header against the raw request body.
  *
  * Format: `t=<unix-seconds>,v1=<hex>`. v1 = HMAC-SHA256(secret, "${t}.${rawBody}").
  * Returns true on match within the tolerance window.

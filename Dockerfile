@@ -26,7 +26,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Re-run install to wire up workspace symlinks for the just-copied source.
 RUN pnpm install --frozen-lockfile --offline
-RUN pnpm --filter @open-voucherify/web build
+RUN pnpm --filter @offerkit/web build
 
 # ---------- web runtime ----------
 FROM node:24-alpine AS web
@@ -48,4 +48,4 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN pnpm install --frozen-lockfile --offline
 EXPOSE 9091
-CMD ["pnpm", "--filter", "@open-voucherify/worker", "start"]
+CMD ["pnpm", "--filter", "@offerkit/worker", "start"]
