@@ -33,7 +33,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <div className="flex flex-col leading-none">
               <span className="text-sm font-semibold">open-voucherify</span>
               <span className="text-xs text-muted-foreground">
-                <T>Phase 1 + 2 + 3</T>
+                <T>Self-hosted</T>
               </span>
             </div>
           </div>

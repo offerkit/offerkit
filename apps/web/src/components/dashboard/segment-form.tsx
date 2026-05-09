@@ -100,7 +100,7 @@ export function SegmentForm({
               <T>Rule</T>
             </CardTitle>
             <CardDescription>
-              <T>Customer-attribute rules in JSON Logic. Order/redemption operators land in Phase 3.</T>
+              <T>Customer-attribute rules in JSON Logic.</T>
             </CardDescription>
           </CardHeader>
           <CardContent>

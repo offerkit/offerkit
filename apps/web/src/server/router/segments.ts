@@ -83,9 +83,8 @@ const remove = os.segments.delete
 const preview = os.segments.preview
   .use(requireSession)
   .handler(async ({ input }) => {
-    // Phase 2 supports customer-attribute rules. Stream all non-deleted
-    // customers through the rules engine and tally matches. At Voucherify
-    // scale this becomes a recompute job, but Phase 2 traffic fits in memory.
+    // In-memory recompute capped at 10k customers. At Voucherify scale this
+    // moves to a background recompute job.
     const customers = (await db()
       .select()
       .from(schema.customer)

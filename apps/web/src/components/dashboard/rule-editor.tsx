@@ -82,8 +82,7 @@ export function RuleEditor({ value, onChange }: RuleEditorProps) {
       {error ? <p className="text-xs text-red-500">{error}</p> : null}
       <p className="text-xs text-muted-foreground">
         <T>
-          Phase 2 ships JSON Logic editing + canned rule presets. The visual builder over JSON
-          Logic lands in Phase 3.
+          Edit JSON Logic directly. A visual rule builder over JSON Logic is on the roadmap.
         </T>
       </p>
     </div>

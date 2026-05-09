@@ -189,7 +189,7 @@ function CustomerForm({
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            <T>Available in Phase 3 once redemptions ship.</T>
+            <T>This customer has no redemptions yet.</T>
           </p>
         </CardContent>
       </Card>
