@@ -56,7 +56,7 @@ const sections: { label: string; items: NavItem[] }[] = [
     items: [
       { href: "/campaigns", label: "Campaigns", icon: Megaphone },
       { href: "/vouchers", label: "Vouchers", icon: TicketPercent },
-      { href: "/orders", label: "Orders", icon: ShoppingBag, comingPhase: 4 },
+      { href: "/orders", label: "Orders", icon: ShoppingBag },
       { href: "/insights", label: "Insights", icon: BarChart3 },
     ],
   },

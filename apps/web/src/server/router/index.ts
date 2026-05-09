@@ -15,6 +15,7 @@ import { vouchersRouter } from "./vouchers";
 import { eventsRouter, webhooksRouter } from "./webhooks";
 import { insightsRouter } from "./insights";
 import { usersRouter } from "./users";
+import { ordersRouter } from "./orders";
 
 const os = implement(contract).$context<RequestContext>();
 
@@ -53,4 +54,5 @@ export const router = os.router({
   events: eventsRouter,
   insights: insightsRouter,
   users: usersRouter,
+  orders: ordersRouter,
 });

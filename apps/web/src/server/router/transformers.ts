@@ -7,6 +7,7 @@ export type VoucherRow = typeof schema.voucher.$inferSelect;
 export type ValidationRuleRow = typeof schema.validationRule.$inferSelect;
 export type RewardTypeRow = typeof schema.rewardType.$inferSelect;
 export type RewardTypeRevisionRow = typeof schema.rewardTypeRevision.$inferSelect;
+export type OrderRow = typeof schema.order.$inferSelect;
 
 export function toCustomer(row: CustomerRow) {
   return {
@@ -84,6 +85,22 @@ export function toValidationRule(row: ValidationRuleRow) {
     description: row.description,
     rule: row.rule,
     appliesTo: row.appliesTo,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+export function toOrder(row: OrderRow) {
+  return {
+    id: row.id,
+    externalId: row.externalId,
+    customerId: row.customerId,
+    items: row.items,
+    amount: row.amount,
+    discountAmount: row.discountAmount,
+    currency: row.currency,
+    status: row.status,
+    metadata: row.metadata,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

@@ -12,6 +12,7 @@ import { vouchers } from "./routes/vouchers.ts";
 import { events, webhooks } from "./routes/webhooks.ts";
 import { insights } from "./routes/insights.ts";
 import { users } from "./routes/users.ts";
+import { orders } from "./routes/orders.ts";
 
 const healthOutput = z.object({
   status: z.literal("ok"),
@@ -46,6 +47,7 @@ export const contract = {
   events,
   insights,
   users,
+  orders,
 };
 
 export type Contract = typeof contract;
