@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   index,
   integer,
@@ -6,11 +7,11 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { campaign } from "./campaign.ts";
 import { customer } from "./customer.ts";
-import { redemption } from "./redemption.ts";
 
 // Mirrors the loyalty reward shape so an integrator can reuse the same
 // "honor a kind+payload" code path. kind=discount issues a voucher,
@@ -34,6 +35,16 @@ export interface ReferralReward {
   payload?: Record<string, unknown>;
 }
 
+// Snapshot of what was actually issued to a side at conversion time.
+// Stored on referralConversion so idempotent replay can return the same
+// outcome without re-deriving from voucher/loyalty rows.
+export interface ReferralOutcome {
+  kind: "discount" | "gift_card" | "loyalty_points" | "custom";
+  voucherCode?: string;
+  loyaltyTransactionId?: string;
+  payload?: Record<string, unknown>;
+}
+
 export const referralProgram = pgTable(
   "referral_program",
   {
@@ -54,8 +65,12 @@ export const referralProgram = pgTable(
   (t) => [index("referral_program_deleted_at_idx").on(t.deletedAt)],
 );
 
-export const referral = pgTable(
-  "referral",
+// A stable per-customer referral code. Idempotent: one row per
+// (program, referrerCustomerId). The customer shares this code with many
+// friends; each friend's conversion is tracked as a separate
+// referralConversion row.
+export const referralCode = pgTable(
+  "referral_code",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     programId: uuid("program_id")
@@ -64,30 +79,56 @@ export const referral = pgTable(
     referrerCustomerId: uuid("referrer_customer_id")
       .notNull()
       .references(() => customer.id, { onDelete: "cascade" }),
-    refereeCustomerId: uuid("referee_customer_id").references(() => customer.id, {
-      onDelete: "set null",
-    }),
     code: text("code").notNull().unique(),
-    status: text("status", { enum: ["issued", "converted", "rejected"] })
-      .notNull()
-      .default("issued"),
-    // Set when conversion succeeds.
-    convertedAt: timestamp("converted_at", { withTimezone: true }),
-    conversionEventId: text("conversion_event_id"),
-    // The redemption rows produced for each side, when applicable.
-    referrerRedemptionId: uuid("referrer_redemption_id").references(() => redemption.id, {
-      onDelete: "set null",
-    }),
-    refereeRedemptionId: uuid("referee_redemption_id").references(() => redemption.id, {
-      onDelete: "set null",
-    }),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    index("referral_program_id_idx").on(t.programId),
-    index("referral_referrer_customer_id_idx").on(t.referrerCustomerId),
-    index("referral_status_idx").on(t.status),
-    unique("referral_program_referrer_unique").on(t.programId, t.referrerCustomerId),
+    index("referral_code_program_id_idx").on(t.programId),
+    index("referral_code_referrer_customer_id_idx").on(t.referrerCustomerId),
+    unique("referral_code_program_referrer_unique").on(t.programId, t.referrerCustomerId),
+  ],
+);
+
+// One row per actual conversion. A given referralCode can have many
+// conversions (one per referee). Idempotency is keyed two ways:
+// - (codeId, refereeCustomerId) unique: the same referee can't convert
+//   the same code twice.
+// - (codeId, conversionEventId) unique when conversionEventId is set:
+//   replaying a conversion event (e.g. duplicate Stripe webhook) returns
+//   the existing row instead of inserting a new one.
+export const referralConversion = pgTable(
+  "referral_conversion",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    codeId: uuid("code_id")
+      .notNull()
+      .references(() => referralCode.id, { onDelete: "cascade" }),
+    refereeCustomerId: uuid("referee_customer_id")
+      .notNull()
+      .references(() => customer.id, { onDelete: "cascade" }),
+    status: text("status", { enum: ["converted", "rejected"] })
+      .notNull()
+      .default("converted"),
+    convertedAt: timestamp("converted_at", { withTimezone: true }).notNull().defaultNow(),
+    conversionEventId: text("conversion_event_id"),
+    // Snapshot of the reward issued to each side. Enables idempotent
+    // replay without re-deriving from voucher/loyalty rows.
+    referrerOutcome: jsonb("referrer_outcome").$type<ReferralOutcome>().notNull(),
+    refereeOutcome: jsonb("referee_outcome").$type<ReferralOutcome>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("referral_conversion_code_id_idx").on(t.codeId),
+    index("referral_conversion_referee_customer_id_idx").on(t.refereeCustomerId),
+    index("referral_conversion_status_idx").on(t.status),
+    unique("referral_conversion_code_referee_unique").on(t.codeId, t.refereeCustomerId),
+    // Partial unique index for event-id dedupe. Allows multiple null event
+    // ids (each is distinct) but enforces uniqueness when set.
+    uniqueIndex("referral_conversion_code_event_unique")
+      .on(t.codeId, t.conversionEventId)
+      .where(sql`${t.conversionEventId} IS NOT NULL`),
   ],
 );

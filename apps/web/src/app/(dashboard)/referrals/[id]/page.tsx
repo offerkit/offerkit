@@ -7,7 +7,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -42,12 +41,12 @@ export default function ReferralProgramDetail({ params }: PageProps) {
   });
 
   const { data: list } = useQuery({
-    queryKey: ["referrals", id],
-    queryFn: () => ovx().referrals.listReferrals({ programId: id, limit: 50 }),
+    queryKey: ["referralCodes", id],
+    queryFn: () => ovx().referrals.listCodes({ programId: id, limit: 50 }),
   });
 
   const refresh = async () => {
-    await queryClient.invalidateQueries({ queryKey: ["referrals", id] });
+    await queryClient.invalidateQueries({ queryKey: ["referralCodes", id] });
   };
 
   const issue = useMutation({
@@ -128,7 +127,7 @@ export default function ReferralProgramDetail({ params }: PageProps) {
           }
           title={gt("Delete this program?")}
           description={gt(
-            "Soft-delete. Existing referrals stay intact for audit but no new codes can be issued.",
+            "Soft-delete. Existing codes and conversions stay intact for audit but no new codes can be issued.",
           )}
           confirmLabel={gt("Delete program")}
           destructive
@@ -238,7 +237,7 @@ export default function ReferralProgramDetail({ params }: PageProps) {
       <Card>
         <CardHeader>
           <CardTitle>
-            <T>Referrals</T>
+            <T>Referral codes</T>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -252,12 +251,6 @@ export default function ReferralProgramDetail({ params }: PageProps) {
                   <TableHead>
                     <T>Referrer</T>
                   </TableHead>
-                  <TableHead>
-                    <T>Referee</T>
-                  </TableHead>
-                  <TableHead>
-                    <T>Status</T>
-                  </TableHead>
                   <TableHead className="text-right">
                     <T>Created</T>
                   </TableHead>
@@ -266,8 +259,8 @@ export default function ReferralProgramDetail({ params }: PageProps) {
               <TableBody>
                 {!list || list.data.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
-                      <T>No referrals yet.</T>
+                    <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
+                      <T>No codes yet.</T>
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -276,18 +269,6 @@ export default function ReferralProgramDetail({ params }: PageProps) {
                       <TableCell className="font-mono text-sm">{r.code}</TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">
                         {r.referrerCustomerId.slice(0, 8)}…
-                      </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
-                        {r.refereeCustomerId
-                          ? `${r.refereeCustomerId.slice(0, 8)}…`
-                          : "—"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={r.status === "converted" ? "default" : "secondary"}
-                        >
-                          {r.status}
-                        </Badge>
                       </TableCell>
                       <TableCell className="text-right text-muted-foreground">
                         {new Date(r.createdAt).toLocaleDateString()}
