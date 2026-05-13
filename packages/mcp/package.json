@@ -1,27 +1,48 @@
 {
   "name": "@offerkit/mcp",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "license": "MIT",
   "type": "module",
+  "description": "Offerkit MCP server — exposes the Offerkit API as Model Context Protocol tools.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/akshitkrnagpal/offerkit.git",
+    "directory": "packages/mcp"
+  },
   "bin": {
-    "offerkit-mcp": "./src/index.ts"
+    "offerkit-mcp": "./dist/index.mjs"
   },
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "tsdown"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@offerkit/contract": "workspace:*",
-    "@offerkit/sdk": "workspace:*",
+    "@offerkit/sdk": "workspace:^",
     "@orpc/contract": "^1.14.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@offerkit/config": "workspace:*",
+    "@offerkit/contract": "workspace:*",
     "@types/node": "^20.19.40",
+    "tsdown": "^0.22.0",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3"
   }

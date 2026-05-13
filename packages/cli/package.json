@@ -1,24 +1,45 @@
 {
   "name": "@offerkit/cli",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "license": "MIT",
   "type": "module",
+  "description": "Offerkit command-line interface.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/akshitkrnagpal/offerkit.git",
+    "directory": "packages/cli"
+  },
   "bin": {
-    "offerkit": "./src/index.ts"
+    "offerkit": "./dist/index.mjs"
   },
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "tsdown"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "dependencies": {
-    "@offerkit/sdk": "workspace:*",
+    "@offerkit/sdk": "workspace:^",
     "commander": "^14.0.3"
   },
   "devDependencies": {
     "@offerkit/config": "workspace:*",
     "@types/node": "^25.6.2",
+    "tsdown": "^0.22.0",
     "typescript": "^6.0.3"
   }
 }
