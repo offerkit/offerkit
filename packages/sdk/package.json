@@ -1,24 +1,46 @@
 {
   "name": "@offerkit/sdk",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "license": "MIT",
   "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
+  "description": "Typed client for the Offerkit promotions API.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/akshitkrnagpal/offerkit.git",
+    "directory": "packages/sdk"
   },
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
+    "build": "tsdown",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "prepublishOnly": "tsdown"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "dependencies": {
-    "@offerkit/contract": "workspace:*",
     "@orpc/client": "^1.14.2",
     "@orpc/contract": "^1.14.2",
-    "@orpc/openapi-client": "^1.14.2"
+    "@orpc/openapi-client": "^1.14.2",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@offerkit/config": "workspace:*",
+    "@offerkit/contract": "workspace:*",
     "@types/node": "^25.6.2",
+    "tsdown": "^0.22.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.5"
   }
