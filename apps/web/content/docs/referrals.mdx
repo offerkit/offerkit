@@ -1,0 +1,195 @@
+---
+title: Referrals
+description: Integrate refer-a-friend, list a customer's codes, and apply codes at checkout.
+---
+
+Offerkit's referral model is **one stable code per referrer, many conversions per code**. A customer's code is fetched-or-created idempotently the first time you call `referrals.issue`. Every friend who checks out with that code creates a separate `referral_conversion` row and issues fresh rewards to both sides.
+
+## Prereqs
+
+- A referral program exists in your Offerkit dashboard. Create one under **Campaigns → New (REFERRAL_PROGRAM) → Referral program**. You'll need the `programId`.
+- Each side has a reward configured. For an EUR 25 mutual discount:
+
+  ```json
+  {
+    "referrerReward": {
+      "kind": "discount",
+      "discount": { "type": "AMOUNT", "amount": 2500 }
+    },
+    "refereeReward": {
+      "kind": "discount",
+      "discount": { "type": "AMOUNT", "amount": 2500 }
+    }
+  }
+  ```
+
+  Amounts are in cents. `kind` can be `discount`, `gift_card`, `loyalty_points`, or `custom`.
+
+- A Customer row in Offerkit for every user on your side that will refer or be referred. Mint these the first time you see the user with `customers.create({ email, name, … })`, persist the returned `customer.id` on your user record (e.g. `users.offerkit_customer_id`), and reuse it forever after.
+
+## Set up the client
+
+```bash
+pnpm add @offerkit/sdk
+```
+
+```ts
+// lib/offerkit.ts
+import { createClient } from "@offerkit/sdk";
+
+export const offerkit = createClient({
+  baseUrl: process.env.OFFERKIT_API_URL!,
+  apiKey: process.env.OFFERKIT_API_KEY!,
+});
+```
+
+The SDK is dashboard-auth only — calls go from your **server** to Offerkit. Don't ship the API key to a browser.
+
+## Flow 1: fetch-or-issue the referrer's code
+
+Idempotent. Safe to call on every page load — the same `(programId, customerId)` pair always returns the same code.
+
+```ts
+const result = await offerkit.referrals.issue({
+  programId: process.env.OFFERKIT_REFERRAL_PROGRAM_ID!,
+  referrerCustomerId: customer.id,
+  // Optional: override the prefix on the code (otherwise derived from the
+  // customer's name). Max 12 chars, [A-Z0-9].
+  prefix: "ALICE",
+});
+
+if (!result.ok) {
+  // result.errorCode is one of: program_not_found, referrer_not_found, validation_error
+  throw new Error(result.message);
+}
+
+// result.codeId — UUID for the referral_code row
+// result.code   — the human-shareable string, e.g. "ALICE-7K3PQ9LM"
+```
+
+Persist `{ customerId → code }` on your side so you don't hammer Offerkit on every render — or just call once and cache, the response is stable.
+
+## Flow 2: list a customer's other codes
+
+A user may also hold vouchers Offerkit issued *to them* (gift cards, loyalty rewards, manual coupons, referee rewards from past redemptions). Pull them with `vouchers.list({ customerId })`:
+
+```ts
+const { data: vouchers } = await offerkit.vouchers.list({
+  customerId: customer.id,
+  limit: 50,
+});
+
+// vouchers[i].code, .type ("DISCOUNT" | "GIFT_CARD"), .discount, .giftBalance,
+// .redemptionLimit, .redemptionCount, .expiresAt, …
+```
+
+You probably want to surface both the referral code (Flow 1) and the voucher list (Flow 2) on the same screen.
+
+## Flow 3: list which codes apply to *this* cart
+
+`vouchers.list` returns everything the customer holds, but not all of it is valid right now (expired, hit redemption cap, doesn't meet minimum order amount, currency mismatch). To filter to "applies to this cart", call `vouchers.validate` on each candidate:
+
+```ts
+const candidates = await offerkit.vouchers.list({
+  customerId: customer.id,
+  limit: 50,
+});
+
+const applicable = await Promise.all(
+  candidates.data.map(async (v) => {
+    const r = await offerkit.vouchers.validate({
+      code: v.code,
+      order: {
+        amount: cart.totalCents,
+        currency: cart.currency,
+        items: cart.items.map((i) => ({
+          productId: i.sku,
+          quantity: i.qty,
+          unitAmount: i.unitPriceCents,
+        })),
+      },
+    });
+    return r.ok ? { voucher: v, validation: r } : null;
+  }),
+);
+
+const usableNow = applicable.filter((x): x is NonNullable<typeof x> => x !== null);
+```
+
+`validate` is read-only — it doesn't decrement counters. You can call it freely on cart updates.
+
+## Flow 4: convert at checkout
+
+When a buyer applies a referral code and completes payment, call `referrals.convert`. This issues both rewards in a single transaction.
+
+```ts
+const conversion = await offerkit.referrals.convert({
+  code: appliedReferralCode,            // the string the buyer entered
+  refereeCustomerId: buyer.id,
+  conversionEventId: order.id,          // strongly recommended — see below
+});
+
+if (!conversion.ok) {
+  // referee_already_converted | self_referral | referral_not_found |
+  // program_not_found | missing_loyalty_member | validation_error
+  return rejectWithReason(conversion.errorCode);
+}
+
+// conversion.conversionId — UUID of the referral_conversion row
+// conversion.code         — the code that was applied
+// conversion.referrerCustomerId / refereeCustomerId
+// conversion.referrerReward / refereeReward
+//   { kind, voucherCode?, loyaltyTransactionId?, payload? }
+// conversion.idempotent — true if this call replayed an existing conversion
+```
+
+Hand the returned `voucherCode`s to the buyer + referrer (email, in-app inbox, dashboard). They redeem like any other Offerkit voucher.
+
+### Idempotency
+
+Pass a stable `conversionEventId` — usually your order id. A duplicate call with the same `conversionEventId` returns the original outcome with `idempotent: true`, including the same `conversionId` and the same voucher codes. This is the safety net for retried webhooks, double-clicked checkout buttons, and crash-recovered jobs.
+
+Without `conversionEventId`, the only dedupe key is `(code, refereeCustomerId)` — a second call from the same buyer on the same code will still error with `referee_already_converted` (correct outcome, but you lose the ability to replay-return the prior result).
+
+### When to call it
+
+The right moment is **after payment captures**, not on "Apply code". Otherwise you'll issue rewards to abandoned carts. Common pattern:
+
+```ts
+// In your payment webhook handler
+on("payment.succeeded", async (event) => {
+  const order = await db.orders.findOrThrow(event.orderId);
+  if (!order.referralCode) return;
+  await offerkit.referrals.convert({
+    code: order.referralCode,
+    refereeCustomerId: order.customerId,
+    conversionEventId: order.id,
+  });
+});
+```
+
+## Redeeming the issued voucher
+
+A code returned in `referrerReward.voucherCode` / `refereeReward.voucherCode` is a regular Offerkit voucher. Validate + redeem it the usual way:
+
+```ts
+await offerkit.vouchers.redeem({
+  code: voucherCode,
+  order: { amount: cart.totalCents, currency: cart.currency, items: [...] },
+  idempotencyKey: order.id,
+});
+```
+
+See [Get started](/docs/getting-started) for the full redemption surface.
+
+## Error codes reference
+
+| Code | Meaning |
+| --- | --- |
+| `program_not_found` | The `programId` (or its parent campaign) was deleted. |
+| `referrer_not_found` | The `referrerCustomerId` doesn't exist or was soft-deleted. |
+| `referral_not_found` | The submitted code doesn't match any `referral_code` row. |
+| `self_referral` | Buyer is trying to redeem their own code. |
+| `referee_already_converted` | This buyer already converted this code. |
+| `missing_loyalty_member` | Reward kind is `loyalty_points` but the customer isn't enrolled. |
+| `validation_error` | Misconfigured reward (e.g. `kind=discount` with no `discount` block). |
