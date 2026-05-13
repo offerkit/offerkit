@@ -5,6 +5,8 @@ import {
   customerCreateInput,
   customerOutput,
   customerUpdateInput,
+  customerUpsertInput,
+  customerUpsertOutput,
 } from "../schemas/customer.ts";
 import { paginatedOutput, paginationInput } from "../schemas/pagination.ts";
 
@@ -19,10 +21,27 @@ export const customers = {
     .route({ method: "GET", path: "/customers/{id}", summary: "Get customer" })
     .input(z.object({ id: z.string().uuid() }))
     .output(customerOutput),
+  getByExternalId: oc
+    .meta(mcpMeta({ expose: true, riskLevel: "safe" }))
+    .route({
+      method: "GET",
+      path: "/customers/by-external-id/{externalId}",
+      summary: "Get a customer by integrator-supplied externalId",
+    })
+    .input(z.object({ externalId: z.string().min(1).max(256) }))
+    .output(customerOutput),
   create: oc
     .route({ method: "POST", path: "/customers", summary: "Create customer" })
     .input(customerCreateInput)
     .output(customerOutput),
+  upsert: oc
+    .route({
+      method: "PUT",
+      path: "/customers/by-external-id",
+      summary: "Create or update a customer keyed by externalId (idempotent)",
+    })
+    .input(customerUpsertInput)
+    .output(customerUpsertOutput),
   update: oc
     .route({ method: "PATCH", path: "/customers/{id}", summary: "Update customer" })
     .input(z.object({ id: z.string().uuid(), patch: customerUpdateInput }))

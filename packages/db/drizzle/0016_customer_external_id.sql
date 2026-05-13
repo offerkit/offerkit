@@ -1,0 +1,2 @@
+ALTER TABLE "customer" ADD COLUMN "external_id" text;--> statement-breakpoint
+CREATE UNIQUE INDEX "customer_external_id_unique" ON "customer" USING btree ("external_id") WHERE "customer"."external_id" IS NOT NULL AND "customer"."deleted_at" IS NULL;
