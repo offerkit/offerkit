@@ -1,0 +1,77 @@
+name: Release
+
+# Manual-only. Trigger from the Actions tab → "Release" → Run workflow.
+# Does in one shot:
+#   1. pnpm version-packages — consumes pending .changeset/*.md files,
+#      bumps versions in the relevant package.json files, writes
+#      CHANGELOG.md entries, deletes the consumed changesets.
+#   2. Commits and pushes the version bumps back to main.
+#   3. Builds @offerkit/sdk, @offerkit/cli, @offerkit/mcp.
+#   4. Runs `changeset publish` to push the bumped versions to npm.
+#
+# If there are no pending changesets, the workflow is a no-op (version
+# step writes nothing, no commit, publish step says "nothing to publish").
+#
+# Requires repo secrets:
+#   - NPM_TOKEN — npm automation token with publish rights on the
+#     @offerkit org (create at https://www.npmjs.com/settings/<you>/tokens,
+#     pick "Automation"). Stored at Settings → Secrets and variables →
+#     Actions.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write  # for pushing version-bump commits back to main
+  id-token: write  # for npm provenance (optional but nice for transparency)
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.23.0
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply pending changesets
+        run: pnpm version-packages
+
+      - name: Commit + push version bumps
+        run: |
+          if git diff --quiet; then
+            echo "No version changes to commit (no pending changesets)."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: release"
+          git push origin HEAD:main
+
+      - name: Build public packages
+        run: pnpm turbo run build --filter=@offerkit/sdk --filter=@offerkit/cli --filter=@offerkit/mcp
+
+      - name: Publish to npm
+        run: pnpm changeset publish
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # changeset publish uses npm under the hood; npm reads NODE_AUTH_TOKEN
+          # when registry-url is set via setup-node above.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
