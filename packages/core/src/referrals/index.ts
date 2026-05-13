@@ -1,5 +1,6 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, sql, isNull } from "drizzle-orm";
 import { schema, type Db } from "@offerkit/db";
+import type { ReferralOutcome } from "@offerkit/db/schema";
 import { generateReferralCode } from "../codes/index.ts";
 import { logger } from "../observability/index.ts";
 
@@ -11,7 +12,7 @@ export type ReferralFailureCode =
   | "program_not_found"
   | "referrer_not_found"
   | "referral_not_found"
-  | "referral_already_converted"
+  | "referee_already_converted"
   | "self_referral"
   | "missing_loyalty_member"
   | "validation_error";
@@ -21,7 +22,6 @@ export type ReferralResult<T> =
   | { ok: false; code: ReferralFailureCode; message: string };
 
 type ReferralProgramRow = typeof schema.referralProgram.$inferSelect;
-type ReferralRow = typeof schema.referral.$inferSelect;
 
 function handleFor(prefix: string | undefined, customerName: string | null, customerId: string): string {
   if (prefix?.trim()) return prefix.toUpperCase().slice(0, 12);
@@ -42,10 +42,14 @@ export interface IssueInput {
   prefix?: string;
 }
 
+/**
+ * Idempotently fetch-or-create the stable referral code for a (program,
+ * referrerCustomerId) pair. Calling repeatedly returns the same code.
+ */
 export async function issueCode(
   db: Db,
   input: IssueInput,
-): Promise<ReferralResult<{ referralId: string; code: string }>> {
+): Promise<ReferralResult<{ codeId: string; code: string }>> {
   const program = await db.query.referralProgram.findFirst({
     where: and(
       eq(schema.referralProgram.id, input.programId),
@@ -63,14 +67,14 @@ export async function issueCode(
     return { ok: false, code: "referrer_not_found", message: "Referrer customer not found" };
   }
 
-  const existing = await db.query.referral.findFirst({
+  const existing = await db.query.referralCode.findFirst({
     where: and(
-      eq(schema.referral.programId, program.id),
-      eq(schema.referral.referrerCustomerId, customer.id),
+      eq(schema.referralCode.programId, program.id),
+      eq(schema.referralCode.referrerCustomerId, customer.id),
     ),
   });
   if (existing) {
-    return { ok: true, referralId: existing.id, code: existing.code };
+    return { ok: true, codeId: existing.id, code: existing.code };
   }
 
   const handle = handleFor(input.prefix, customer.name, customer.id);
@@ -78,19 +82,36 @@ export async function issueCode(
     const code = generateReferralCode(handle, { length: program.codeLength });
     try {
       const [row] = await db
-        .insert(schema.referral)
+        .insert(schema.referralCode)
         .values({
           programId: program.id,
           referrerCustomerId: customer.id,
           code,
         })
-        .returning({ id: schema.referral.id });
-      if (!row) throw new Error("referral insert failed");
-      return { ok: true, referralId: row.id, code };
+        .returning({ id: schema.referralCode.id });
+      if (!row) throw new Error("referral code insert failed");
+      return { ok: true, codeId: row.id, code };
     } catch (err) {
-      // Unique violation on code → retry with a fresh suffix.
-      const cause = err as { code?: string };
-      if (cause.code !== "23505" || attempt === 5) throw err;
+      // Two unique violations to handle:
+      //  1. code collision (random suffix) — retry with new suffix
+      //  2. (program, referrer) collision — another concurrent caller won the
+      //     race and inserted the row first. Re-read and return that row.
+      const cause = err as { code?: string; constraint?: string; constraint_name?: string };
+      if (cause.code === "23505") {
+        const constraint = cause.constraint ?? cause.constraint_name ?? "";
+        if (constraint.includes("program_referrer")) {
+          const winner = await db.query.referralCode.findFirst({
+            where: and(
+              eq(schema.referralCode.programId, program.id),
+              eq(schema.referralCode.referrerCustomerId, customer.id),
+            ),
+          });
+          if (winner) return { ok: true, codeId: winner.id, code: winner.code };
+        }
+        // Otherwise it's a code collision; try the next suffix.
+        if (attempt < 5) continue;
+      }
+      throw err;
     }
   }
   return { ok: false, code: "validation_error", message: "Could not allocate a unique code" };
@@ -99,56 +120,100 @@ export async function issueCode(
 export interface ConvertInput {
   code: string;
   refereeCustomerId: string;
-  /** Optional dedupe key for the conversion event (e.g. order id). */
+  /**
+   * Optional dedupe key for the conversion event (e.g. order id). When set,
+   * a second call with the same key returns the prior outcome idempotently
+   * instead of erroring or duplicating.
+   */
   conversionEventId?: string;
 }
 
 export interface ConvertOutcome {
-  referralId: string;
+  conversionId: string;
+  code: string;
+  codeId: string;
   referrerCustomerId: string;
   refereeCustomerId: string;
-  referrerReward: ReferralIssued;
-  refereeReward: ReferralIssued;
+  referrerReward: ReferralOutcome;
+  refereeReward: ReferralOutcome;
+  /** True when this call replayed an existing conversion by event-id dedupe. */
+  idempotent: boolean;
 }
 
-export interface ReferralIssued {
-  kind: "discount" | "gift_card" | "loyalty_points" | "custom";
-  voucherCode?: string;
-  loyaltyTransactionId?: string;
-  payload?: Record<string, unknown>;
-}
-
+/**
+ * Apply a referral code on behalf of a referee. Issues both sides' rewards
+ * atomically and records a referralConversion row. Multiple referees can
+ * convert the same code; the same referee can only convert it once.
+ *
+ * Idempotency:
+ * - Same (codeId, refereeCustomerId) replay → returns referee_already_converted.
+ * - Same (codeId, conversionEventId) replay → returns the prior outcome with
+ *   idempotent=true.
+ */
 export async function convert(
   db: Db,
   input: ConvertInput,
 ): Promise<ReferralResult<ConvertOutcome>> {
   return db.transaction(async (tx) => {
-    const [r] = (await tx
-      .select()
-      .from(schema.referral)
-      .where(eq(schema.referral.code, input.code))
-      .limit(1)
-      .for("update")) as ReferralRow[];
-    if (!r) {
+    const codeRow = await tx.query.referralCode.findFirst({
+      where: eq(schema.referralCode.code, input.code),
+    });
+    if (!codeRow) {
       return { ok: false, code: "referral_not_found", message: "Referral code not found" };
     }
-    if (r.referrerCustomerId === input.refereeCustomerId) {
+
+    if (codeRow.referrerCustomerId === input.refereeCustomerId) {
       return { ok: false, code: "self_referral", message: "Referrer cannot also be the referee" };
     }
-    if (r.status === "converted") {
-      // Re-conversion is rejected: the referee already received their
-      // reward, and replaying might hand back codes for soft-deleted
-      // vouchers. Look up GET /referrals/{code} for the original outcome.
+
+    // Idempotent replay by conversionEventId — return the prior conversion.
+    if (input.conversionEventId) {
+      const priorByEvent = await tx.query.referralConversion.findFirst({
+        where: and(
+          eq(schema.referralConversion.codeId, codeRow.id),
+          eq(schema.referralConversion.conversionEventId, input.conversionEventId),
+        ),
+      });
+      if (priorByEvent) {
+        return {
+          ok: true,
+          conversionId: priorByEvent.id,
+          code: codeRow.code,
+          codeId: codeRow.id,
+          referrerCustomerId: codeRow.referrerCustomerId,
+          refereeCustomerId: priorByEvent.refereeCustomerId,
+          referrerReward: priorByEvent.referrerOutcome,
+          refereeReward: priorByEvent.refereeOutcome,
+          idempotent: true,
+        };
+      }
+    }
+
+    // Same referee replay → reject. We don't return the prior outcome here
+    // because the caller is asking for a *new* conversion for the same person,
+    // which is not allowed.
+    const priorByReferee = await tx
+      .select()
+      .from(schema.referralConversion)
+      .where(
+        and(
+          eq(schema.referralConversion.codeId, codeRow.id),
+          eq(schema.referralConversion.refereeCustomerId, input.refereeCustomerId),
+        ),
+      )
+      .limit(1)
+      .for("update");
+    if (priorByReferee[0]) {
       return {
         ok: false,
-        code: "referral_already_converted",
-        message: "Referral has already been converted",
+        code: "referee_already_converted",
+        message: "This referee has already converted this referral code",
       };
     }
 
     const program = await tx.query.referralProgram.findFirst({
       where: and(
-        eq(schema.referralProgram.id, r.programId),
+        eq(schema.referralProgram.id, codeRow.programId),
         isNull(schema.referralProgram.deletedAt),
       ),
     });
@@ -156,7 +221,7 @@ export async function convert(
       return { ok: false, code: "program_not_found", message: "Referral program not found" };
     }
 
-    const referrer = await issueReward(tx, program, r.referrerCustomerId, "referrer");
+    const referrer = await issueReward(tx, program, codeRow.referrerCustomerId, "referrer");
     if (!referrer.ok) {
       return { ok: false, code: referrer.code, message: referrer.message };
     }
@@ -165,34 +230,90 @@ export async function convert(
       return { ok: false, code: referee.code, message: referee.message };
     }
 
-    await tx
-      .update(schema.referral)
-      .set({
-        refereeCustomerId: input.refereeCustomerId,
-        status: "converted",
-        convertedAt: new Date(),
-        conversionEventId: input.conversionEventId ?? null,
-        updatedAt: new Date(),
-      })
-      .where(eq(schema.referral.id, r.id));
+    const referrerOutcome = pickIssued(referrer);
+    const refereeOutcome = pickIssued(referee);
+
+    let insertedId: string;
+    try {
+      const [row] = await tx
+        .insert(schema.referralConversion)
+        .values({
+          codeId: codeRow.id,
+          refereeCustomerId: input.refereeCustomerId,
+          conversionEventId: input.conversionEventId ?? null,
+          referrerOutcome,
+          refereeOutcome,
+        })
+        .returning({ id: schema.referralConversion.id });
+      if (!row) throw new Error("referral_conversion insert failed");
+      insertedId = row.id;
+    } catch (err) {
+      // Race: another concurrent call won. Distinguish event-id vs referee dup.
+      const cause = err as { code?: string; constraint?: string; constraint_name?: string };
+      if (cause.code === "23505") {
+        const constraint = cause.constraint ?? cause.constraint_name ?? "";
+        if (constraint.includes("code_event") && input.conversionEventId) {
+          const winner = await tx.query.referralConversion.findFirst({
+            where: and(
+              eq(schema.referralConversion.codeId, codeRow.id),
+              eq(schema.referralConversion.conversionEventId, input.conversionEventId),
+            ),
+          });
+          if (winner) {
+            return {
+              ok: true,
+              conversionId: winner.id,
+              code: codeRow.code,
+              codeId: codeRow.id,
+              referrerCustomerId: codeRow.referrerCustomerId,
+              refereeCustomerId: winner.refereeCustomerId,
+              referrerReward: winner.referrerOutcome,
+              refereeReward: winner.refereeOutcome,
+              idempotent: true,
+            };
+          }
+        }
+        return {
+          ok: false,
+          code: "referee_already_converted",
+          message: "This referee has already converted this referral code",
+        };
+      }
+      throw err;
+    }
 
     log.info(
-      { referralId: r.id, code: r.code },
+      { conversionId: insertedId, codeId: codeRow.id, code: codeRow.code },
       "referral converted",
     );
 
     return {
       ok: true,
-      referralId: r.id,
-      referrerCustomerId: r.referrerCustomerId,
+      conversionId: insertedId,
+      code: codeRow.code,
+      codeId: codeRow.id,
+      referrerCustomerId: codeRow.referrerCustomerId,
       refereeCustomerId: input.refereeCustomerId,
-      referrerReward: pickIssued(referrer),
-      refereeReward: pickIssued(referee),
+      referrerReward: referrerOutcome,
+      refereeReward: refereeOutcome,
+      idempotent: false,
     };
   });
 }
 
-function pickIssued(r: { ok: true } & ReferralIssued): ReferralIssued {
+interface IssueRewardOk {
+  ok: true;
+  kind: ReferralOutcome["kind"];
+  voucherCode?: string;
+  loyaltyTransactionId?: string;
+  payload?: Record<string, unknown>;
+}
+
+type IssueRewardResult =
+  | IssueRewardOk
+  | { ok: false; code: ReferralFailureCode; message: string };
+
+function pickIssued(r: IssueRewardOk): ReferralOutcome {
   return {
     kind: r.kind,
     voucherCode: r.voucherCode,
@@ -206,7 +327,7 @@ async function issueReward(
   program: ReferralProgramRow,
   customerId: string,
   side: "referrer" | "referee",
-): Promise<ReferralResult<ReferralIssued>> {
+): Promise<IssueRewardResult> {
   const reward = side === "referrer" ? program.referrerReward : program.refereeReward;
 
   switch (reward.kind) {

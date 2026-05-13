@@ -40,19 +40,34 @@ export const referralProgramUpdateInput = referralProgramCreateInput
   .omit({ campaignId: true })
   .partial();
 
-export const referralStatus = z.enum(["issued", "converted", "rejected"]);
+export const referralOutcome = z.object({
+  kind: z.enum(["discount", "gift_card", "loyalty_points", "custom"]),
+  voucherCode: z.string().optional(),
+  loyaltyTransactionId: z.string().uuid().optional(),
+  payload: z.record(z.string(), z.unknown()).optional(),
+});
 
-export const referralOutput = z.object({
+export const referralCodeOutput = z.object({
   id: z.string().uuid(),
   programId: z.string().uuid(),
   referrerCustomerId: z.string().uuid(),
-  refereeCustomerId: z.string().uuid().nullable(),
   code: z.string(),
-  status: referralStatus,
-  convertedAt: z.string().datetime().nullable(),
+  metadata: z.record(z.string(), z.unknown()),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export const referralConversionStatus = z.enum(["converted", "rejected"]);
+
+export const referralConversionOutput = z.object({
+  id: z.string().uuid(),
+  codeId: z.string().uuid(),
+  refereeCustomerId: z.string().uuid(),
+  status: referralConversionStatus,
+  convertedAt: z.string().datetime(),
   conversionEventId: z.string().nullable(),
-  referrerRedemptionId: z.string().uuid().nullable(),
-  refereeRedemptionId: z.string().uuid().nullable(),
+  referrerOutcome: referralOutcome,
+  refereeOutcome: referralOutcome,
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -69,28 +84,24 @@ export const referralConvertInput = z.object({
   conversionEventId: z.string().optional(),
 });
 
-const referralIssued = z.object({
-  kind: z.enum(["discount", "gift_card", "loyalty_points", "custom"]),
-  voucherCode: z.string().optional(),
-  loyaltyTransactionId: z.string().uuid().optional(),
-  payload: z.record(z.string(), z.unknown()).optional(),
+export const referralIssueOutput = z.object({
+  ok: z.boolean(),
+  codeId: z.string().uuid().optional(),
+  code: z.string().optional(),
+  errorCode: z.string().optional(),
+  message: z.string().optional(),
 });
 
 export const referralConvertOutput = z.object({
   ok: z.boolean(),
-  referralId: z.string().uuid().optional(),
+  conversionId: z.string().uuid().optional(),
+  codeId: z.string().uuid().optional(),
+  code: z.string().optional(),
   referrerCustomerId: z.string().uuid().optional(),
   refereeCustomerId: z.string().uuid().optional(),
-  referrerReward: referralIssued.optional(),
-  refereeReward: referralIssued.optional(),
-  code: z.string().optional(),
-  message: z.string().optional(),
-});
-
-export const referralIssueOutput = z.object({
-  ok: z.boolean(),
-  referralId: z.string().uuid().optional(),
-  code: z.string().optional(),
+  referrerReward: referralOutcome.optional(),
+  refereeReward: referralOutcome.optional(),
+  idempotent: z.boolean().optional(),
   errorCode: z.string().optional(),
   message: z.string().optional(),
 });

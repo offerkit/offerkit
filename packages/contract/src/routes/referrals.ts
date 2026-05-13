@@ -2,11 +2,12 @@ import { oc } from "@orpc/contract";
 import { z } from "zod";
 import { paginatedOutput, paginationInput } from "../schemas/pagination.ts";
 import {
+  referralCodeOutput,
+  referralConversionOutput,
   referralConvertInput,
   referralConvertOutput,
   referralIssueInput,
   referralIssueOutput,
-  referralOutput,
   referralProgramCreateInput,
   referralProgramOutput,
   referralProgramUpdateInput,
@@ -57,27 +58,35 @@ const programs = {
 
 export const referrals = {
   programs,
-  listReferrals: oc
+  listCodes: oc
     .route({
       method: "GET",
-      path: "/referral-programs/{programId}/referrals",
-      summary: "List referrals in a program",
+      path: "/referral-programs/{programId}/codes",
+      summary: "List referral codes in a program",
     })
     .input(paginationInput.extend({ programId: z.string().uuid() }))
-    .output(paginatedOutput(referralOutput)),
+    .output(paginatedOutput(referralCodeOutput)),
+  listConversions: oc
+    .route({
+      method: "GET",
+      path: "/referral-codes/{codeId}/conversions",
+      summary: "List conversions for a referral code",
+    })
+    .input(paginationInput.extend({ codeId: z.string().uuid() }))
+    .output(paginatedOutput(referralConversionOutput)),
   getByCode: oc
     .route({
       method: "GET",
       path: "/referrals/{code}",
-      summary: "Look up a referral by code",
+      summary: "Look up a referral code",
     })
     .input(z.object({ code: z.string() }))
-    .output(referralOutput),
+    .output(referralCodeOutput),
   issue: oc
     .route({
       method: "POST",
       path: "/referrals/issue",
-      summary: "Issue a referral code for a customer",
+      summary: "Issue (or fetch) a referral code for a customer",
     })
     .input(referralIssueInput)
     .output(referralIssueOutput),
