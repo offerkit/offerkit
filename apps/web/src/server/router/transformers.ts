@@ -15,6 +15,7 @@ export function toCustomer(row: CustomerRow) {
     email: row.email,
     name: row.name,
     phone: row.phone,
+    externalId: row.externalId,
     address: row.address,
     metadata: row.metadata,
     summary: row.summary,

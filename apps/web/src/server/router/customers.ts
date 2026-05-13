@@ -47,6 +47,19 @@ const get = os.customers.get
     return toCustomer(row);
   });
 
+const getByExternalId = os.customers.getByExternalId
+  .use(requireSession)
+  .handler(async ({ input }) => {
+    const row = await db().query.customer.findFirst({
+      where: and(
+        eq(schema.customer.externalId, input.externalId),
+        isNull(schema.customer.deletedAt),
+      ),
+    });
+    if (!row) throw new ORPCError("NOT_FOUND", { message: "Customer not found" });
+    return toCustomer(row);
+  });
+
 const create = os.customers.create
   .use(requireSession)
   .handler(async ({ input }) => {
@@ -57,6 +70,7 @@ const create = os.customers.create
           email: input.email ?? null,
           name: input.name ?? null,
           phone: input.phone ?? null,
+          externalId: input.externalId ?? null,
           address: input.address ?? null,
           metadata: input.metadata ?? {},
         })
@@ -65,11 +79,78 @@ const create = os.customers.create
       await emitEvent(tx, {
         type: "customer.created",
         entityId: r.id,
-        payload: { customerId: r.id, email: r.email, name: r.name },
+        payload: { customerId: r.id, email: r.email, name: r.name, externalId: r.externalId },
       });
       return r;
     });
     return toCustomer(row);
+  });
+
+// Idempotent on externalId. Single-tx find-or-create. On race (two callers
+// upserting the same externalId at once), the unique index wins; we catch
+// the 23505 and re-read.
+const upsert = os.customers.upsert
+  .use(requireSession)
+  .handler(async ({ input }) => {
+    const result = await db().transaction(async (tx) => {
+      const existing = await tx.query.customer.findFirst({
+        where: and(
+          eq(schema.customer.externalId, input.externalId),
+          isNull(schema.customer.deletedAt),
+        ),
+      });
+      if (existing) {
+        const patch: Partial<typeof schema.customer.$inferInsert> = {
+          updatedAt: new Date(),
+        };
+        if (input.email !== undefined) patch.email = input.email;
+        if (input.name !== undefined) patch.name = input.name;
+        if (input.phone !== undefined) patch.phone = input.phone;
+        if (input.address !== undefined) patch.address = input.address;
+        if (input.metadata !== undefined) patch.metadata = input.metadata;
+        const [updated] = await tx
+          .update(schema.customer)
+          .set(patch)
+          .where(eq(schema.customer.id, existing.id))
+          .returning();
+        if (!updated) throw new ORPCError("INTERNAL_SERVER_ERROR", { message: "Update failed" });
+        return { row: updated, created: false };
+      }
+      try {
+        const [r] = await tx
+          .insert(schema.customer)
+          .values({
+            externalId: input.externalId,
+            email: input.email ?? null,
+            name: input.name ?? null,
+            phone: input.phone ?? null,
+            address: input.address ?? null,
+            metadata: input.metadata ?? {},
+          })
+          .returning();
+        if (!r) throw new ORPCError("INTERNAL_SERVER_ERROR", { message: "Insert failed" });
+        await emitEvent(tx, {
+          type: "customer.created",
+          entityId: r.id,
+          payload: { customerId: r.id, email: r.email, name: r.name, externalId: r.externalId },
+        });
+        return { row: r, created: true };
+      } catch (err) {
+        const cause = err as { code?: string };
+        if (cause.code === "23505") {
+          // A concurrent caller won the race. Re-read and patch instead.
+          const winner = await tx.query.customer.findFirst({
+            where: and(
+              eq(schema.customer.externalId, input.externalId),
+              isNull(schema.customer.deletedAt),
+            ),
+          });
+          if (winner) return { row: winner, created: false };
+        }
+        throw err;
+      }
+    });
+    return { customer: toCustomer(result.row), created: result.created };
   });
 
 const update = os.customers.update
@@ -81,6 +162,7 @@ const update = os.customers.update
     if (input.patch.email !== undefined) patch.email = input.patch.email ?? null;
     if (input.patch.name !== undefined) patch.name = input.patch.name ?? null;
     if (input.patch.phone !== undefined) patch.phone = input.patch.phone ?? null;
+    if (input.patch.externalId !== undefined) patch.externalId = input.patch.externalId ?? null;
     if (input.patch.address !== undefined) patch.address = input.patch.address ?? null;
     if (input.patch.metadata !== undefined) patch.metadata = input.patch.metadata;
 
@@ -100,4 +182,12 @@ const remove = os.customers.delete
     return { ok: true as const };
   });
 
-export const customersRouter = { list, get, create, update, delete: remove };
+export const customersRouter = {
+  list,
+  get,
+  getByExternalId,
+  create,
+  upsert,
+  update,
+  delete: remove,
+};

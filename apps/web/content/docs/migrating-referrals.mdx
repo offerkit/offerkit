@@ -26,13 +26,7 @@ Things you **don't** need to import: original conversion timestamps (Offerkit us
 
 ## Step 1: import customers
 
-You need an Offerkit `customer` row for every referrer and referee in your history. The Customer schema doesn't have a built-in `externalId` column, so pick one of these strategies and stick with it:
-
-- **Email as the join key** (simplest, works if every referrer has a unique email). Use `customers.list({ search: user.email, limit: 1 })` to look up before creating.
-- **Your user id in `customer.metadata`** (more robust). Store it as `metadata.appUserId` on create; you'll need to fetch and walk the list to build a lookup since `customers.list` doesn't filter on metadata.
-- **Save the Offerkit id on your side** (most reliable for ongoing use). Add an `offerkit_customer_id` column to your users table and write to it the first time you mint each customer.
-
-For the bulk import, the email approach is usually fine:
+You need an Offerkit `customer` row for every referrer and referee in your history. The Customer model has an `externalId` field — pass your user id there and Offerkit handles the rest:
 
 ```ts
 import { createClient } from "@offerkit/sdk";
@@ -42,24 +36,18 @@ const offerkit = createClient({
   apiKey: process.env.OFFERKIT_API_KEY!,
 });
 
-const userIdToCustomerId = new Map<string, string>();
-
 for (const user of legacyUsers) {
-  const existing = await offerkit.customers.list({ search: user.email, limit: 1 });
-  let customerId = existing.data[0]?.id;
-  if (!customerId) {
-    const created = await offerkit.customers.create({
-      email: user.email,
-      name: user.name,
-      metadata: { appUserId: user.id },
-    });
-    customerId = created.id;
-  }
-  userIdToCustomerId.set(user.id, customerId);
+  await offerkit.customers.upsert({
+    externalId: user.id,            // your stable user id
+    email: user.email,
+    name: user.name,
+  });
 }
 ```
 
-Persist `userIdToCustomerId` to disk (or your DB) — Step 2 and Step 3 reuse it. If the import has to resume after a crash, the next run skips already-mapped users.
+`upsert` is idempotent on `externalId` — safe to re-run after a crash, safe to call repeatedly during normal operation. The response includes `{ customer, created }` so you can fire downstream events on first-create only. For lookups later, call `customers.getByExternalId({ externalId: user.id })`.
+
+Step 2 and Step 3 below assume customers have `externalId` set this way.
 
 ## Step 2: insert one referral_code per referrer
 
@@ -83,11 +71,11 @@ SELECT
   r.created_at,
   r.created_at
 FROM legacy_referral r
-JOIN customer c ON (c.metadata->>'appUserId') = r.referrer_user_id::text
+JOIN customer c ON c.external_id = r.referrer_user_id::text AND c.deleted_at IS NULL
 ON CONFLICT (program_id, referrer_customer_id) DO NOTHING;
 ```
 
-The `metadata->>'appUserId'` join assumes you stored your user id in `customer.metadata.appUserId` during Step 1. If you used email instead, swap to `JOIN customer c ON c.email = r.referrer_email`. `code` has a global UNIQUE constraint; if your legacy table has duplicates, dedupe first.
+`code` has a global UNIQUE constraint; if your legacy table has duplicates, dedupe first.
 
 **Option B: let Offerkit mint new codes.**
 
@@ -129,8 +117,10 @@ SELECT
   lc.created_at,
   lc.created_at
 FROM legacy_conversion lc
-JOIN customer c_referrer ON (c_referrer.metadata->>'appUserId') = lc.referrer_user_id::text
-JOIN customer c_referee  ON (c_referee.metadata->>'appUserId')  = lc.referee_user_id::text
+JOIN customer c_referrer ON c_referrer.external_id = lc.referrer_user_id::text
+                         AND c_referrer.deleted_at IS NULL
+JOIN customer c_referee  ON c_referee.external_id  = lc.referee_user_id::text
+                         AND c_referee.deleted_at IS NULL
 JOIN referral_code rc    ON rc.referrer_customer_id = c_referrer.id
                          AND rc.program_id = '<your-programId>'::uuid
 ON CONFLICT (code_id, referee_customer_id) DO NOTHING;

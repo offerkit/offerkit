@@ -25,7 +25,7 @@ Offerkit's referral model is **one stable code per referrer, many conversions pe
 
   Amounts are in cents. `kind` can be `discount`, `gift_card`, `loyalty_points`, or `custom`.
 
-- A Customer row in Offerkit for every user on your side that will refer or be referred. Mint these the first time you see the user with `customers.create({ email, name, … })`, persist the returned `customer.id` on your user record (e.g. `users.offerkit_customer_id`), and reuse it forever after.
+- A Customer row in Offerkit for every user on your side that will refer or be referred. The cleanest pattern is `customers.upsert({ externalId: yourUserId, email, name, … })` — idempotent on `externalId`, so you can call it any time without tracking the OfferKit-minted uuid on your side. Use `customers.getByExternalId({ externalId })` for lookups.
 
 ## Set up the client
 

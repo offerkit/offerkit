@@ -113,6 +113,13 @@
       "when": 1778623741522,
       "tag": "0015_referral_split_code_conversion",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1778672628254,
+      "tag": "0016_customer_external_id",
+      "breakpoints": true
     }
   ]
 }
