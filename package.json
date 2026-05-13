@@ -14,9 +14,13 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "fallow": "pnpm dlx fallow",
-    "prepare": "lefthook install || true"
+    "prepare": "lefthook install || true",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "turbo run build --filter=@offerkit/sdk --filter=@offerkit/cli --filter=@offerkit/mcp && changeset publish"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.31.0",
     "eslint": "^9.39.4",
     "lefthook": "^2.1.6",
     "turbo": "^2.9.10"
