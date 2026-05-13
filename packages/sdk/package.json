@@ -9,14 +9,8 @@
     "url": "https://github.com/akshitkrnagpal/offerkit.git",
     "directory": "packages/sdk"
   },
-  "main": "./dist/index.mjs",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.mts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.mts",
-      "import": "./dist/index.mjs"
-    }
+    ".": "./src/index.ts"
   },
   "files": [
     "dist"
@@ -28,7 +22,16 @@
     "prepublishOnly": "tsdown"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "main": "./dist/index.mjs",
+    "module": "./dist/index.mjs",
+    "types": "./dist/index.d.mts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.mts",
+        "import": "./dist/index.mjs"
+      }
+    }
   },
   "dependencies": {
     "@orpc/client": "^1.14.2",
