@@ -1,0 +1,171 @@
+---
+title: Migrating existing referrals
+description: One-time backfill from your legacy referral table into Offerkit.
+---
+
+If you're already running a referrals program before adopting Offerkit, you'll have two kinds of historical data to preserve:
+
+1. **Referrers who hold a code** — each user with a code that may still be shared. Becomes one `referral_code` row.
+2. **Past conversions** — each successful referral (referrer + referee pair) where the rewards were already issued. Becomes one `referral_conversion` row.
+
+This guide walks the import end-to-end. It's intentionally explicit about *what not to do* — the most expensive mistake here is double-issuing rewards.
+
+## Decide what you're preserving
+
+Offerkit needs three things for each historical record:
+
+| Your data | Offerkit field | Notes |
+| --- | --- | --- |
+| Referrer user id | `referral_code.referrer_customer_id` | Customer must exist in Offerkit first (see [Step 1](#step-1-import-customers)). |
+| Referee user id | `referral_conversion.referee_customer_id` | Same. |
+| Code string | `referral_code.code` | Must be globally unique inside the Offerkit deployment. |
+| Original event id | `referral_conversion.conversion_event_id` | Optional but **strongly recommended** — your old order id is the cleanest dedupe key. |
+| Issued voucher code(s) | `referral_conversion.referrer_outcome.voucherCode` / `referee_outcome.voucherCode` | Only if you still want them to honor the original vouchers (see [Step 4](#step-4-decide-what-to-do-with-historical-vouchers)). |
+
+Things you **don't** need to import: original conversion timestamps (Offerkit uses `created_at = now()` unless you override), the running program total, or analytics aggregates (Offerkit derives those).
+
+## Step 1: import customers
+
+You need an Offerkit `customer` row for every referrer and referee in your history. The Customer schema doesn't have a built-in `externalId` column, so pick one of these strategies and stick with it:
+
+- **Email as the join key** (simplest, works if every referrer has a unique email). Use `customers.list({ search: user.email, limit: 1 })` to look up before creating.
+- **Your user id in `customer.metadata`** (more robust). Store it as `metadata.appUserId` on create; you'll need to fetch and walk the list to build a lookup since `customers.list` doesn't filter on metadata.
+- **Save the Offerkit id on your side** (most reliable for ongoing use). Add an `offerkit_customer_id` column to your users table and write to it the first time you mint each customer.
+
+For the bulk import, the email approach is usually fine:
+
+```ts
+import { createClient } from "@offerkit/sdk";
+
+const offerkit = createClient({
+  baseUrl: process.env.OFFERKIT_API_URL!,
+  apiKey: process.env.OFFERKIT_API_KEY!,
+});
+
+const userIdToCustomerId = new Map<string, string>();
+
+for (const user of legacyUsers) {
+  const existing = await offerkit.customers.list({ search: user.email, limit: 1 });
+  let customerId = existing.data[0]?.id;
+  if (!customerId) {
+    const created = await offerkit.customers.create({
+      email: user.email,
+      name: user.name,
+      metadata: { appUserId: user.id },
+    });
+    customerId = created.id;
+  }
+  userIdToCustomerId.set(user.id, customerId);
+}
+```
+
+Persist `userIdToCustomerId` to disk (or your DB) — Step 2 and Step 3 reuse it. If the import has to resume after a crash, the next run skips already-mapped users.
+
+## Step 2: insert one referral_code per referrer
+
+The contract endpoint is `POST /api/v1/referrals/issue`. It's idempotent on `(programId, referrerCustomerId)` — so running the importer twice is safe; the second pass returns the same code instead of erroring.
+
+But there's a catch: `issue` **generates** the code. If you need to preserve the existing code strings your users have been sharing, you have two options:
+
+**Option A (preferred): write directly to the database.**
+
+The `issue` endpoint can't accept a custom code string, so for a one-time bulk import where preserving the original strings matters, run a SQL script against the Offerkit Postgres directly:
+
+First load your legacy table into the Offerkit database (e.g. `legacy_referral(referrer_user_id, code, created_at)` via `\copy` or a one-off import). Then:
+
+```sql
+INSERT INTO referral_code (id, program_id, referrer_customer_id, code, created_at, updated_at)
+SELECT
+  gen_random_uuid(),
+  '<your-programId>'::uuid,
+  c.id,
+  r.code,
+  r.created_at,
+  r.created_at
+FROM legacy_referral r
+JOIN customer c ON (c.metadata->>'appUserId') = r.referrer_user_id::text
+ON CONFLICT (program_id, referrer_customer_id) DO NOTHING;
+```
+
+The `metadata->>'appUserId'` join assumes you stored your user id in `customer.metadata.appUserId` during Step 1. If you used email instead, swap to `JOIN customer c ON c.email = r.referrer_email`. `code` has a global UNIQUE constraint; if your legacy table has duplicates, dedupe first.
+
+**Option B: let Offerkit mint new codes.**
+
+If your users haven't shared their codes far and wide yet (or you're happy to email everyone the new code), call `referrals.issue` and discard the old strings:
+
+```ts
+for (const referrer of legacyReferrers) {
+  const customerId = externalToCustomerId.get(referrer.userId);
+  if (!customerId) continue;
+  await offerkit.referrals.issue({
+    programId: process.env.OFFERKIT_REFERRAL_PROGRAM_ID!,
+    referrerCustomerId: customerId,
+  });
+}
+```
+
+This is simpler and idempotent, but you lose the codes already in the wild.
+
+## Step 3: insert one referral_conversion per historical conversion
+
+This is the step where double-issuing is most likely to bite. **Do not** call `referrals.convert` for historical rows — that endpoint *issues fresh rewards* (mints new vouchers, credits loyalty points). For history, you want to record that a conversion happened without firing rewards again.
+
+Same SQL pattern:
+
+```sql
+INSERT INTO referral_conversion (
+  id, code_id, referee_customer_id, status, converted_at, conversion_event_id,
+  referrer_outcome, referee_outcome, created_at, updated_at
+)
+SELECT
+  gen_random_uuid(),
+  rc.id,
+  c_referee.id,
+  'converted',
+  lc.converted_at,
+  lc.original_order_id,                       -- your dedupe key
+  jsonb_build_object('kind', 'discount'),     -- placeholder; see step 4
+  jsonb_build_object('kind', 'discount'),
+  lc.created_at,
+  lc.created_at
+FROM legacy_conversion lc
+JOIN customer c_referrer ON (c_referrer.metadata->>'appUserId') = lc.referrer_user_id::text
+JOIN customer c_referee  ON (c_referee.metadata->>'appUserId')  = lc.referee_user_id::text
+JOIN referral_code rc    ON rc.referrer_customer_id = c_referrer.id
+                         AND rc.program_id = '<your-programId>'::uuid
+ON CONFLICT (code_id, referee_customer_id) DO NOTHING;
+```
+
+The `(code_id, referee_customer_id)` unique constraint blocks duplicate inserts; the partial unique on `(code_id, conversion_event_id) WHERE conversion_event_id IS NOT NULL` blocks duplicate event-id replays. Together they make the importer safely re-runnable.
+
+## Step 4: decide what to do with historical vouchers
+
+Three options, depending on how you handled rewards in the legacy system:
+
+1. **The legacy rewards were already redeemed** — most common for old data. Don't import the voucher codes at all. The placeholder `{"kind": "discount"}` outcome in the conversion row is enough to audit "yes, this conversion happened." Users won't see anything new.
+
+2. **The legacy rewards are still active and your old system honors them** — keep that system running for the legacy codes. Don't try to mirror them into Offerkit; you'd just have two sources of truth.
+
+3. **You want Offerkit to start honoring the legacy codes** — for each active legacy voucher, `POST /api/v1/vouchers` with the original `code`, `campaignId`, and `type`/`discount`. Then update the conversion row's `referrer_outcome.voucherCode` / `referee_outcome.voucherCode` to reference them. This is the most work — only do it if you're decommissioning the old system.
+
+## Step 5: verify
+
+After the import, sanity-check totals:
+
+```sql
+SELECT
+  (SELECT COUNT(*) FROM legacy_referral)              AS legacy_codes,
+  (SELECT COUNT(*) FROM referral_code WHERE program_id = '<your-programId>') AS offerkit_codes,
+  (SELECT COUNT(*) FROM legacy_conversion)            AS legacy_conversions,
+  (SELECT COUNT(*) FROM referral_conversion rc
+    JOIN referral_code rcd ON rcd.id = rc.code_id
+   WHERE rcd.program_id = '<your-programId>')         AS offerkit_conversions;
+```
+
+Spot-check a handful of users on the Offerkit dashboard at **Referrals → \<program\> → Codes** — each legacy referrer should now have one code; clicking through should show the right conversion count.
+
+## Going live
+
+Once the import settles, point your application at the SDK ([Referrals integration guide](/docs/referrals)). All *new* conversions from this point forward go through `referrals.convert`, which issues fresh rewards. Legacy rows stay frozen as historical evidence — they're never re-converted.
+
+Keep the legacy table around for at least one billing cycle as a safety net. If something goes wrong, you can re-run Step 3 because of the `ON CONFLICT` guards.
