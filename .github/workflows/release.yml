@@ -8,7 +8,8 @@ name: Release
 #      All in the runner's working tree only; nothing pushed yet.
 #   2. Build @offerkit/sdk, @offerkit/cli, @offerkit/mcp from the bumped
 #      working tree.
-#   3. `changeset publish` — push the new versions to npm.
+#   3. `changeset publish` — push the new versions to npm via npm's
+#      trusted-publishing OIDC flow (no NPM_TOKEN secret needed).
 #   4. Only if publish succeeded: commit the version bumps + consumed
 #      changesets as github-actions[bot] and push to main.
 #
@@ -20,16 +21,20 @@ name: Release
 # If there are no pending changesets, all release-specific steps short-
 # circuit and the workflow exits clean.
 #
-# Requires the repo secret NPM_TOKEN (npm automation token with publish
-# rights on @offerkit). Set at Settings → Secrets and variables →
-# Actions → New repository secret.
+# Setup (one-time, per package on npmjs.com):
+# - Package Settings → Trusted Publisher → Add publisher → GitHub Actions
+# - owner: akshitkrnagpal · repository: offerkit
+# - workflow filename: release.yml · environment: (blank)
+# - Repeat for @offerkit/sdk, @offerkit/cli, @offerkit/mcp.
+#
+# Requires Node 24+ on the runner (ships npm 11+, which speaks OIDC).
 
 on:
   workflow_dispatch:
 
 permissions:
   contents: write  # for pushing the post-publish version-bump commit
-  id-token: write  # for npm provenance / future trusted-publishing
+  id-token: write  # npm trusted-publishing OIDC token request
 
 jobs:
   release:
@@ -49,7 +54,7 @@ jobs:
       - name: Install Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
           registry-url: https://registry.npmjs.org
 
@@ -72,13 +77,12 @@ jobs:
         run: pnpm turbo run build --filter=@offerkit/sdk --filter=@offerkit/cli --filter=@offerkit/mcp
 
       - name: Publish to npm
+        # No NPM_TOKEN — npm picks up the OIDC token from
+        # ACTIONS_ID_TOKEN_REQUEST_TOKEN (granted via id-token: write
+        # permission above). Requires trusted publisher configured on
+        # npmjs.com for each package.
         if: steps.version.outputs.changed == 'true'
         run: pnpm changeset publish
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          # changeset publish uses npm under the hood; npm reads
-          # NODE_AUTH_TOKEN when registry-url is set above.
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Commit + push version bumps
         if: steps.version.outputs.changed == 'true'
