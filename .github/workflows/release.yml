@@ -1,29 +1,35 @@
 name: Release
 
 # Manual-only. Trigger from the Actions tab → "Release" → Run workflow.
-# Does in one shot:
+# Order of operations:
 #   1. pnpm version-packages — consumes pending .changeset/*.md files,
 #      bumps versions in the relevant package.json files, writes
 #      CHANGELOG.md entries, deletes the consumed changesets.
-#   2. Commits and pushes the version bumps back to main.
-#   3. Builds @offerkit/sdk, @offerkit/cli, @offerkit/mcp.
-#   4. Runs `changeset publish` to push the bumped versions to npm.
+#      All in the runner's working tree only; nothing pushed yet.
+#   2. Build @offerkit/sdk, @offerkit/cli, @offerkit/mcp from the bumped
+#      working tree.
+#   3. `changeset publish` — push the new versions to npm.
+#   4. Only if publish succeeded: commit the version bumps + consumed
+#      changesets as github-actions[bot] and push to main.
 #
-# If there are no pending changesets, the workflow is a no-op (version
-# step writes nothing, no commit, publish step says "nothing to publish").
+# Failure semantics: if build or publish fails, no commit hits main.
+# The pending changesets stay on main intact, and the next run will
+# re-attempt cleanly. (changeset publish itself is safe to re-run —
+# it skips versions already on npm.)
 #
-# Requires repo secrets:
-#   - NPM_TOKEN — npm automation token with publish rights on the
-#     @offerkit org (create at https://www.npmjs.com/settings/<you>/tokens,
-#     pick "Automation"). Stored at Settings → Secrets and variables →
-#     Actions.
+# If there are no pending changesets, all release-specific steps short-
+# circuit and the workflow exits clean.
+#
+# Requires the repo secret NPM_TOKEN (npm automation token with publish
+# rights on @offerkit). Set at Settings → Secrets and variables →
+# Actions → New repository secret.
 
 on:
   workflow_dispatch:
 
 permissions:
-  contents: write  # for pushing version-bump commits back to main
-  id-token: write  # for npm provenance (optional but nice for transparency)
+  contents: write  # for pushing the post-publish version-bump commit
+  id-token: write  # for npm provenance / future trusted-publishing
 
 jobs:
   release:
@@ -43,7 +49,7 @@ jobs:
       - name: Install Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
           registry-url: https://registry.npmjs.org
 
@@ -51,27 +57,34 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Apply pending changesets
-        run: pnpm version-packages
+        id: version
+        run: |
+          pnpm version-packages
+          if git diff --quiet; then
+            echo "No pending changesets — nothing to release."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build public packages
+        if: steps.version.outputs.changed == 'true'
+        run: pnpm turbo run build --filter=@offerkit/sdk --filter=@offerkit/cli --filter=@offerkit/mcp
+
+      - name: Publish to npm
+        if: steps.version.outputs.changed == 'true'
+        run: pnpm changeset publish
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # changeset publish uses npm under the hood; npm reads
+          # NODE_AUTH_TOKEN when registry-url is set above.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Commit + push version bumps
+        if: steps.version.outputs.changed == 'true'
         run: |
-          if git diff --quiet; then
-            echo "No version changes to commit (no pending changesets)."
-            exit 0
-          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "chore: release"
           git push origin HEAD:main
-
-      - name: Build public packages
-        run: pnpm turbo run build --filter=@offerkit/sdk --filter=@offerkit/cli --filter=@offerkit/mcp
-
-      - name: Publish to npm
-        run: pnpm changeset publish
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          # changeset publish uses npm under the hood; npm reads NODE_AUTH_TOKEN
-          # when registry-url is set via setup-node above.
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
