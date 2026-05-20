@@ -35,10 +35,30 @@ export const breakdownEntry = z.object({
   reason: z.enum(["exclusivity_lost", "zero_after_running_total"]).optional(),
 });
 
+export const redemptionExplanation = z.object({
+  code: z.enum([
+    "voucher_not_found",
+    "voucher_disabled",
+    "voucher_expired",
+    "redemption_limit_reached",
+    "currency_mismatch",
+    "gift_balance_zero",
+    "order_required",
+    "exclusivity_lost",
+    "zero_after_running_total",
+    "gift_card_stacking_unsupported",
+  ]),
+  message: z.string(),
+  voucherId: z.string().uuid().optional(),
+  voucherCode: z.string().optional(),
+  details: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
+});
+
 export const validateOutput = z.object({
   valid: z.boolean(),
   code: z.string().optional(),
   message: z.string().optional(),
+  explanations: z.array(redemptionExplanation).optional(),
   preview: z
     .object({
       amount: z.number().int(),
@@ -57,6 +77,7 @@ export const redeemOutput = z.object({
   idempotent: z.boolean().optional(),
   code: z.string().optional(),
   message: z.string().optional(),
+  explanations: z.array(redemptionExplanation).optional(),
 });
 
 export const stackRedeemInput = z.object({
@@ -85,4 +106,5 @@ export const stackRedeemOutput = z.object({
   idempotent: z.boolean().optional(),
   code: z.string().optional(),
   message: z.string().optional(),
+  explanations: z.array(redemptionExplanation).optional(),
 });

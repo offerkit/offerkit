@@ -269,6 +269,7 @@ const validateProc = os.vouchers.validate
       valid: result.valid,
       code: result.code,
       message: result.message,
+      explanations: result.explanations,
       preview: result.preview,
     };
   });
@@ -294,7 +295,12 @@ const redeemProc = os.vouchers.redeem
         idempotent: result.idempotent,
       };
     }
-    return { ok: false, code: result.code, message: result.message };
+    return {
+      ok: false,
+      code: result.code,
+      message: result.message,
+      explanations: result.explanations,
+    };
   });
 
 const transactions = os.vouchers.transactions
@@ -343,10 +349,16 @@ const stackRedeemProc = os.vouchers.stackRedeem
         finalOrder: result.finalOrder,
         breakdown: result.breakdown,
         entries: result.entries,
+        explanations: result.explanations,
         idempotent: result.idempotent,
       };
     }
-    return { ok: false, code: result.code, message: result.message };
+    return {
+      ok: false,
+      code: result.code,
+      message: result.message,
+      explanations: result.explanations,
+    };
   });
 
 export const vouchersRouter = {

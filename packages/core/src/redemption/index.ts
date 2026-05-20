@@ -12,6 +12,8 @@ export type {
   RedeemInput,
   RedeemResult,
   RedeemSuccess,
+  RedemptionExplanation,
+  RedemptionExplanationCode,
   RedemptionFailureCode,
   StackEntry,
   StackRedeemInput,

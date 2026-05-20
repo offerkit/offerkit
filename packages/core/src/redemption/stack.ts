@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { schema, type Db } from "@offerkit/db";
 import { calculateDiscount, type DiscountResult } from "../discount/index.ts";
 import { emitEvent } from "../events/index.ts";
+import { failureExplanation, stackBreakdownExplanations } from "./explanations.ts";
 import { logger, withSpan } from "../observability/index.ts";
 import { checkActivation, messageFor } from "./shared.ts";
 import type {
@@ -41,7 +42,18 @@ async function stackRedeemImpl(
   input: StackRedeemInput,
 ): Promise<StackRedeemResult> {
   if (input.voucherCodes.length === 0) {
-    return { ok: false, code: "voucher_not_found", message: "No voucher codes supplied" };
+    return {
+      ok: false,
+      code: "voucher_not_found",
+      message: "No voucher codes supplied",
+      explanations: [
+        {
+          code: "voucher_not_found",
+          message: "No voucher codes supplied",
+          details: { suppliedCodes: 0 },
+        },
+      ],
+    };
   }
   // Dedupe + sort to make the lock acquisition order deterministic.
   const codes = [...new Set(input.voucherCodes)].sort();
@@ -66,6 +78,13 @@ async function stackRedeemImpl(
         ok: false,
         code: "voucher_not_found",
         message: `Voucher not found: ${String(missing)}`,
+        explanations: [
+          {
+            code: "voucher_not_found",
+            message: "Voucher not found",
+            voucherCode: missing,
+          },
+        ],
       };
     }
 
@@ -73,7 +92,12 @@ async function stackRedeemImpl(
     for (const v of lockedRows) {
       const failure = checkActivation(v, now);
       if (failure) {
-        return { ok: false, code: failure, message: messageFor(failure) };
+        return {
+          ok: false,
+          code: failure,
+          message: messageFor(failure),
+          explanations: [failureExplanation(failure, v)],
+        };
       }
       // Stackable redemptions don't support gift cards yet — they need
       // partial-spend semantics that don't compose with calculateDiscount.
@@ -82,6 +106,15 @@ async function stackRedeemImpl(
           ok: false,
           code: "voucher_disabled",
           message: `Gift card ${v.code} cannot be stacked with discounts`,
+          explanations: [
+            {
+              code: "gift_card_stacking_unsupported",
+              message: "Gift cards cannot be stacked with discounts",
+              voucherId: v.id,
+              voucherCode: v.code,
+              details: { type: v.type },
+            },
+          ],
         };
       }
     }
@@ -160,6 +193,7 @@ async function stackRedeemImpl(
       finalOrder: result.finalOrder,
       breakdown: result.breakdown,
       entries,
+      explanations: stackBreakdownExplanations(result.breakdown),
     };
   });
 }
