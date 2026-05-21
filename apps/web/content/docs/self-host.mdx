@@ -43,6 +43,35 @@ OFFERKIT_PUBLIC_URL=https://your-domain
 
 …and the first deploy will boot a working instance. There is no GitHub Actions pipeline; Railway builds directly from the repo on push.
 
+## Production: Diploi
+
+Diploi should use the same deployment shape as Docker compose and Railway:
+
+- `web` — public HTTP component built from `apps/web/Dockerfile`, exposes `:3000`
+- `worker` — private/background component built from `apps/worker/Dockerfile`, exposes health on `:9091`
+- `postgres` — managed Postgres service wired into both components as `DATABASE_URL`
+- `redis` — only required for releases that use Redis-backed background jobs; wire it as `REDIS_URL` into both components when enabled
+
+Required `web` environment variables:
+
+```
+DATABASE_URL=postgres://...
+BETTER_AUTH_SECRET=…
+OFFERKIT_PUBLIC_URL=https://your-diploi-domain
+ADMIN_EMAIL=…
+ADMIN_PASSWORD=…
+```
+
+Required `worker` environment variables:
+
+```
+DATABASE_URL=postgres://...
+WORKER_HEALTH_PORT=9091
+# REDIS_URL=redis://...  # only for Redis-backed queue releases
+```
+
+Use the README's **Launch with Diploi** button if you want to start from Diploi's project wizard. After the first deploy, verify `/api/v1/ready` on `web`, `:9091/health` on `worker`, and sign in with the seeded admin account.
+
 ## Observability
 
 The image is OpenTelemetry-ready out of the box. Set:

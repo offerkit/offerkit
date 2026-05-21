@@ -69,6 +69,12 @@ The `docker-compose.yml` brings up `web` + `worker` + `postgres`. Migrations run
 
 In one Railway project, create three services: a Postgres add-on, a `web` service (Config-as-Code Path: `apps/web/railway.toml`, Dockerfile Build Stage: `web`), and a `worker` service (Config-as-Code Path: `apps/worker/railway.toml`, Dockerfile Build Stage: `worker`, no public domain). Reference Postgres's `DATABASE_URL` into both. Set `BETTER_AUTH_SECRET`, `OFFERKIT_PUBLIC_URL`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` on the `web` service.
 
+### Diploi
+
+[![Launch with Diploi](https://diploi.com/launch-big.svg)](https://diploi.com/launch/akshitkrnagpal/offerkit)
+
+Create one Diploi project with a public `web` component, a private `worker` component, and a Postgres service. Build both components from this repo's Dockerfiles: `apps/web/Dockerfile` for `web`, `apps/worker/Dockerfile` for `worker`. Wire Postgres's `DATABASE_URL` into both components. Set `BETTER_AUTH_SECRET`, `OFFERKIT_PUBLIC_URL`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` on `web`; set `WORKER_HEALTH_PORT=9091` on `worker`. If you deploy a Redis-backed queue release, add a Redis service and wire `REDIS_URL` into both components.
+
 ## 📦 SDK & CLI & MCP
 
 ### TypeScript SDK
