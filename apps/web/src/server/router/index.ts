@@ -7,6 +7,7 @@ import { apiKeysRouter } from "./api-keys";
 import { campaignsRouter } from "./campaigns";
 import { customersRouter } from "./customers";
 import { loyaltyRouter } from "./loyalty";
+import { promotionsRouter } from "./promotions";
 import { referralsRouter } from "./referrals";
 import { rewardTypesRouter } from "./reward-types";
 import { segmentsRouter } from "./segments";
@@ -46,6 +47,7 @@ export const router = os.router({
   customers: customersRouter,
   segments: segmentsRouter,
   campaigns: campaignsRouter,
+  promotions: promotionsRouter,
   vouchers: vouchersRouter,
   validationRules: validationRulesRouter,
   rewardTypes: rewardTypesRouter,

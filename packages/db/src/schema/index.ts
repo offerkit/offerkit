@@ -9,6 +9,7 @@ export * from "./idempotency.ts";
 export * from "./job.ts";
 export * from "./loyalty.ts";
 export * from "./order.ts";
+export * from "./promotion-tier.ts";
 export * from "./referral.ts";
 export * from "./redemption.ts";
 export * from "./reward-type.ts";

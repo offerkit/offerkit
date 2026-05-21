@@ -5,6 +5,7 @@ import { campaigns } from "./routes/campaigns.ts";
 import { customers } from "./routes/customers.ts";
 import { loyalty } from "./routes/loyalty.ts";
 import { referrals } from "./routes/referrals.ts";
+import { promotions } from "./routes/promotions.ts";
 import { rewardTypes } from "./routes/reward-types.ts";
 import { segments } from "./routes/segments.ts";
 import { validationRules } from "./routes/validation-rules.ts";
@@ -39,6 +40,7 @@ export const contract = {
   customers,
   segments,
   campaigns,
+  promotions,
   vouchers,
   validationRules,
   rewardTypes,
