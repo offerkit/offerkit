@@ -9,6 +9,20 @@ export type RedemptionFailureCode =
   | "gift_balance_zero"
   | "order_required";
 
+export type RedemptionExplanationCode =
+  | RedemptionFailureCode
+  | "exclusivity_lost"
+  | "zero_after_running_total"
+  | "gift_card_stacking_unsupported";
+
+export interface RedemptionExplanation {
+  code: RedemptionExplanationCode;
+  message: string;
+  voucherId?: string;
+  voucherCode?: string;
+  details?: Record<string, string | number | boolean | null>;
+}
+
 export interface RedeemInput {
   voucherCode: string;
   customerId?: string;
@@ -33,6 +47,7 @@ export interface RedeemFailure {
   ok: false;
   code: RedemptionFailureCode;
   message: string;
+  explanations?: RedemptionExplanation[];
 }
 
 export type RedeemResult = RedeemSuccess | RedeemFailure;
@@ -47,6 +62,7 @@ export interface ValidateResult {
   valid: boolean;
   code?: RedemptionFailureCode;
   message?: string;
+  explanations?: RedemptionExplanation[];
   preview?: { amount: number; finalOrder: DiscountResult["finalOrder"]; breakdown: DiscountResult["breakdown"] };
 }
 
@@ -73,6 +89,7 @@ export interface StackRedeemSuccess {
   finalOrder: DiscountResult["finalOrder"];
   breakdown: DiscountResult["breakdown"];
   entries: StackEntry[];
+  explanations?: RedemptionExplanation[];
   idempotent?: boolean;
 }
 

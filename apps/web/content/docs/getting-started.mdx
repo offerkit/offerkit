@@ -58,7 +58,7 @@ curl -H "Authorization: Bearer $OFFERKIT_API_KEY" -H 'Content-Type: application/
   -d '{"order":{"amount":5000,"currency":"USD","items":[]},"idempotencyKey":"order-123"}'
 ```
 
-The redeem endpoint is idempotent on `(voucherCode, idempotencyKey)` — replays return the same response with `idempotent: true`.
+The redeem endpoint is idempotent on `(voucherCode, idempotencyKey)` — replays return the same response with `idempotent: true`. Validate, redeem, and stack-redeem failures also include an `explanations` array with support-safe reason codes and details such as activation windows, redemption limits, gift card balance, and stacking skips.
 
 ## Where next
 

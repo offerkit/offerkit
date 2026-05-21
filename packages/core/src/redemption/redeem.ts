@@ -2,6 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { schema, type Db } from "@offerkit/db";
 import type { DiscountResult } from "../discount/index.ts";
 import { emitEvent } from "../events/index.ts";
+import { failureExplanation } from "./explanations.ts";
 import { logger, withSpan } from "../observability/index.ts";
 import { checkActivation, messageFor, previewDiscount, previewGiftCard } from "./shared.ts";
 import type {
@@ -35,7 +36,12 @@ function redeemImpl(db: Db, input: RedeemInput): Promise<RedeemResult> {
       .for("update")) as VoucherRow[];
     const voucher = locked[0];
     if (!voucher) {
-      return { ok: false, code: "voucher_not_found", message: messageFor("voucher_not_found") };
+      return {
+        ok: false,
+        code: "voucher_not_found",
+        message: messageFor("voucher_not_found"),
+        explanations: [failureExplanation("voucher_not_found")],
+      };
     }
 
     if (input.idempotencyKey) {
@@ -55,7 +61,12 @@ function redeemImpl(db: Db, input: RedeemInput): Promise<RedeemResult> {
         failureReason: failure,
         idempotencyKey: input.idempotencyKey ?? null,
       });
-      return { ok: false, code: failure, message: messageFor(failure) };
+      return {
+        ok: false,
+        code: failure,
+        message: messageFor(failure),
+        explanations: [failureExplanation(failure, voucher)],
+      };
     }
 
     if (voucher.type === "GIFT_CARD") {
@@ -103,7 +114,7 @@ async function replayRedemption(
     };
   }
   const code = (existing.failureReason as RedemptionFailureCode | null) ?? "voucher_disabled";
-  return { ok: false, code, message: messageFor(code) };
+  return { ok: false, code, message: messageFor(code), explanations: [failureExplanation(code)] };
 }
 
 async function redeemGiftCard(
@@ -113,11 +124,21 @@ async function redeemGiftCard(
   now: Date,
 ): Promise<RedeemResult> {
   if (!input.order) {
-    return { ok: false, code: "order_required", message: messageFor("order_required") };
+    return {
+      ok: false,
+      code: "order_required",
+      message: messageFor("order_required"),
+      explanations: [failureExplanation("order_required", voucher)],
+    };
   }
   const gp = previewGiftCard(voucher, input.order);
   if (!gp || gp.spend === 0) {
-    return { ok: false, code: "gift_balance_zero", message: messageFor("gift_balance_zero") };
+    return {
+      ok: false,
+      code: "gift_balance_zero",
+      message: messageFor("gift_balance_zero"),
+      explanations: [failureExplanation("gift_balance_zero", voucher)],
+    };
   }
 
   await tx
