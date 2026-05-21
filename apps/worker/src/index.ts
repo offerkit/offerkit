@@ -21,8 +21,8 @@ const db = getDb();
 const registry = createJobRegistry();
 
 // Daily loyalty sweep that schedules its own next run after success.
-// Boot calls ensureScheduled() so a freshly-deployed db gets the first
-// row; from then on the queue is the source of truth for cadence.
+// Boot calls ensureScheduled() so a freshly-deployed queue gets the first
+// job; from then on Redis/BullMQ is the source of truth for cadence.
 const LOYALTY_EXPIRE_INTERVAL_MS = 24 * 60 * 60_000;
 registry.register("webhook.deliver", async ({ jobId, payload }) => {
   const deliveryId = (payload as { deliveryId?: string }).deliveryId;
@@ -114,9 +114,8 @@ await runWorker({
   registry,
   workerId,
   signal: controller.signal,
-  // Liveness: every poll cycle (whether or not work was claimed) proves
-  // the worker reached the DB and is making progress. /ready compares
-  // this against now() < 60s.
+  // Liveness: every adapter tick proves the worker loop or Redis heartbeat
+  // is still running. /ready compares this against now() < 60s.
   onTick: () => {
     lastHeartbeat = Date.now();
   },

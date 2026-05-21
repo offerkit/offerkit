@@ -61,19 +61,19 @@ Visit <http://localhost:3000> and sign in with the `ADMIN_EMAIL` / `ADMIN_PASSWO
 
 ### Docker compose
 
-The `docker-compose.yml` brings up `web` + `worker` + `postgres`. Migrations run automatically on web boot. See [`/docs/self-host`](apps/web/content/docs/self-host.mdx) for env vars and tuning.
+The `docker-compose.yml` brings up `web` + `worker` + `postgres` + `redis`. Migrations run automatically on web boot. Background jobs are queued in Redis via BullMQ. See [`/docs/self-host`](apps/web/content/docs/self-host.mdx) for env vars and tuning.
 
 ### Railway
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new)
 
-In one Railway project, create three services: a Postgres add-on, a `web` service (Config-as-Code Path: `apps/web/railway.toml`, Dockerfile Build Stage: `web`), and a `worker` service (Config-as-Code Path: `apps/worker/railway.toml`, Dockerfile Build Stage: `worker`, no public domain). Reference Postgres's `DATABASE_URL` into both. Set `BETTER_AUTH_SECRET`, `OFFERKIT_PUBLIC_URL`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` on the `web` service.
+In one Railway project, create four services: a Postgres add-on, a Redis add-on, a `web` service (Config-as-Code Path: `apps/web/railway.toml`, Dockerfile Build Stage: `web`), and a `worker` service (Config-as-Code Path: `apps/worker/railway.toml`, Dockerfile Build Stage: `worker`, no public domain). Reference Postgres's `DATABASE_URL` and Redis's `REDIS_URL` into both app services. Set `BETTER_AUTH_SECRET`, `OFFERKIT_PUBLIC_URL`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` on the `web` service.
 
 ### Diploi
 
 [![Launch with Diploi](https://diploi.com/launch-big.svg)](https://diploi.com/launch/akshitkrnagpal/offerkit)
 
-Create one Diploi project with a public `web` component, a private `worker` component, and a Postgres service. Build both components from this repo's Dockerfiles: `apps/web/Dockerfile` for `web`, `apps/worker/Dockerfile` for `worker`. Wire Postgres's `DATABASE_URL` into both components. Set `BETTER_AUTH_SECRET`, `OFFERKIT_PUBLIC_URL`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` on `web`; set `WORKER_HEALTH_PORT=9091` on `worker`. If you deploy a Redis-backed queue release, add a Redis service and wire `REDIS_URL` into both components.
+Create one Diploi project with a public `web` component, a private `worker` component, Postgres, and Redis. Build both components from this repo's Dockerfiles: `apps/web/Dockerfile` for `web`, `apps/worker/Dockerfile` for `worker`. Wire Postgres's `DATABASE_URL` and Redis's `REDIS_URL` into both components. Set `BETTER_AUTH_SECRET`, `OFFERKIT_PUBLIC_URL`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` on `web`; set `WORKER_HEALTH_PORT=9091` on `worker`.
 
 ## 📦 SDK & CLI & MCP
 
@@ -137,7 +137,7 @@ offerkit vouchers redeem SUMMER10 --amount 9999
 
 ## 🏗️ Development
 
-Requires Node 24+, pnpm 10+, a running Postgres.
+Requires Node 24+, pnpm 10+, running Postgres, and Redis.
 
 ```bash
 pnpm install
@@ -149,7 +149,7 @@ pnpm --filter @offerkit/worker dev       # worker on :9091
 
 ```
 apps/web         Next.js dashboard + REST API + /docs (Fumadocs embedded)
-apps/worker      Long-running Node process — runs the Postgres job queue
+apps/worker      Long-running Node process — runs the Redis/BullMQ job queue
 packages/contract  oRPC router contract + Zod schemas (single source of truth)
 packages/core    Domain logic (rules, redemption, discount, jobs, observability, email)
 packages/db      Drizzle schema + client + migrations
