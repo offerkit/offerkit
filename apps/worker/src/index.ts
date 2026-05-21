@@ -114,9 +114,8 @@ await runWorker({
   registry,
   workerId,
   signal: controller.signal,
-  // Liveness: every poll cycle (whether or not work was claimed) proves
-  // the worker reached the DB and is making progress. /ready compares
-  // this against now() < 60s.
+  // Liveness: every adapter tick proves the worker loop or Redis heartbeat
+  // is still running. /ready compares this against now() < 60s.
   onTick: () => {
     lastHeartbeat = Date.now();
   },

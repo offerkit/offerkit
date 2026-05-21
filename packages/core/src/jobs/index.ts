@@ -88,6 +88,7 @@ export function createRedisJobQueue(options: RedisJobQueueOptions): JobQueueAdap
   const connection = createRedisConnection(options.redisUrl);
   const queue = new (options.QueueCtor ?? (Queue as unknown as QueueCtor))(queueName, { connection });
   let worker: WorkerLike | undefined;
+  let heartbeat: NodeJS.Timeout | undefined;
   let resolveRun: (() => void) | undefined;
   let runPromise: Promise<void> | undefined;
 
@@ -138,6 +139,11 @@ export function createRedisJobQueue(options: RedisJobQueueOptions): JobQueueAdap
         .on("completed", () => runOptions.onTick?.())
         .on("failed", (job, err) => log.warn({ job, err }, "redis job failed"));
 
+      runOptions.onTick?.();
+      const heartbeatMs = runOptions.pollIntervalMs ?? 2_000;
+      heartbeat = setInterval(() => runOptions.onTick?.(), heartbeatMs);
+      heartbeat.unref?.();
+
       runOptions.signal?.addEventListener("abort", () => {
         void adapter.close();
       });
@@ -150,6 +156,10 @@ export function createRedisJobQueue(options: RedisJobQueueOptions): JobQueueAdap
     },
 
     async close() {
+      if (heartbeat) {
+        clearInterval(heartbeat);
+        heartbeat = undefined;
+      }
       await worker?.close();
       worker = undefined;
       await queue.close();
