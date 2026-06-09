@@ -1,5 +1,11 @@
 # @offerkit/sdk
 
+## 0.2.3
+
+### Patch Changes
+
+- 6c1a6eb: Publish the updated contract surface for promotions, voucher qualification, and richer redemption failure details in the SDK, and refresh the CLI against the new SDK release.
+
 ## 0.2.2
 
 ### Patch Changes
