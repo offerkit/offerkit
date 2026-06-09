@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { voucherDiscount } from "./voucher.ts";
 
 export const orderItem = z.object({
   productId: z.string(),
@@ -66,6 +67,45 @@ export const validateOutput = z.object({
       breakdown: z.array(breakdownEntry),
     })
     .optional(),
+});
+
+export const qualifyInput = z.object({
+  customerId: z.string().uuid(),
+  order: orderInput,
+  filters: z
+    .object({
+      campaignIds: z.array(z.string().uuid()).max(100).optional(),
+      includeSkipped: z.boolean().optional(),
+    })
+    .optional(),
+});
+
+export const qualifyOutput = z.object({
+  eligible: z.array(
+    z.object({
+      code: z.string(),
+      campaignId: z.string().uuid().nullable(),
+      discount: voucherDiscount
+        .omit({ appliesTo: true })
+        .nullable(),
+      endDate: z.string().datetime().nullable(),
+      preview: z
+        .object({
+          amount: z.number().int(),
+          finalOrder: z.object({ amount: z.number().int(), currency: z.string() }),
+          breakdown: z.array(breakdownEntry),
+        })
+        .optional(),
+    }),
+  ),
+  skipped: z.array(
+    z.object({
+      code: z.string(),
+      campaignId: z.string().uuid().nullable(),
+      reason: z.string(),
+      message: z.string(),
+    }),
+  ),
 });
 
 export const redeemOutput = z.object({

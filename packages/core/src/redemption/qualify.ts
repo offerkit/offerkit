@@ -1,0 +1,69 @@
+import { and, eq, inArray, isNull } from "drizzle-orm";
+import { schema, type Db } from "@offerkit/db";
+import { withSpan } from "../observability/index.ts";
+import { validateVoucher } from "./shared.ts";
+import type {
+  QualifyInput,
+  VoucherQualificationResult,
+  VoucherQualificationSkipped,
+  VoucherRow,
+} from "./types.ts";
+
+export function qualify(db: Db, input: QualifyInput): Promise<VoucherQualificationResult> {
+  return withSpan(
+    "voucher.qualify",
+    () => qualifyImpl(db, input),
+    {
+      "customer.id": input.customerId,
+      "voucher.include_skipped": input.filters?.includeSkipped ?? false,
+    },
+  );
+}
+
+async function qualifyImpl(db: Db, input: QualifyInput): Promise<VoucherQualificationResult> {
+  const campaignIds = input.filters?.campaignIds ?? [];
+  if (campaignIds.length === 0 && input.filters?.campaignIds) {
+    return { eligible: [], skipped: [] };
+  }
+
+  const filters = [
+    eq(schema.voucher.customerId, input.customerId),
+    isNull(schema.voucher.deletedAt),
+  ];
+  if (campaignIds.length > 0) {
+    filters.push(inArray(schema.voucher.campaignId, campaignIds));
+  }
+
+  const vouchers = (await db
+    .select()
+    .from(schema.voucher)
+    .where(and(...filters))) as VoucherRow[];
+
+  const eligible: VoucherQualificationResult["eligible"] = [];
+  const skipped: VoucherQualificationSkipped[] = [];
+
+  for (const voucher of vouchers) {
+    const result = validateVoucher(voucher, input.order);
+    if (result.valid) {
+      eligible.push({
+        code: voucher.code,
+        campaignId: voucher.campaignId,
+        discount: voucher.discount,
+        endDate: voucher.endDate?.toISOString() ?? null,
+        preview: result.preview,
+      });
+      continue;
+    }
+
+    if (input.filters?.includeSkipped) {
+      skipped.push({
+        code: voucher.code,
+        campaignId: voucher.campaignId,
+        reason: result.code ?? "voucher_invalid",
+        message: result.message ?? "Voucher is not eligible for this order",
+      });
+    }
+  }
+
+  return { eligible, skipped };
+}

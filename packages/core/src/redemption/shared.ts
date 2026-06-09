@@ -1,5 +1,6 @@
 import { calculateDiscount, type DiscountOrder, type DiscountResult } from "../discount/index.ts";
-import type { RedemptionFailureCode, VoucherRow } from "./types.ts";
+import { failureExplanation } from "./explanations.ts";
+import type { RedemptionFailureCode, ValidateResult, VoucherRow } from "./types.ts";
 
 export function checkActivation(v: VoucherRow, now: Date): RedemptionFailureCode | null {
   if (!v.active) return "voucher_disabled";
@@ -79,6 +80,53 @@ export function previewDiscount(
         ]
       : [],
   });
+}
+
+export function validateVoucher(voucher: VoucherRow | undefined, order: DiscountOrder | undefined): ValidateResult {
+  if (!voucher) {
+    return {
+      valid: false,
+      code: "voucher_not_found",
+      message: "Voucher not found",
+      explanations: [failureExplanation("voucher_not_found")],
+    };
+  }
+
+  const failure = checkActivation(voucher, new Date());
+  if (failure) {
+    return {
+      valid: false,
+      code: failure,
+      message: messageFor(failure),
+      explanations: [failureExplanation(failure, voucher)],
+    };
+  }
+
+  if (voucher.type === "GIFT_CARD") {
+    const gp = previewGiftCard(voucher, order);
+    if (!gp) {
+      return {
+        valid: false,
+        code: "gift_balance_zero",
+        message: messageFor("gift_balance_zero"),
+        explanations: [failureExplanation("gift_balance_zero", voucher)],
+      };
+    }
+    return {
+      valid: true,
+      preview: { amount: gp.spend, finalOrder: gp.finalOrder, breakdown: gp.breakdown },
+    };
+  }
+
+  const preview = previewDiscount(voucher, order);
+  return {
+    valid: true,
+    preview: {
+      amount: preview.appliedDiscounts.reduce((s, a) => s + a.amount, 0),
+      finalOrder: preview.finalOrder,
+      breakdown: preview.breakdown,
+    },
+  };
 }
 
 export function messageFor(code: RedemptionFailureCode): string {

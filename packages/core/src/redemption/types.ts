@@ -66,6 +66,35 @@ export interface ValidateResult {
   preview?: { amount: number; finalOrder: DiscountResult["finalOrder"]; breakdown: DiscountResult["breakdown"] };
 }
 
+export interface QualifyInput {
+  customerId: string;
+  order: DiscountOrder;
+  filters?: {
+    campaignIds?: string[];
+    includeSkipped?: boolean;
+  };
+}
+
+export interface VoucherQualificationEligible {
+  code: string;
+  campaignId: string | null;
+  discount: VoucherRow["discount"];
+  endDate: string | null;
+  preview?: ValidateResult["preview"];
+}
+
+export interface VoucherQualificationSkipped {
+  code: string;
+  campaignId: string | null;
+  reason: string;
+  message: string;
+}
+
+export interface VoucherQualificationResult {
+  eligible: VoucherQualificationEligible[];
+  skipped: VoucherQualificationSkipped[];
+}
+
 export interface StackRedeemInput {
   voucherCodes: string[];
   customerId?: string;
@@ -108,6 +137,7 @@ export interface VoucherRow extends Record<string, unknown> {
   active: boolean;
   startDate: Date | null;
   endDate: Date | null;
+  customerId: string | null;
   priority: number;
   exclusive: boolean;
   deletedAt: Date | null;

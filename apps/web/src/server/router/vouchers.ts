@@ -4,7 +4,7 @@ import { schema } from "@offerkit/db";
 import { contract } from "@offerkit/contract/router";
 import { generateUniqueCodes, BULK_INLINE_THRESHOLD } from "@offerkit/core/codes";
 import { enqueueJob } from "@offerkit/core/jobs";
-import { redeem, stackRedeem, validate } from "@offerkit/core/redemption";
+import { qualify, redeem, stackRedeem, validate } from "@offerkit/core/redemption";
 import type { RequestContext } from "@/server/context";
 import { db } from "@/lib/db";
 import { requireSession } from "@/server/middleware/auth";
@@ -274,6 +274,10 @@ const validateProc = os.vouchers.validate
     };
   });
 
+const qualifyProc = os.vouchers.qualify
+  .use(requireSession)
+  .handler(({ input }) => qualify(db(), input));
+
 const redeemProc = os.vouchers.redeem
   .use(requireSession)
   .handler(async ({ input }) => {
@@ -369,6 +373,7 @@ export const vouchersRouter = {
   delete: remove,
   bulk,
   validate: validateProc,
+  qualify: qualifyProc,
   redeem: redeemProc,
   stackRedeem: stackRedeemProc,
   transactions,
