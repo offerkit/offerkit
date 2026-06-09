@@ -4,11 +4,13 @@
 // in isolation. Shared types are in types.ts; helpers in shared.ts.
 
 export { validate } from "./validate.ts";
+export { qualify } from "./qualify.ts";
 export { redeem } from "./redeem.ts";
 export { stackRedeem } from "./stack.ts";
 export { rollback } from "./rollback.ts";
 export type {
   RedeemFailure,
+  QualifyInput,
   RedeemInput,
   RedeemResult,
   RedeemSuccess,
@@ -21,4 +23,7 @@ export type {
   StackRedeemSuccess,
   ValidateInput,
   ValidateResult,
+  VoucherQualificationEligible,
+  VoucherQualificationResult,
+  VoucherQualificationSkipped,
 } from "./types.ts";

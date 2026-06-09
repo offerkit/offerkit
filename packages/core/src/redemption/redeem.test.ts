@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { schema, type Db } from "@offerkit/db";
-import { redeem, rollback } from "./index.ts";
+import { qualify, redeem, rollback } from "./index.ts";
 import { getTestDb } from "./_test-db.ts";
 
 // Live-DB redemption suite. Skips without TEST_DATABASE_URL so the
@@ -148,5 +148,68 @@ describe.skipIf(!enabled)("redeem (live DB)", () => {
     if (!empty.ok) expect(empty.code).toBe("gift_balance_zero");
 
     await cleanup(db, v.id);
+  });
+
+  it("qualifies customer-held vouchers without writing redemption rows", async () => {
+    if (!db) throw new Error("db not initialized");
+    const [customer] = await db.insert(schema.customer).values({}).returning({ id: schema.customer.id });
+    const [otherCustomer] = await db.insert(schema.customer).values({}).returning({ id: schema.customer.id });
+    const [campaign] = await db
+      .insert(schema.campaign)
+      .values({ name: "Qualified campaign", type: "DISCOUNT", status: "active", currency: "USD" })
+      .returning({ id: schema.campaign.id });
+    const [otherCampaign] = await db
+      .insert(schema.campaign)
+      .values({ name: "Other campaign", type: "DISCOUNT", status: "active", currency: "USD" })
+      .returning({ id: schema.campaign.id });
+    if (!customer || !otherCustomer || !campaign || !otherCampaign) {
+      throw new Error("qualification fixture insert failed");
+    }
+
+    const valid = await makeVoucher(db, { customerId: customer.id, campaignId: campaign.id });
+    const disabled = await makeVoucher(db, {
+      customerId: customer.id,
+      campaignId: campaign.id,
+      active: false,
+    });
+    const wrongCampaign = await makeVoucher(db, {
+      customerId: customer.id,
+      campaignId: otherCampaign.id,
+    });
+    const wrongCustomer = await makeVoucher(db, {
+      customerId: otherCustomer.id,
+      campaignId: campaign.id,
+    });
+
+    const result = await qualify(db, {
+      customerId: customer.id,
+      order: { amount: 5_000, currency: "USD" },
+      filters: { campaignIds: [campaign.id], includeSkipped: true },
+    });
+
+    expect(result.eligible.map((v) => v.code)).toEqual([valid.code]);
+    expect(result.skipped).toMatchObject([
+      { code: disabled.code, reason: "voucher_disabled", message: "Voucher is disabled" },
+    ]);
+
+    const redemptionRows = await db
+      .select({ id: schema.redemption.id })
+      .from(schema.redemption)
+      .where(eq(schema.redemption.voucherId, valid.id));
+    const disabledRedemptionRows = await db
+      .select({ id: schema.redemption.id })
+      .from(schema.redemption)
+      .where(eq(schema.redemption.voucherId, disabled.id));
+    expect(redemptionRows).toHaveLength(0);
+    expect(disabledRedemptionRows).toHaveLength(0);
+
+    await cleanup(db, valid.id);
+    await cleanup(db, disabled.id);
+    await cleanup(db, wrongCampaign.id);
+    await cleanup(db, wrongCustomer.id);
+    await db.delete(schema.campaign).where(eq(schema.campaign.id, campaign.id));
+    await db.delete(schema.campaign).where(eq(schema.campaign.id, otherCampaign.id));
+    await db.delete(schema.customer).where(eq(schema.customer.id, customer.id));
+    await db.delete(schema.customer).where(eq(schema.customer.id, otherCustomer.id));
   });
 });

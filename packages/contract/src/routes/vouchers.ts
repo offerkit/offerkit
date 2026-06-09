@@ -11,6 +11,8 @@ import {
 import {
   redeemInput,
   redeemOutput,
+  qualifyInput,
+  qualifyOutput,
   stackRedeemInput,
   stackRedeemOutput,
   validateInput,
@@ -70,6 +72,15 @@ export const vouchers = {
     })
     .input(validateInput)
     .output(validateOutput),
+  qualify: oc
+    .meta(mcpMeta({ expose: true, riskLevel: "safe" }))
+    .route({
+      method: "POST",
+      path: "/vouchers/qualify",
+      summary: "Batch-qualify customer-held voucher codes for an order",
+    })
+    .input(qualifyInput)
+    .output(qualifyOutput),
   redeem: oc
     .meta(
       mcpMeta({
