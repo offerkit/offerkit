@@ -90,25 +90,26 @@ const tiersUpdate = os.promotions.tiers.update
   .use(requireSession)
   .handler(async ({ input }) => {
     const patch: Partial<typeof schema.promotionTier.$inferInsert> = { updatedAt: new Date() };
-    if (input.patch.name !== undefined) patch.name = input.patch.name;
-    if (input.patch.description !== undefined) patch.description = input.patch.description ?? null;
-    if (input.patch.effect !== undefined) patch.effect = input.patch.effect;
-    if (input.patch.customRewards !== undefined) patch.customRewards = input.patch.customRewards;
-    if (input.patch.validationRuleId !== undefined)
-      patch.validationRuleId = input.patch.validationRuleId ?? null;
-    if (input.patch.active !== undefined) patch.active = input.patch.active;
-    if (input.patch.priority !== undefined) patch.priority = input.patch.priority;
-    if (input.patch.exclusive !== undefined) patch.exclusive = input.patch.exclusive;
-    if (input.patch.startDate !== undefined)
-      patch.startDate = input.patch.startDate ? new Date(input.patch.startDate) : null;
-    if (input.patch.endDate !== undefined)
-      patch.endDate = input.patch.endDate ? new Date(input.patch.endDate) : null;
-    if (input.patch.metadata !== undefined) patch.metadata = input.patch.metadata;
+    const { patch: inputPatch } = input.body;
+    if (inputPatch.name !== undefined) patch.name = inputPatch.name;
+    if (inputPatch.description !== undefined) patch.description = inputPatch.description ?? null;
+    if (inputPatch.effect !== undefined) patch.effect = inputPatch.effect;
+    if (inputPatch.customRewards !== undefined) patch.customRewards = inputPatch.customRewards;
+    if (inputPatch.validationRuleId !== undefined)
+      patch.validationRuleId = inputPatch.validationRuleId ?? null;
+    if (inputPatch.active !== undefined) patch.active = inputPatch.active;
+    if (inputPatch.priority !== undefined) patch.priority = inputPatch.priority;
+    if (inputPatch.exclusive !== undefined) patch.exclusive = inputPatch.exclusive;
+    if (inputPatch.startDate !== undefined)
+      patch.startDate = inputPatch.startDate ? new Date(inputPatch.startDate) : null;
+    if (inputPatch.endDate !== undefined)
+      patch.endDate = inputPatch.endDate ? new Date(inputPatch.endDate) : null;
+    if (inputPatch.metadata !== undefined) patch.metadata = inputPatch.metadata;
 
     const [row] = await db()
       .update(schema.promotionTier)
       .set(patch)
-      .where(and(eq(schema.promotionTier.id, input.id), isNull(schema.promotionTier.deletedAt)))
+      .where(and(eq(schema.promotionTier.id, input.params.id), isNull(schema.promotionTier.deletedAt)))
       .returning();
     if (!row) throw new ORPCError("NOT_FOUND", { message: "Promotion tier not found" });
     return toPromotionTier(row);
@@ -117,7 +118,7 @@ const tiersUpdate = os.promotions.tiers.update
 const tiersDelete = os.promotions.tiers.delete
   .use(requireSession)
   .handler(async ({ input }) => {
-    await softDeleteById(schema.promotionTier, input.id, "Promotion tier not found");
+    await softDeleteById(schema.promotionTier, input.params.id, "Promotion tier not found");
     return { ok: true as const };
   });
 

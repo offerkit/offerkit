@@ -86,18 +86,18 @@ describe.skipIf(!E2E_ENABLED)("vouchers bulk + CRUD + transactions", () => {
     expect(created.code).toBe(code);
     expect(created.active).toBe(true);
 
-    const fetched = await client.vouchers.get({ code });
+    const fetched = await client.vouchers.get({ params: { code } });
     expect(fetched.id).toBe(created.id);
 
     const updated = await client.vouchers.update({
-      code,
-      patch: { active: false },
+      params: { code },
+      body: { patch: { active: false } },
     });
     expect(updated.active).toBe(false);
 
-    await client.vouchers.delete({ code });
+    await client.vouchers.delete({ params: { code } });
 
-    await expect(client.vouchers.get({ code })).rejects.toThrow(/not found/i);
+    await expect(client.vouchers.get({ params: { code } })).rejects.toThrow(/not found/i);
   });
 
   it("transactions endpoint returns the gift-card credit ledger", async () => {
@@ -118,7 +118,7 @@ describe.skipIf(!E2E_ENABLED)("vouchers bulk + CRUD + transactions", () => {
       giftBalance: 5_000,
     });
 
-    const tx = await client.vouchers.transactions({ code });
+    const tx = await client.vouchers.transactions({ params: { code } });
     expect(Array.isArray(tx.data)).toBe(true);
     // Initial credit is recorded when the gift card is minted.
     const credit = tx.data.find((t) => t.reason === "CREDIT");

@@ -41,21 +41,21 @@ describe.skipIf(!E2E_ENABLED)("campaigns CRUD", () => {
     expect(created.name).toBe(name);
 
     const updated = await client.campaigns.update({
-      id: created.id,
-      patch: { description: "tagged for e2e" },
+      params: { id: created.id },
+      body: { patch: { description: "tagged for e2e" } },
     });
     expect(updated.description).toBe("tagged for e2e");
 
     const search = await client.campaigns.list({ search: name, limit: 5 });
     expect(search.data.find((c) => c.id === created.id)).toBeDefined();
 
-    await client.campaigns.delete({ id: created.id });
+    await client.campaigns.delete({ params: { id: created.id } });
 
     const after = await client.campaigns.list({ search: name, limit: 5 });
     expect(after.data.find((c) => c.id === created.id)).toBeUndefined();
 
     // get on a soft-deleted row returns NOT_FOUND.
-    await expect(client.campaigns.get({ id: created.id })).rejects.toThrow(
+    await expect(client.campaigns.get({ params: { id: created.id } })).rejects.toThrow(
       /not found/i,
     );
   });

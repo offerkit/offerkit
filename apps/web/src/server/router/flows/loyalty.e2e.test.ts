@@ -95,13 +95,13 @@ describe.skipIf(!E2E_ENABLED)("loyalty: enroll → earn → tier → redeem → 
     expect(redeem.payload?.kind).toBe("discount");
 
     // History should include EARN and REDEEM rows.
-    const history = await client.loyalty.members.history({ id: member.id });
+    const history = await client.loyalty.members.history({ params: { id: member.id } });
     expect(history.data.length).toBeGreaterThanOrEqual(2);
     expect(history.data.find((t) => t.reason === "EARN")).toBeDefined();
     expect(history.data.find((t) => t.reason === "REDEEM")).toBeDefined();
 
     // Verify tier listing works too.
-    const tiers = await client.loyalty.tiers.list({ programId: program.id });
+    const tiers = await client.loyalty.tiers.list({ params: { programId: program.id } });
     expect(tiers.data.map((t) => t.id).sort()).toEqual(
       [bronze.id, gold.id].sort(),
     );

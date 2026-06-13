@@ -38,20 +38,20 @@ describe.skipIf(!E2E_ENABLED)("customers CRUD", () => {
     expect(created.email).toBe(email);
 
     const updated = await client.customers.update({
-      id: created.id,
-      patch: { name: `${tag}-updated` },
+      params: { id: created.id },
+      body: { patch: { name: `${tag}-updated` } },
     });
     expect(updated.name).toBe(`${tag}-updated`);
 
     const search = await client.customers.list({ search: tag, limit: 5 });
     expect(search.data.find((c) => c.id === created.id)).toBeDefined();
 
-    await client.customers.delete({ id: created.id });
+    await client.customers.delete({ params: { id: created.id } });
 
     const after = await client.customers.list({ search: tag, limit: 5 });
     expect(after.data.find((c) => c.id === created.id)).toBeUndefined();
 
-    await expect(client.customers.get({ id: created.id })).rejects.toThrow(
+    await expect(client.customers.get({ params: { id: created.id } })).rejects.toThrow(
       /not found/i,
     );
   });

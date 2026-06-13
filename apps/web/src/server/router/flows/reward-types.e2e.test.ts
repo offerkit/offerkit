@@ -40,12 +40,12 @@ describe.skipIf(!E2E_ENABLED)("custom reward types CRUD + voucher payload roundt
     });
     expect(created.key).toBe(key);
 
-    const fetched = await client.rewardTypes.get({ id: created.id });
+    const fetched = await client.rewardTypes.get({ params: { id: created.id } });
     expect(fetched.id).toBe(created.id);
 
     const updated = await client.rewardTypes.update({
-      id: created.id,
-      patch: { description: "Waive shipping for these lanes" },
+      params: { id: created.id },
+      body: { patch: { description: "Waive shipping for these lanes" } },
     });
     expect(updated.description).toBe("Waive shipping for these lanes");
 
@@ -68,14 +68,14 @@ describe.skipIf(!E2E_ENABLED)("custom reward types CRUD + voucher payload roundt
     // Redemption succeeds. Custom-reward emission is the integration
     // surface — the redeem call returns ok and includes the voucher code.
     const redeemed = await client.vouchers.redeem({
-      code,
-      order: { amount: 5_000, currency: "USD" },
+      params: { code },
+      body: { order: { amount: 5_000, currency: "USD" } },
     });
     expect(redeemed.ok).toBe(true);
 
     // Soft-delete
-    await client.rewardTypes.delete({ id: created.id });
-    await expect(client.rewardTypes.get({ id: created.id })).rejects.toThrow(
+    await client.rewardTypes.delete({ params: { id: created.id } });
+    await expect(client.rewardTypes.get({ params: { id: created.id } })).rejects.toThrow(
       /not found/i,
     );
   });

@@ -35,7 +35,7 @@ const get = os.segments.get
   .use(requireSession)
   .handler(async ({ input }) => {
     const row = await db().query.segment.findFirst({
-      where: and(eq(schema.segment.id, input.id), isNull(schema.segment.deletedAt)),
+      where: and(eq(schema.segment.id, input.params.id), isNull(schema.segment.deletedAt)),
     });
     if (!row) throw new ORPCError("NOT_FOUND", { message: "Segment not found" });
     return toSegment(row);
@@ -60,14 +60,15 @@ const update = os.segments.update
   .use(requireSession)
   .handler(async ({ input }) => {
     const patch: Partial<typeof schema.segment.$inferInsert> = { updatedAt: new Date() };
-    if (input.patch.name !== undefined) patch.name = input.patch.name;
-    if (input.patch.description !== undefined) patch.description = input.patch.description ?? null;
-    if (input.patch.rule !== undefined) patch.rule = input.patch.rule;
+    const { patch: inputPatch } = input.body;
+    if (inputPatch.name !== undefined) patch.name = inputPatch.name;
+    if (inputPatch.description !== undefined) patch.description = inputPatch.description ?? null;
+    if (inputPatch.rule !== undefined) patch.rule = inputPatch.rule;
 
     const [row] = await db()
       .update(schema.segment)
       .set(patch)
-      .where(and(eq(schema.segment.id, input.id), isNull(schema.segment.deletedAt)))
+      .where(and(eq(schema.segment.id, input.params.id), isNull(schema.segment.deletedAt)))
       .returning();
     if (!row) throw new ORPCError("NOT_FOUND", { message: "Segment not found" });
     return toSegment(row);
@@ -76,7 +77,7 @@ const update = os.segments.update
 const remove = os.segments.delete
   .use(requireSession)
   .handler(async ({ input }) => {
-    await softDeleteById(schema.segment, input.id, "Segment not found");
+    await softDeleteById(schema.segment, input.params.id, "Segment not found");
     return { ok: true as const };
   });
 

@@ -77,7 +77,7 @@ describe.skipIf(!E2E_ENABLED)("referrals: program → issue → convert → both
     expect(reissued.code).toBe(issuedCode);
     expect(reissued.codeId).toBe(issuedCodeId);
 
-    const lookup = await client.referrals.getByCode({ code: issuedCode });
+    const lookup = await client.referrals.getByCode({ params: { code: issuedCode } });
     expect(lookup.referrerCustomerId).toBe(referrer.id);
     expect(lookup.id).toBe(issuedCodeId);
 
@@ -143,8 +143,8 @@ describe.skipIf(!E2E_ENABLED)("referrals: program → issue → convert → both
     expect(convertedCReplay.conversionId).toBe(convertedC.conversionId);
 
     const conversions = await client.referrals.listConversions({
-      codeId: issuedCodeId,
-      limit: 10,
+      params: { codeId: issuedCodeId },
+      query: { limit: 10 },
     });
     expect(conversions.data.length).toBe(3);
   });

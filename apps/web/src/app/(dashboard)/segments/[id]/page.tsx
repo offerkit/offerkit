@@ -24,17 +24,19 @@ export default function SegmentDetailPage({ params }: PageProps) {
 
   const { data, isLoading } = useQuery({
     queryKey: ["segments", id],
-    queryFn: () => ovx().segments.get({ id }),
+    queryFn: () => ovx().segments.get({ params: { id } }),
   });
 
   const update = useMutation({
     mutationFn: (state: { name: string; description: string; rule: Record<string, unknown> }) =>
       ovx().segments.update({
-        id,
-        patch: {
-          name: state.name,
-          description: state.description || undefined,
-          rule: state.rule,
+        params: { id },
+        body: {
+          patch: {
+            name: state.name,
+            description: state.description || undefined,
+            rule: state.rule,
+          },
         },
       }),
     onSuccess: async () => {
@@ -47,7 +49,7 @@ export default function SegmentDetailPage({ params }: PageProps) {
   });
 
   const remove = useMutation({
-    mutationFn: () => ovx().segments.delete({ id }),
+    mutationFn: () => ovx().segments.delete({ params: { id } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["segments"] });
       toast.success(gt("Segment deleted"));

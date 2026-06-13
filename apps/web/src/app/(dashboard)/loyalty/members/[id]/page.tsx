@@ -35,18 +35,18 @@ export default function LoyaltyMemberPage({ params }: PageProps) {
 
   const { data: member, isLoading } = useQuery({
     queryKey: ["loyaltyMembers", id],
-    queryFn: () => ovx().loyalty.members.get({ id }),
+    queryFn: () => ovx().loyalty.members.get({ params: { id } }),
   });
 
   const { data: history } = useQuery({
     queryKey: ["loyaltyMembers", id, "history"],
-    queryFn: () => ovx().loyalty.members.history({ id }),
+    queryFn: () => ovx().loyalty.members.history({ params: { id } }),
   });
 
   const { data: rewards } = useQuery({
     queryKey: ["loyaltyRewards", member?.programId ?? ""],
     queryFn: () =>
-      ovx().loyalty.rewards.list({ programId: member?.programId ?? "" }),
+      ovx().loyalty.rewards.list({ params: { programId: member?.programId ?? "" } }),
     enabled: !!member,
   });
 

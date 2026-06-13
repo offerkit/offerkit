@@ -24,18 +24,20 @@ export default function RuleDetailPage({ params }: PageProps) {
 
   const { data, isLoading } = useQuery({
     queryKey: ["validationRules", id],
-    queryFn: () => ovx().validationRules.get({ id }),
+    queryFn: () => ovx().validationRules.get({ params: { id } }),
   });
 
   const update = useMutation({
     mutationFn: (state: RuleFormState) =>
       ovx().validationRules.update({
-        id,
-        patch: {
-          name: state.name,
-          description: state.description || undefined,
-          appliesTo: state.appliesTo,
-          rule: state.rule,
+        params: { id },
+        body: {
+          patch: {
+            name: state.name,
+            description: state.description || undefined,
+            appliesTo: state.appliesTo,
+            rule: state.rule,
+          },
         },
       }),
     onSuccess: async () => {
@@ -48,7 +50,7 @@ export default function RuleDetailPage({ params }: PageProps) {
   });
 
   const remove = useMutation({
-    mutationFn: () => ovx().validationRules.delete({ id }),
+    mutationFn: () => ovx().validationRules.delete({ params: { id } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["validationRules"] });
       toast.success(gt("Rule deleted"));

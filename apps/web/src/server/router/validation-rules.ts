@@ -33,7 +33,7 @@ const get = os.validationRules.get
   .handler(async ({ input }) => {
     const row = await db().query.validationRule.findFirst({
       where: and(
-        eq(schema.validationRule.id, input.id),
+        eq(schema.validationRule.id, input.params.id),
         isNull(schema.validationRule.deletedAt),
       ),
     });
@@ -61,18 +61,19 @@ const update = os.validationRules.update
   .use(requireSession)
   .handler(async ({ input }) => {
     const patch: Partial<typeof schema.validationRule.$inferInsert> = { updatedAt: new Date() };
-    if (input.patch.name !== undefined) patch.name = input.patch.name;
-    if (input.patch.description !== undefined)
-      patch.description = input.patch.description ?? null;
-    if (input.patch.rule !== undefined) patch.rule = input.patch.rule;
-    if (input.patch.appliesTo !== undefined) patch.appliesTo = input.patch.appliesTo;
+    const { patch: inputPatch } = input.body;
+    if (inputPatch.name !== undefined) patch.name = inputPatch.name;
+    if (inputPatch.description !== undefined)
+      patch.description = inputPatch.description ?? null;
+    if (inputPatch.rule !== undefined) patch.rule = inputPatch.rule;
+    if (inputPatch.appliesTo !== undefined) patch.appliesTo = inputPatch.appliesTo;
 
     const [row] = await db()
       .update(schema.validationRule)
       .set(patch)
       .where(
         and(
-          eq(schema.validationRule.id, input.id),
+          eq(schema.validationRule.id, input.params.id),
           isNull(schema.validationRule.deletedAt),
         ),
       )
@@ -84,7 +85,7 @@ const update = os.validationRules.update
 const remove = os.validationRules.delete
   .use(requireSession)
   .handler(async ({ input }) => {
-    await softDeleteById(schema.validationRule, input.id, "Validation rule not found");
+    await softDeleteById(schema.validationRule, input.params.id, "Validation rule not found");
     return { ok: true as const };
   });
 

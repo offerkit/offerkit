@@ -38,7 +38,7 @@ const get = os.campaigns.get
   .use(requireSession)
   .handler(async ({ input }) => {
     const row = await db().query.campaign.findFirst({
-      where: and(eq(schema.campaign.id, input.id), isNull(schema.campaign.deletedAt)),
+      where: and(eq(schema.campaign.id, input.params.id), isNull(schema.campaign.deletedAt)),
     });
     if (!row) throw new ORPCError("NOT_FOUND", { message: "Campaign not found" });
     return toCampaign(row);
@@ -71,30 +71,31 @@ const update = os.campaigns.update
   .use(requireSession)
   .handler(async ({ input }) => {
     const patch: Partial<typeof schema.campaign.$inferInsert> = { updatedAt: new Date() };
-    if (input.patch.name !== undefined) patch.name = input.patch.name;
-    if (input.patch.description !== undefined)
-      patch.description = input.patch.description ?? null;
-    if (input.patch.status !== undefined) patch.status = input.patch.status;
-    if (input.patch.currency !== undefined) patch.currency = input.patch.currency;
-    if (input.patch.timezone !== undefined) patch.timezone = input.patch.timezone;
-    if (input.patch.startDate !== undefined) {
-      const v = toDateOrNull(input.patch.startDate);
+    const { patch: inputPatch } = input.body;
+    if (inputPatch.name !== undefined) patch.name = inputPatch.name;
+    if (inputPatch.description !== undefined)
+      patch.description = inputPatch.description ?? null;
+    if (inputPatch.status !== undefined) patch.status = inputPatch.status;
+    if (inputPatch.currency !== undefined) patch.currency = inputPatch.currency;
+    if (inputPatch.timezone !== undefined) patch.timezone = inputPatch.timezone;
+    if (inputPatch.startDate !== undefined) {
+      const v = toDateOrNull(inputPatch.startDate);
       if (v !== undefined) patch.startDate = v;
     }
-    if (input.patch.endDate !== undefined) {
-      const v = toDateOrNull(input.patch.endDate);
+    if (inputPatch.endDate !== undefined) {
+      const v = toDateOrNull(inputPatch.endDate);
       if (v !== undefined) patch.endDate = v;
     }
-    if (input.patch.codeConfig !== undefined) patch.codeConfig = input.patch.codeConfig;
-    if (input.patch.validationRuleId !== undefined)
-      patch.validationRuleId = input.patch.validationRuleId ?? null;
-    if (input.patch.autoApply !== undefined) patch.autoApply = input.patch.autoApply;
-    if (input.patch.metadata !== undefined) patch.metadata = input.patch.metadata;
+    if (inputPatch.codeConfig !== undefined) patch.codeConfig = inputPatch.codeConfig;
+    if (inputPatch.validationRuleId !== undefined)
+      patch.validationRuleId = inputPatch.validationRuleId ?? null;
+    if (inputPatch.autoApply !== undefined) patch.autoApply = inputPatch.autoApply;
+    if (inputPatch.metadata !== undefined) patch.metadata = inputPatch.metadata;
 
     const [row] = await db()
       .update(schema.campaign)
       .set(patch)
-      .where(and(eq(schema.campaign.id, input.id), isNull(schema.campaign.deletedAt)))
+      .where(and(eq(schema.campaign.id, input.params.id), isNull(schema.campaign.deletedAt)))
       .returning();
     if (!row) throw new ORPCError("NOT_FOUND", { message: "Campaign not found" });
     return toCampaign(row);
@@ -103,7 +104,7 @@ const update = os.campaigns.update
 const remove = os.campaigns.delete
   .use(requireSession)
   .handler(async ({ input }) => {
-    await softDeleteById(schema.campaign, input.id, "Campaign not found");
+    await softDeleteById(schema.campaign, input.params.id, "Campaign not found");
     return { ok: true as const };
   });
 

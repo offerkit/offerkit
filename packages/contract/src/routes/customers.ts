@@ -18,8 +18,13 @@ export const customers = {
     .output(paginatedOutput(customerOutput)),
   get: oc
     .meta(mcpMeta({ expose: true, riskLevel: "safe" }))
-    .route({ method: "GET", path: "/customers/{id}", summary: "Get customer" })
-    .input(z.object({ id: z.string().uuid() }))
+    .route({
+      method: "GET",
+      path: "/customers/{id}",
+      summary: "Get customer",
+      inputStructure: "detailed",
+    })
+    .input(z.object({ params: z.object({ id: z.string().uuid() }) }))
     .output(customerOutput),
   getByExternalId: oc
     .meta(mcpMeta({ expose: true, riskLevel: "safe" }))
@@ -27,8 +32,9 @@ export const customers = {
       method: "GET",
       path: "/customers/by-external-id/{externalId}",
       summary: "Get a customer by integrator-supplied externalId",
+      inputStructure: "detailed",
     })
-    .input(z.object({ externalId: z.string().min(1).max(256) }))
+    .input(z.object({ params: z.object({ externalId: z.string().min(1).max(256) }) }))
     .output(customerOutput),
   create: oc
     .route({ method: "POST", path: "/customers", summary: "Create customer" })
@@ -43,11 +49,21 @@ export const customers = {
     .input(customerUpsertInput)
     .output(customerUpsertOutput),
   update: oc
-    .route({ method: "PATCH", path: "/customers/{id}", summary: "Update customer" })
-    .input(z.object({ id: z.string().uuid(), patch: customerUpdateInput }))
+    .route({
+      method: "PATCH",
+      path: "/customers/{id}",
+      summary: "Update customer",
+      inputStructure: "detailed",
+    })
+    .input(z.object({ params: z.object({ id: z.string().uuid() }), body: z.object({ patch: customerUpdateInput }) }))
     .output(customerOutput),
   delete: oc
-    .route({ method: "DELETE", path: "/customers/{id}", summary: "Soft-delete customer" })
-    .input(z.object({ id: z.string().uuid() }))
+    .route({
+      method: "DELETE",
+      path: "/customers/{id}",
+      summary: "Soft-delete customer",
+      inputStructure: "detailed",
+    })
+    .input(z.object({ params: z.object({ id: z.string().uuid() }) }))
     .output(z.object({ ok: z.literal(true) })),
 };

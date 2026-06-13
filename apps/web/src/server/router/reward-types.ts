@@ -68,7 +68,7 @@ const get = os.rewardTypes.get
   .use(requireSession)
   .handler(async ({ input }) => {
     const row = await db().query.rewardType.findFirst({
-      where: and(eq(schema.rewardType.id, input.id), isNull(schema.rewardType.deletedAt)),
+      where: and(eq(schema.rewardType.id, input.params.id), isNull(schema.rewardType.deletedAt)),
     });
     if (!row) throw new ORPCError("NOT_FOUND", { message: "Reward type not found" });
     const revision = await loadActiveRevision(row.id, row.activeRevisionId);
@@ -116,20 +116,21 @@ const update = os.rewardTypes.update
     return db().transaction(async (tx) => {
       const existing = await tx.query.rewardType.findFirst({
         where: and(
-          eq(schema.rewardType.id, input.id),
+          eq(schema.rewardType.id, input.params.id),
           isNull(schema.rewardType.deletedAt),
         ),
       });
       if (!existing) throw new ORPCError("NOT_FOUND", { message: "Reward type not found" });
 
       const patch: Partial<typeof schema.rewardType.$inferInsert> = { updatedAt: new Date() };
-      if (input.patch.name !== undefined) patch.name = input.patch.name;
-      if (input.patch.description !== undefined)
-        patch.description = input.patch.description ?? null;
+      const { patch: inputPatch } = input.body;
+      if (inputPatch.name !== undefined) patch.name = inputPatch.name;
+      if (inputPatch.description !== undefined)
+        patch.description = inputPatch.description ?? null;
 
       let revision: RewardTypeRevisionRow | undefined;
-      if (input.patch.payloadSchema !== undefined) {
-        const checksum = checksumSchema(input.patch.payloadSchema);
+      if (inputPatch.payloadSchema !== undefined) {
+        const checksum = checksumSchema(inputPatch.payloadSchema);
         const current = existing.activeRevisionId
           ? await tx.query.rewardTypeRevision.findFirst({
               where: eq(schema.rewardTypeRevision.id, existing.activeRevisionId),
@@ -140,7 +141,7 @@ const update = os.rewardTypes.update
             .insert(schema.rewardTypeRevision)
             .values({
               rewardTypeId: existing.id,
-              payloadSchema: input.patch.payloadSchema,
+              payloadSchema: inputPatch.payloadSchema,
               checksum,
             })
             .returning();
@@ -169,7 +170,7 @@ const update = os.rewardTypes.update
 const remove = os.rewardTypes.delete
   .use(requireSession)
   .handler(async ({ input }) => {
-    await softDeleteById(schema.rewardType, input.id, "Reward type not found");
+    await softDeleteById(schema.rewardType, input.params.id, "Reward type not found");
     return { ok: true as const };
   });
 

@@ -54,7 +54,7 @@ const get = os.vouchers.get
   .use(requireSession)
   .handler(async ({ input }) => {
     const row = await db().query.voucher.findFirst({
-      where: and(eq(schema.voucher.code, input.code), isNull(schema.voucher.deletedAt)),
+      where: and(eq(schema.voucher.code, input.params.code), isNull(schema.voucher.deletedAt)),
     });
     if (!row) throw new ORPCError("NOT_FOUND", { message: "Voucher not found" });
     return toVoucher(row);
@@ -130,31 +130,32 @@ const create = os.vouchers.create
 const update = os.vouchers.update
   .use(requireSession)
   .handler(async ({ input }) => {
+    const { patch: inputPatch } = input.body;
     const row = await db().transaction(async (tx) => {
       const [existing] = (await tx
         .select()
         .from(schema.voucher)
-        .where(and(eq(schema.voucher.code, input.code), isNull(schema.voucher.deletedAt)))
+        .where(and(eq(schema.voucher.code, input.params.code), isNull(schema.voucher.deletedAt)))
         .limit(1)
         .for("update")) as (typeof schema.voucher.$inferSelect)[];
       if (!existing) throw new ORPCError("NOT_FOUND", { message: "Voucher not found" });
 
       const patch: Partial<typeof schema.voucher.$inferInsert> = { updatedAt: new Date() };
-      if (input.patch.campaignId !== undefined) patch.campaignId = input.patch.campaignId ?? null;
-      if (input.patch.discount !== undefined) patch.discount = input.patch.discount ?? null;
-      if (input.patch.customRewards !== undefined) patch.customRewards = input.patch.customRewards;
-      if (input.patch.giftBalance !== undefined) patch.giftBalance = input.patch.giftBalance ?? null;
-      if (input.patch.redemptionLimit !== undefined)
-        patch.redemptionLimit = input.patch.redemptionLimit ?? null;
-      if (input.patch.priority !== undefined) patch.priority = input.patch.priority;
-      if (input.patch.exclusive !== undefined) patch.exclusive = input.patch.exclusive;
-      if (input.patch.active !== undefined) patch.active = input.patch.active;
-      if (input.patch.startDate !== undefined)
-        patch.startDate = input.patch.startDate ? new Date(input.patch.startDate) : null;
-      if (input.patch.endDate !== undefined)
-        patch.endDate = input.patch.endDate ? new Date(input.patch.endDate) : null;
-      if (input.patch.customerId !== undefined) patch.customerId = input.patch.customerId ?? null;
-      if (input.patch.metadata !== undefined) patch.metadata = input.patch.metadata;
+      if (inputPatch.campaignId !== undefined) patch.campaignId = inputPatch.campaignId ?? null;
+      if (inputPatch.discount !== undefined) patch.discount = inputPatch.discount ?? null;
+      if (inputPatch.customRewards !== undefined) patch.customRewards = inputPatch.customRewards;
+      if (inputPatch.giftBalance !== undefined) patch.giftBalance = inputPatch.giftBalance ?? null;
+      if (inputPatch.redemptionLimit !== undefined)
+        patch.redemptionLimit = inputPatch.redemptionLimit ?? null;
+      if (inputPatch.priority !== undefined) patch.priority = inputPatch.priority;
+      if (inputPatch.exclusive !== undefined) patch.exclusive = inputPatch.exclusive;
+      if (inputPatch.active !== undefined) patch.active = inputPatch.active;
+      if (inputPatch.startDate !== undefined)
+        patch.startDate = inputPatch.startDate ? new Date(inputPatch.startDate) : null;
+      if (inputPatch.endDate !== undefined)
+        patch.endDate = inputPatch.endDate ? new Date(inputPatch.endDate) : null;
+      if (inputPatch.customerId !== undefined) patch.customerId = inputPatch.customerId ?? null;
+      if (inputPatch.metadata !== undefined) patch.metadata = inputPatch.metadata;
 
       const [updated] = await tx
         .update(schema.voucher)
@@ -165,11 +166,11 @@ const update = os.vouchers.update
 
       if (
         existing.type === "GIFT_CARD" &&
-        input.patch.giftBalance !== undefined &&
-        input.patch.giftBalance !== null
+        inputPatch.giftBalance !== undefined &&
+        inputPatch.giftBalance !== null
       ) {
         const oldBalance = existing.giftBalance ?? 0;
-        const newBalance = input.patch.giftBalance;
+        const newBalance = inputPatch.giftBalance;
         const delta = newBalance - oldBalance;
         if (delta !== 0) {
           await tx.insert(schema.giftCardTransaction).values({
@@ -193,7 +194,7 @@ const remove = os.vouchers.delete
     const [row] = await db()
       .update(schema.voucher)
       .set({ deletedAt: new Date() })
-      .where(and(eq(schema.voucher.code, input.code), isNull(schema.voucher.deletedAt)))
+      .where(and(eq(schema.voucher.code, input.params.code), isNull(schema.voucher.deletedAt)))
       .returning({ id: schema.voucher.id, campaignId: schema.voucher.campaignId });
     if (!row) throw new ORPCError("NOT_FOUND", { message: "Voucher not found" });
     if (row.campaignId) {
@@ -261,9 +262,9 @@ const validateProc = os.vouchers.validate
   .use(requireSession)
   .handler(async ({ input }) => {
     const result = await validate(db(), {
-      voucherCode: input.code,
-      customerId: input.customerId,
-      order: input.order,
+      voucherCode: input.params.code,
+      customerId: input.body?.customerId,
+      order: input.body?.order,
     });
     return {
       valid: result.valid,
@@ -282,12 +283,12 @@ const redeemProc = os.vouchers.redeem
   .use(requireSession)
   .handler(async ({ input }) => {
     const result = await redeem(db(), {
-      voucherCode: input.code,
-      customerId: input.customerId,
-      order: input.order,
-      orderId: input.orderId,
-      externalOrderId: input.externalOrderId,
-      idempotencyKey: input.idempotencyKey,
+      voucherCode: input.params.code,
+      customerId: input.body?.customerId,
+      order: input.body?.order,
+      orderId: input.body?.orderId,
+      externalOrderId: input.body?.externalOrderId,
+      idempotencyKey: input.body?.idempotencyKey,
     });
     if (result.ok) {
       return {
@@ -311,7 +312,7 @@ const transactions = os.vouchers.transactions
   .use(requireSession)
   .handler(async ({ input }) => {
     const voucher = await db().query.voucher.findFirst({
-      where: and(eq(schema.voucher.code, input.code), isNull(schema.voucher.deletedAt)),
+      where: and(eq(schema.voucher.code, input.params.code), isNull(schema.voucher.deletedAt)),
       columns: { id: true },
     });
     if (!voucher) throw new ORPCError("NOT_FOUND", { message: "Voucher not found" });

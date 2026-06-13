@@ -60,7 +60,7 @@ const revoke = os.apiKeys.revoke
     const [row] = await db()
       .update(schema.apiKey)
       .set({ disabledAt: new Date(), updatedAt: new Date() })
-      .where(eq(schema.apiKey.id, input.id))
+      .where(eq(schema.apiKey.id, input.params.id))
       .returning({ id: schema.apiKey.id });
     if (!row) throw new ORPCError("NOT_FOUND", { message: "API key not found" });
     return { ok: true as const };

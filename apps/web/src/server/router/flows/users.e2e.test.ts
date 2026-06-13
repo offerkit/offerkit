@@ -41,14 +41,14 @@ describe.skipIf(!E2E_ENABLED)("staff users admin", () => {
     const list = await client.users.list({});
     expect(list.data.find((u) => u.id === created.id)).toBeDefined();
 
-    const reset = await client.users.resetPassword({ id: created.id });
+    const reset = await client.users.resetPassword({ params: { id: created.id } });
     expect(reset.password).toBeTruthy();
     expect(reset.password).not.toBe(created.password);
 
-    const disabled = await client.users.disable({ id: created.id });
+    const disabled = await client.users.disable({ params: { id: created.id } });
     expect(disabled.disabledAt).not.toBeNull();
 
-    const reEnabled = await client.users.enable({ id: created.id });
+    const reEnabled = await client.users.enable({ params: { id: created.id } });
     expect(reEnabled.disabledAt).toBeNull();
   });
 });

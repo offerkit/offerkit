@@ -34,16 +34,16 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   const { data, isLoading } = useQuery({
     queryKey: ["order", id],
-    queryFn: () => ovx().orders.get({ id }),
+    queryFn: () => ovx().orders.get({ params: { id } }),
   });
 
   const { data: redemptions } = useQuery({
     queryKey: ["order", id, "redemptions"],
-    queryFn: () => ovx().orders.redemptions({ id }),
+    queryFn: () => ovx().orders.redemptions({ params: { id } }),
   });
 
   const fulfill = useMutation({
-    mutationFn: () => ovx().orders.fulfill({ id }),
+    mutationFn: () => ovx().orders.fulfill({ params: { id } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["order", id] });
       toast.success(gt("Marked fulfilled"));
@@ -51,7 +51,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   });
 
   const cancel = useMutation({
-    mutationFn: () => ovx().orders.cancel({ id }),
+    mutationFn: () => ovx().orders.cancel({ params: { id } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["order", id] });
       toast.success(gt("Order canceled"));

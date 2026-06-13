@@ -120,14 +120,14 @@ describe.skipIf(!enabled)("SDK contract e2e", () => {
     if (!voucher) return;
 
     const validated = await client.vouchers.validate({
-      code: voucher.code,
-      order: { amount: 5_000, currency: "USD" },
+      params: { code: voucher.code },
+      body: { order: { amount: 5_000, currency: "USD" } },
     });
     expect(validated.valid).toBe(true);
 
     const redeemed = await client.vouchers.redeem({
-      code: voucher.code,
-      order: { amount: 5_000, currency: "USD" },
+      params: { code: voucher.code },
+      body: { order: { amount: 5_000, currency: "USD" } },
     });
     expect(redeemed.ok).toBe(true);
     // Bulk-minted vouchers have no discount jsonb, so the calculation

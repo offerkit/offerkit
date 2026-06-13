@@ -39,10 +39,10 @@ describe.skipIf(!E2E_ENABLED)("orders CRUD + lifecycle + redemption attachment",
     expect(created.id).toMatch(/^[0-9a-f-]{36}$/);
     expect(created.status).toBe("CREATED");
 
-    const fulfilled = await client.orders.fulfill({ id: created.id });
+    const fulfilled = await client.orders.fulfill({ params: { id: created.id } });
     expect(fulfilled.status).toBe("FULFILLED");
 
-    const canceled = await client.orders.cancel({ id: created.id });
+    const canceled = await client.orders.cancel({ params: { id: created.id } });
     expect(canceled.status).toBe("CANCELED");
 
     // Now create a fresh order to attach a redemption to.
@@ -66,13 +66,15 @@ describe.skipIf(!E2E_ENABLED)("orders CRUD + lifecycle + redemption attachment",
     });
 
     const redeemed = await client.vouchers.redeem({
-      code,
-      orderId: order2.id,
-      order: { amount: 5_000, currency: "USD" },
+      params: { code },
+      body: {
+        orderId: order2.id,
+        order: { amount: 5_000, currency: "USD" },
+      },
     });
     expect(redeemed.ok).toBe(true);
 
-    const list = await client.orders.redemptions({ id: order2.id });
+    const list = await client.orders.redemptions({ params: { id: order2.id } });
     expect(list.data).toHaveLength(1);
     expect(list.data[0]?.voucherCode).toBe(code);
     expect(list.data[0]?.result).toBe("SUCCESS");

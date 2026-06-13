@@ -30,17 +30,17 @@ export default function WebhookDetailPage({ params }: PageProps) {
 
   const { data: webhook } = useQuery({
     queryKey: ["webhooks", id],
-    queryFn: () => ovx().webhooks.get({ id }),
+    queryFn: () => ovx().webhooks.get({ params: { id } }),
   });
 
   const { data: deliveries } = useQuery({
     queryKey: ["webhooks", id, "deliveries"],
-    queryFn: () => ovx().webhooks.deliveries({ id, limit: 50 }),
+    queryFn: () => ovx().webhooks.deliveries({ params: { id }, query: { limit: 50 } }),
     refetchInterval: 5_000,
   });
 
   const replay = useMutation({
-    mutationFn: (deliveryId: string) => ovx().webhooks.replay({ id: deliveryId }),
+    mutationFn: (deliveryId: string) => ovx().webhooks.replay({ params: { id: deliveryId } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["webhooks", id, "deliveries"] });
       toast.success(gt("Re-enqueued"));

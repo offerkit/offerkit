@@ -68,13 +68,13 @@ describe.skipIf(!E2E_ENABLED)("loyalty expiry sweep", () => {
     const result = await expirePoints(db);
     expect(result.expired).toBeGreaterThanOrEqual(1);
 
-    const history = await client.loyalty.members.history({ id: member.id });
+    const history = await client.loyalty.members.history({ params: { id: member.id } });
     const expiry = history.data.find((t) => t.reason === "EXPIRY");
     expect(expiry).toBeDefined();
     expect(expiry?.delta).toBe(-100);
 
     // Final balance is 0 after expiry cancels the original earn.
-    const updatedMember = await client.loyalty.members.get({ id: member.id });
+    const updatedMember = await client.loyalty.members.get({ params: { id: member.id } });
     expect(updatedMember.balance).toBe(0);
   });
 });

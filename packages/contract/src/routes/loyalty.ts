@@ -30,39 +30,69 @@ const programs = {
     .input(paginationInput)
     .output(paginatedOutput(loyaltyProgramOutput)),
   get: oc
-    .route({ method: "GET", path: "/loyalty/programs/{id}", summary: "Get loyalty program" })
-    .input(z.object({ id: z.string().uuid() }))
+    .route({
+      method: "GET",
+      path: "/loyalty/programs/{id}",
+      summary: "Get loyalty program",
+      inputStructure: "detailed",
+    })
+    .input(z.object({ params: z.object({ id: z.string().uuid() }) }))
     .output(loyaltyProgramOutput),
   create: oc
     .route({ method: "POST", path: "/loyalty/programs", summary: "Create loyalty program" })
     .input(loyaltyProgramCreateInput)
     .output(loyaltyProgramOutput),
   update: oc
-    .route({ method: "PATCH", path: "/loyalty/programs/{id}", summary: "Update loyalty program" })
-    .input(z.object({ id: z.string().uuid(), patch: loyaltyProgramUpdateInput }))
+    .route({
+      method: "PATCH",
+      path: "/loyalty/programs/{id}",
+      summary: "Update loyalty program",
+      inputStructure: "detailed",
+    })
+    .input(z.object({ params: z.object({ id: z.string().uuid() }), body: z.object({ patch: loyaltyProgramUpdateInput }) }))
     .output(loyaltyProgramOutput),
   delete: oc
-    .route({ method: "DELETE", path: "/loyalty/programs/{id}", summary: "Soft-delete program" })
-    .input(z.object({ id: z.string().uuid() }))
+    .route({
+      method: "DELETE",
+      path: "/loyalty/programs/{id}",
+      summary: "Soft-delete program",
+      inputStructure: "detailed",
+    })
+    .input(z.object({ params: z.object({ id: z.string().uuid() }) }))
     .output(z.object({ ok: z.literal(true) })),
 };
 
 const tiers = {
   list: oc
-    .route({ method: "GET", path: "/loyalty/programs/{programId}/tiers", summary: "List tiers" })
-    .input(z.object({ programId: z.string().uuid() }))
+    .route({
+      method: "GET",
+      path: "/loyalty/programs/{programId}/tiers",
+      summary: "List tiers",
+      inputStructure: "detailed",
+    })
+    .input(z.object({ params: z.object({ programId: z.string().uuid() }) }))
     .output(z.object({ data: z.array(loyaltyTierOutput) })),
   create: oc
     .route({ method: "POST", path: "/loyalty/tiers", summary: "Create tier" })
     .input(loyaltyTierCreateInput)
     .output(loyaltyTierOutput),
   update: oc
-    .route({ method: "PATCH", path: "/loyalty/tiers/{id}", summary: "Update tier" })
-    .input(z.object({ id: z.string().uuid(), patch: loyaltyTierUpdateInput }))
+    .route({
+      method: "PATCH",
+      path: "/loyalty/tiers/{id}",
+      summary: "Update tier",
+      inputStructure: "detailed",
+    })
+    .input(z.object({ params: z.object({ id: z.string().uuid() }), body: z.object({ patch: loyaltyTierUpdateInput }) }))
     .output(loyaltyTierOutput),
   delete: oc
-    .route({ method: "DELETE", path: "/loyalty/tiers/{id}", summary: "Delete tier" })
-    .input(z.object({ id: z.string().uuid() }))
+    .route({
+      method: "DELETE",
+      path: "/loyalty/tiers/{id}",
+      summary: "Delete tier",
+      inputStructure: "detailed",
+    })
+    .input(z.object({ params: z.object({ id: z.string().uuid() }) }))
     .output(z.object({ ok: z.literal(true) })),
 };
 
@@ -72,20 +102,31 @@ const earningRules = {
       method: "GET",
       path: "/loyalty/programs/{programId}/earning-rules",
       summary: "List earning rules",
+      inputStructure: "detailed",
     })
-    .input(z.object({ programId: z.string().uuid() }))
+    .input(z.object({ params: z.object({ programId: z.string().uuid() }) }))
     .output(z.object({ data: z.array(loyaltyEarningRuleOutput) })),
   create: oc
     .route({ method: "POST", path: "/loyalty/earning-rules", summary: "Create earning rule" })
     .input(loyaltyEarningRuleCreateInput)
     .output(loyaltyEarningRuleOutput),
   update: oc
-    .route({ method: "PATCH", path: "/loyalty/earning-rules/{id}", summary: "Update earning rule" })
-    .input(z.object({ id: z.string().uuid(), patch: loyaltyEarningRuleUpdateInput }))
+    .route({
+      method: "PATCH",
+      path: "/loyalty/earning-rules/{id}",
+      summary: "Update earning rule",
+      inputStructure: "detailed",
+    })
+    .input(z.object({ params: z.object({ id: z.string().uuid() }), body: z.object({ patch: loyaltyEarningRuleUpdateInput }) }))
     .output(loyaltyEarningRuleOutput),
   delete: oc
-    .route({ method: "DELETE", path: "/loyalty/earning-rules/{id}", summary: "Delete earning rule" })
-    .input(z.object({ id: z.string().uuid() }))
+    .route({
+      method: "DELETE",
+      path: "/loyalty/earning-rules/{id}",
+      summary: "Delete earning rule",
+      inputStructure: "detailed",
+    })
+    .input(z.object({ params: z.object({ id: z.string().uuid() }) }))
     .output(z.object({ ok: z.literal(true) })),
 };
 
@@ -95,20 +136,31 @@ const rewards = {
       method: "GET",
       path: "/loyalty/programs/{programId}/rewards",
       summary: "List rewards",
+      inputStructure: "detailed",
     })
-    .input(z.object({ programId: z.string().uuid() }))
+    .input(z.object({ params: z.object({ programId: z.string().uuid() }) }))
     .output(z.object({ data: z.array(loyaltyRewardOutput) })),
   create: oc
     .route({ method: "POST", path: "/loyalty/rewards", summary: "Create reward" })
     .input(loyaltyRewardCreateInput)
     .output(loyaltyRewardOutput),
   update: oc
-    .route({ method: "PATCH", path: "/loyalty/rewards/{id}", summary: "Update reward" })
-    .input(z.object({ id: z.string().uuid(), patch: loyaltyRewardUpdateInput }))
+    .route({
+      method: "PATCH",
+      path: "/loyalty/rewards/{id}",
+      summary: "Update reward",
+      inputStructure: "detailed",
+    })
+    .input(z.object({ params: z.object({ id: z.string().uuid() }), body: z.object({ patch: loyaltyRewardUpdateInput }) }))
     .output(loyaltyRewardOutput),
   delete: oc
-    .route({ method: "DELETE", path: "/loyalty/rewards/{id}", summary: "Soft-delete reward" })
-    .input(z.object({ id: z.string().uuid() }))
+    .route({
+      method: "DELETE",
+      path: "/loyalty/rewards/{id}",
+      summary: "Soft-delete reward",
+      inputStructure: "detailed",
+    })
+    .input(z.object({ params: z.object({ id: z.string().uuid() }) }))
     .output(z.object({ ok: z.literal(true) })),
 };
 
@@ -118,12 +170,18 @@ const members = {
       method: "GET",
       path: "/loyalty/programs/{programId}/members",
       summary: "List members of a program",
+      inputStructure: "detailed",
     })
-    .input(paginationInput.extend({ programId: z.string().uuid() }))
+    .input(z.object({ params: z.object({ programId: z.string().uuid() }), query: paginationInput }))
     .output(paginatedOutput(loyaltyMemberOutput)),
   get: oc
-    .route({ method: "GET", path: "/loyalty/members/{id}", summary: "Get member" })
-    .input(z.object({ id: z.string().uuid() }))
+    .route({
+      method: "GET",
+      path: "/loyalty/members/{id}",
+      summary: "Get member",
+      inputStructure: "detailed",
+    })
+    .input(z.object({ params: z.object({ id: z.string().uuid() }) }))
     .output(loyaltyMemberOutput),
   enroll: oc
     .route({ method: "POST", path: "/loyalty/members", summary: "Enroll a customer" })
@@ -183,8 +241,9 @@ const members = {
       method: "GET",
       path: "/loyalty/members/{id}/transactions",
       summary: "Member transaction ledger",
+      inputStructure: "detailed",
     })
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ params: z.object({ id: z.string().uuid() }) }))
     .output(z.object({ data: z.array(loyaltyTransactionOutput) })),
 };
 

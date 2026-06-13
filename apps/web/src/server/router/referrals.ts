@@ -75,7 +75,7 @@ const programGet = os.referrals.programs.get
   .handler(async ({ input }) => {
     const row = await db().query.referralProgram.findFirst({
       where: and(
-        eq(schema.referralProgram.id, input.id),
+        eq(schema.referralProgram.id, input.params.id),
         isNull(schema.referralProgram.deletedAt),
       ),
     });
@@ -116,16 +116,17 @@ const programUpdate = os.referrals.programs.update
   .use(requireSession)
   .handler(async ({ input }) => {
     const patch: Partial<typeof schema.referralProgram.$inferInsert> = { updatedAt: new Date() };
-    if (input.patch.referrerReward !== undefined) patch.referrerReward = input.patch.referrerReward;
-    if (input.patch.refereeReward !== undefined) patch.refereeReward = input.patch.refereeReward;
-    if (input.patch.codeLength !== undefined) patch.codeLength = input.patch.codeLength;
-    if (input.patch.metadata !== undefined) patch.metadata = input.patch.metadata;
+    const { patch: inputPatch } = input.body;
+    if (inputPatch.referrerReward !== undefined) patch.referrerReward = inputPatch.referrerReward;
+    if (inputPatch.refereeReward !== undefined) patch.refereeReward = inputPatch.refereeReward;
+    if (inputPatch.codeLength !== undefined) patch.codeLength = inputPatch.codeLength;
+    if (inputPatch.metadata !== undefined) patch.metadata = inputPatch.metadata;
     const [row] = await db()
       .update(schema.referralProgram)
       .set(patch)
       .where(
         and(
-          eq(schema.referralProgram.id, input.id),
+          eq(schema.referralProgram.id, input.params.id),
           isNull(schema.referralProgram.deletedAt),
         ),
       )
@@ -137,16 +138,16 @@ const programUpdate = os.referrals.programs.update
 const programDelete = os.referrals.programs.delete
   .use(requireSession)
   .handler(async ({ input }) => {
-    await softDeleteById(schema.referralProgram, input.id, "Referral program not found");
+    await softDeleteById(schema.referralProgram, input.params.id, "Referral program not found");
     return { ok: true as const };
   });
 
 const listCodes = os.referrals.listCodes
   .use(requireSession)
   .handler(async ({ input }) => {
-    const limit = input.limit;
-    const cursor = decodeCursor(input.cursor);
-    const filters = [eq(schema.referralCode.programId, input.programId)];
+    const limit = input.query.limit;
+    const cursor = decodeCursor(input.query.cursor);
+    const filters = [eq(schema.referralCode.programId, input.params.programId)];
     if (cursor) {
       filters.push(
         sql`(${schema.referralCode.createdAt}, ${schema.referralCode.id}) < (${cursor.createdAt}, ${cursor.id})`,
@@ -173,9 +174,9 @@ const listCodes = os.referrals.listCodes
 const listConversions = os.referrals.listConversions
   .use(requireSession)
   .handler(async ({ input }) => {
-    const limit = input.limit;
-    const cursor = decodeCursor(input.cursor);
-    const filters = [eq(schema.referralConversion.codeId, input.codeId)];
+    const limit = input.query.limit;
+    const cursor = decodeCursor(input.query.cursor);
+    const filters = [eq(schema.referralConversion.codeId, input.params.codeId)];
     if (cursor) {
       filters.push(
         sql`(${schema.referralConversion.createdAt}, ${schema.referralConversion.id}) < (${cursor.createdAt}, ${cursor.id})`,
@@ -201,7 +202,7 @@ const listConversions = os.referrals.listConversions
 
 const getByCode = os.referrals.getByCode.use(requireSession).handler(async ({ input }) => {
   const row = await db().query.referralCode.findFirst({
-    where: eq(schema.referralCode.code, input.code),
+    where: eq(schema.referralCode.code, input.params.code),
   });
   if (!row) throw new ORPCError("NOT_FOUND", { message: "Referral not found" });
   return toReferralCode(row);

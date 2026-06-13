@@ -56,8 +56,8 @@ describe.skipIf(!E2E_ENABLED)("segments preview + CRUD", () => {
       "==": [{ var: "customer.email" }, `__none__-${tag}@example.com`],
     };
     const updated = await client.segments.update({
-      id: segment.id,
-      patch: { rule: noMatchRule },
+      params: { id: segment.id },
+      body: { patch: { rule: noMatchRule } },
     });
     expect(updated.rule).toEqual(noMatchRule);
 
@@ -69,7 +69,7 @@ describe.skipIf(!E2E_ENABLED)("segments preview + CRUD", () => {
     expect(previewAfter.sample).toHaveLength(0);
 
     // Cleanup.
-    await client.segments.delete({ id: segment.id });
-    await client.customers.delete({ id: seeded.id });
+    await client.segments.delete({ params: { id: segment.id } });
+    await client.customers.delete({ params: { id: seeded.id } });
   });
 });

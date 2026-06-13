@@ -19,7 +19,8 @@ export const apiKeys = {
       method: "DELETE",
       path: "/api-keys/{id}",
       summary: "Disable an API key (cannot be re-enabled)",
+      inputStructure: "detailed",
     })
-    .input(z.object({ id: z.string() }))
+    .input(z.object({ params: z.object({ id: z.string() }) }))
     .output(z.object({ ok: z.literal(true) })),
 };
