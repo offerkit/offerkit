@@ -19,7 +19,7 @@
   "dependencies": {
     "@opentelemetry/api": "^1.9.1",
     "drizzle-orm": "^0.45.2",
-    "pg": "^8.20.0"
+    "pg": "^8.21.0"
   },
   "devDependencies": {
     "@offerkit/config": "workspace:*",

@@ -13,10 +13,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@orpc/contract": "^1.14.2",
-    "@orpc/openapi": "^1.14.2",
-    "@orpc/server": "^1.14.2",
-    "@orpc/zod": "^1.14.2",
+    "@orpc/contract": "^1.14.6",
+    "@orpc/openapi": "^1.14.6",
+    "@orpc/server": "^1.14.6",
+    "@orpc/zod": "^1.14.6",
     "zod": "^4.4.3"
   },
   "devDependencies": {

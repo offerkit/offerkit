@@ -37,7 +37,7 @@
   },
   "dependencies": {
     "@offerkit/sdk": "workspace:^",
-    "commander": "^14.0.3"
+    "commander": "^15.0.0"
   },
   "devDependencies": {
     "@offerkit/config": "workspace:*",
