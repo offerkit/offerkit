@@ -33,7 +33,7 @@ export function UserMenu({ name, email }: { name: string; email: string }) {
         <div className="flex size-8 items-center justify-center rounded-md bg-primary/10">
           <User className="size-4 text-primary" />
         </div>
-        <div className="flex flex-col items-start text-left text-xs">
+        <div className="flex flex-col items-start text-left text-xs group-data-[collapsible=icon]:hidden">
           <span className="truncate font-medium">{name}</span>
           <span className="truncate text-muted-foreground">{email}</span>
         </div>
