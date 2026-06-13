@@ -23,7 +23,7 @@
   },
   "devDependencies": {
     "@offerkit/config": "workspace:*",
-    "@types/node": "^25.6.2",
+    "@types/node": "^25.9.3",
     "@types/pg": "^8.20.0",
     "drizzle-kit": "^0.31.10",
     "typescript": "^6.0.3"
