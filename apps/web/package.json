@@ -48,18 +48,18 @@
   },
   "devDependencies": {
     "@offerkit/config": "workspace:*",
-    "@playwright/test": "^1.59.1",
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
-    "@types/mdx": "^2.0.13",
-    "@types/node": "^20",
+    "@types/mdx": "^2.0.14",
+    "@types/node": "^25",
     "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.6",
+    "eslint": "^10",
+    "eslint-config-next": "16.2.9",
     "pg": "^8.20.0",
     "tailwindcss": "^4",
-    "typescript": "^5",
-    "vitest": "^4.1.5"
+    "typescript": "^6",
+    "vitest": "^4.1.8"
   }
 }
