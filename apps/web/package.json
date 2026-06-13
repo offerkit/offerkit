@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "pretypecheck": "fumadocs-mdx",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",

@@ -3,10 +3,10 @@
   "version": "0.2.3",
   "license": "MIT",
   "type": "module",
-  "description": "Typed client for the Offerkit promotions API.",
+  "description": "Typed client for the OfferKit promotions API.",
   "repository": {
     "type": "git",
-    "url": "https://github.com/akshitkrnagpal/offerkit.git",
+    "url": "https://github.com/offerkit/offerkit.git",
     "directory": "packages/sdk"
   },
   "exports": {

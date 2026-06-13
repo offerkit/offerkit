@@ -3,10 +3,10 @@
   "version": "0.1.3",
   "license": "MIT",
   "type": "module",
-  "description": "Offerkit MCP server — exposes the Offerkit API as Model Context Protocol tools.",
+  "description": "OfferKit MCP server - exposes the OfferKit API as Model Context Protocol tools.",
   "repository": {
     "type": "git",
-    "url": "https://github.com/akshitkrnagpal/offerkit.git",
+    "url": "https://github.com/offerkit/offerkit.git",
     "directory": "packages/mcp"
   },
   "exports": {

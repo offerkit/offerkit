@@ -53,7 +53,7 @@ function fail(err: unknown): never {
 }
 
 const program = new Command();
-program.name("offerkit").description("Offerkit CLI").version("0.0.0");
+program.name("offerkit").description("OfferKit CLI").version("0.0.0");
 
 program
   .command("login")
