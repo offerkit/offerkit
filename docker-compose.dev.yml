@@ -1,0 +1,12 @@
+services:
+  web:
+    image: offerkit:dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+  worker:
+    image: offerkit:dev
+    build:
+      context: .
+      dockerfile: Dockerfile

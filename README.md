@@ -17,7 +17,7 @@
   <a href="#-license">License</a>
 </p>
 
-OfferKit is a complete promotion engine — coupons, gift cards, loyalty, referrals, customer segments, validation rules — surfaced as a dashboard, a typed REST API, a TypeScript SDK, a CLI, and a curated MCP server. One Docker compose or one Railway click and you have it running on your own infra. Strict TypeScript, MIT throughout, agentic from day one.
+OfferKit is a complete promotion engine — coupons, gift cards, loyalty, referrals, customer segments, validation rules — surfaced as a dashboard, a typed REST API, a TypeScript SDK, a CLI, and a curated MCP server. One published Docker image runs both web and worker, so you can self-host without building this monorepo in production. Strict TypeScript, MIT throughout, agentic from day one.
 
 ## 🤖 Why OfferKit
 
@@ -27,7 +27,7 @@ OfferKit is a complete promotion engine — coupons, gift cards, loyalty, referr
 
 **Open source.** MIT throughout the monorepo. No CLA at v1.0. No commercial features paywalled. Built entirely on top of MIT/Apache OSS.
 
-**Self-hostable.** One `docker compose up` brings up web + worker + Postgres. One Railway click does the same in production. Postgres-backed everything (no Redis, no separate queue infra). OpenTelemetry-ready out of the box for any OTLP backend.
+**Self-hostable.** One `docker compose up` brings up web + worker + Postgres + Redis from `ghcr.io/offerkit/offerkit`. Railway uses the same published image for both services; no GitHub source deploy required. OpenTelemetry-ready out of the box for any OTLP backend.
 
 ## ✨ Features
 
@@ -61,19 +61,19 @@ Visit <http://localhost:3000> and sign in with the `ADMIN_EMAIL` / `ADMIN_PASSWO
 
 ### Docker compose
 
-The `docker-compose.yml` brings up `web` + `worker` + `postgres` + `redis`. Migrations run automatically on web boot. Background jobs are queued in Redis via BullMQ. See [`/docs/self-host`](apps/web/content/docs/self-host.mdx) for env vars and tuning.
+The `docker-compose.yml` brings up `web` + `worker` + `postgres` + `redis`. Both runtime services use the same published image, `ghcr.io/offerkit/offerkit`. Migrations run automatically on web boot. Background jobs are queued in Redis via BullMQ. See [`/docs/self-host`](apps/web/content/docs/self-host.mdx) for env vars and tuning.
 
 ### Railway
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new)
 
-In one Railway project, create four services: a Postgres add-on, a Redis add-on, a `web` service (Config-as-Code Path: `apps/web/railway.toml`, Dockerfile Build Stage: `web`), and a `worker` service (Config-as-Code Path: `apps/worker/railway.toml`, Dockerfile Build Stage: `worker`, no public domain). Reference Postgres's `DATABASE_URL` and Redis's `REDIS_URL` into both app services. Set `BETTER_AUTH_SECRET`, `OFFERKIT_PUBLIC_URL`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` on the `web` service.
+In one Railway project, create Postgres and Redis, then create two Docker Image services from `ghcr.io/offerkit/offerkit:latest`. The public `web` service uses the default command. The private `worker` service overrides the command to `node apps/worker/dist/index.js` and should not have a public domain. Reference Postgres's `DATABASE_URL` and Redis's `REDIS_URL` into both app services. Set `BETTER_AUTH_SECRET`, `OFFERKIT_PUBLIC_URL`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` on the `web` service.
 
 ### Diploi
 
 [![Launch with Diploi](https://diploi.com/launch-big.svg)](https://diploi.com/launch/akshitkrnagpal/offerkit)
 
-Create one Diploi project with a public `web` component, a private `worker` component, Postgres, and Redis. Build both components from this repo's Dockerfiles: `apps/web/Dockerfile` for `web`, `apps/worker/Dockerfile` for `worker`. Wire Postgres's `DATABASE_URL` and Redis's `REDIS_URL` into both components. Set `BETTER_AUTH_SECRET`, `OFFERKIT_PUBLIC_URL`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` on `web`; set `WORKER_HEALTH_PORT=9091` on `worker`.
+Create one Diploi project with a public `web` component, a private `worker` component, Postgres, and Redis. Use the same published image, `ghcr.io/offerkit/offerkit:latest`, for both components. The worker command is `node apps/worker/dist/index.js`. Wire Postgres's `DATABASE_URL` and Redis's `REDIS_URL` into both components. Set `BETTER_AUTH_SECRET`, `OFFERKIT_PUBLIC_URL`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` on `web`; set `WORKER_HEALTH_PORT=9091` on `worker`.
 
 ## 📦 SDK & CLI & MCP
 
@@ -145,6 +145,12 @@ cp .env.example .env             # edit DATABASE_URL etc.
 pnpm --filter @offerkit/db push
 pnpm --filter @offerkit/web dev          # web on :3000
 pnpm --filter @offerkit/worker dev       # worker on :9091
+```
+
+To test the production image shape from local source:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
 ```

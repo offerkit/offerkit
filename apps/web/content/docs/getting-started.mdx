@@ -12,7 +12,7 @@ cp .env.example .env  # set ADMIN_EMAIL, ADMIN_PASSWORD, BETTER_AUTH_SECRET
 docker compose up -d
 ```
 
-The web app is at `http://localhost:3000`, the worker exposes a health endpoint at `:9091`, Postgres listens on `:5432`. First boot creates an admin from `ADMIN_EMAIL` / `ADMIN_PASSWORD` and flags `mustChangePassword`.
+Compose pulls the published `ghcr.io/offerkit/offerkit` image and runs it as both `web` and `worker`. The web app is at `http://localhost:3000`, the worker exposes a health endpoint at `:9091`, Postgres listens on `:5432`. First boot creates an admin from `ADMIN_EMAIL` / `ADMIN_PASSWORD` and flags `mustChangePassword`.
 
 ## 2. Sign in and mint an API key
 
@@ -62,6 +62,6 @@ The redeem endpoint is idempotent on `(voucherCode, idempotencyKey)` — replays
 
 ## Where next
 
-- [Self-host on Railway](/docs/self-host)
+- [Self-host](/docs/self-host)
 - [SDK + CLI + MCP](/docs/integrations)
 - [Webhooks](/docs/webhooks)

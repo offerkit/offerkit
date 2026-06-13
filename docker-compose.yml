@@ -28,9 +28,7 @@ services:
       retries: 10
 
   web:
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
+    image: ${OFFERKIT_IMAGE:-ghcr.io/offerkit/offerkit}:${OFFERKIT_IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
       postgres:
@@ -51,9 +49,8 @@ services:
       - "3000:3000"
 
   worker:
-    build:
-      context: .
-      dockerfile: apps/worker/Dockerfile
+    image: ${OFFERKIT_IMAGE:-ghcr.io/offerkit/offerkit}:${OFFERKIT_IMAGE_TAG:-latest}
+    command: ["node", "apps/worker/dist/index.js"]
     restart: unless-stopped
     depends_on:
       postgres:
