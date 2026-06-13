@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://www.openplaceholder.com/1200x400/OfferKit" alt="OfferKit" width="800" />
+  <img src=".github/assets/offerkit-readme-header-text.png" alt="OfferKit promotion engine dashboard illustration" width="800" />
 </p>
 
 <h1 align="center">OfferKit</h1>
@@ -194,7 +194,7 @@ No CLA at v1.0.
 
 ## 🙏 Acknowledgments
 
-Banner generated with [Open Placeholder](https://github.com/akshitkrnagpal/open-placeholder). Built on top of [Next.js](https://nextjs.org/), [Drizzle ORM](https://orm.drizzle.team/), [Better Auth](https://better-auth.com/), [oRPC](https://orpc.dev/), [Fumadocs](https://fumadocs.dev/), [gt-next](https://generaltranslation.com/), and the rest of the OSS world.
+Built on top of [Next.js](https://nextjs.org/), [Drizzle ORM](https://orm.drizzle.team/), [Better Auth](https://better-auth.com/), [oRPC](https://orpc.dev/), [Fumadocs](https://fumadocs.dev/), [gt-next](https://generaltranslation.com/), and the rest of the OSS world.
 
 <p align="center">
   <a href="./LICENSE"><img src="https://img.shields.io/github/license/offerkit/offerkit?style=flat-square" alt="MIT License" /></a>
