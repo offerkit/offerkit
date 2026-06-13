@@ -1,15 +1,16 @@
 ---
 title: Self-host
-description: Docker compose locally and Railway in production. No CI required.
+description: Run the published Docker image locally or on Railway. No source build required.
 ---
 
 ## Local: Docker compose
 
-The provided `docker-compose.yml` boots three services from the same image:
+The provided `docker-compose.yml` boots four services. `web` and `worker` use the same published image, `ghcr.io/offerkit/offerkit`:
 
 - `web` — Next.js dashboard + REST API on `:3000`
-- `worker` — long-running Node process pulling jobs out of the Postgres queue
+- `worker` — long-running Node process pulling jobs out of the queue
 - `postgres` — Postgres 17 on `:5432`
+- `redis` — Redis 7 on `:6379`
 
 ```bash
 cp .env.example .env
@@ -22,33 +23,67 @@ cp .env.example .env
 docker compose up -d
 ```
 
-`web`'s entrypoint runs `drizzle-kit migrate` before starting Next.js, so a fresh DB is fully migrated on first boot. The `worker` reclaims orphaned jobs on startup and re-seeds the recurring `loyalty.points.expire` sweep if it's missing.
+`web` runs migrations before starting Next.js, so a fresh DB is fully migrated on first boot. The `worker` reclaims orphaned jobs on startup and re-seeds the recurring `loyalty.points.expire` sweep if it's missing.
+
+Pin a release by setting `OFFERKIT_IMAGE_TAG`, for example:
+
+```bash
+OFFERKIT_IMAGE_TAG=v1.2.3 docker compose up -d
+```
+
+Contributors who need to test local source changes can build the same image shape:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+```
 
 ## Production: Railway
 
-The repo ships a `railway.toml` template that provisions:
+Railway should deploy the published image directly. Do not connect the monorepo as a GitHub source.
 
-- a Postgres add-on (DATABASE_URL wired automatically)
-- two services from the same Dockerfile, differing only in start command (`web` runs Next.js + migrations; `worker` runs the queue consumer)
-- a healthcheck on `/api/v1/ready` (web) and `:9091/health` (worker)
+In one Railway project, create:
 
-Click **Deploy on Railway** in the README, set:
+- Postgres
+- Redis
+- `web` Docker Image service using `ghcr.io/offerkit/offerkit:latest`
+- `worker` Docker Image service using `ghcr.io/offerkit/offerkit:latest`
+
+For production, pin both image services to a version tag such as `ghcr.io/offerkit/offerkit:v1.2.3` instead of `latest`.
+
+Set these variables on `web`:
 
 ```
+DATABASE_URL=postgres://...
+REDIS_URL=redis://...
 ADMIN_EMAIL=…
 ADMIN_PASSWORD=…
 BETTER_AUTH_SECRET=…
 OFFERKIT_PUBLIC_URL=https://your-domain
 ```
 
-…and the first deploy will boot a working instance. There is no GitHub Actions pipeline; Railway builds directly from the repo on push.
+`web` uses the image default command and should expose a public domain. Configure its healthcheck path as `/api/v1/ready`.
+
+Set these variables on `worker`:
+
+```
+DATABASE_URL=postgres://...
+REDIS_URL=redis://...
+```
+
+Override the `worker` start command:
+
+```bash
+node apps/worker/dist/index.js
+```
+
+`worker` should not expose a public domain. Configure its healthcheck path as `/health`.
 
 ## Production: Diploi
 
 Diploi should use the same deployment shape as Docker compose and Railway:
 
-- `web` — public HTTP component built from `apps/web/Dockerfile`, exposes `:3000`
-- `worker` — private/background component built from `apps/worker/Dockerfile`, exposes health on `:9091`
+- `web` — public HTTP component from `ghcr.io/offerkit/offerkit`, exposes `:3000`
+- `worker` — private/background component from `ghcr.io/offerkit/offerkit`, command `node apps/worker/dist/index.js`, exposes health on `:9091`
 - `postgres` — managed Postgres service wired into both components as `DATABASE_URL`
 - `redis` — Redis service wired into both components as `REDIS_URL`; BullMQ stores background jobs here
 
