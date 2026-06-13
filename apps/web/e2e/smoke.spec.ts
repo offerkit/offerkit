@@ -6,13 +6,17 @@ test.describe("dashboard smoke", () => {
     // every test starts already authenticated as the seeded admin (with
     // the password-rotation handled once during setup).
     await page.goto("/dashboard");
-    // The dashboard shows tile cards (no h1) and the sidebar nav.
-    await expect(
-      page.getByRole("link", { name: /campaigns/i }).first(),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: /customers/i }).first(),
-    ).toBeVisible();
+    // The dashboard shows grouped tile cards and the sidebar nav.
+    for (const href of [
+      "/customers",
+      "/campaigns",
+      "/vouchers",
+      "/loyalty",
+      "/webhooks",
+      "/settings",
+    ]) {
+      await expect(page.locator(`a[href="${href}"] [data-slot="card"]`)).toBeVisible();
+    }
   });
 
   test("campaigns page loads without server errors", async ({ page }) => {
