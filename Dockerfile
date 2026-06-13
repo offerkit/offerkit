@@ -24,21 +24,20 @@ COPY packages/sdk/package.json packages/sdk/
 COPY packages/cli/package.json packages/cli/
 COPY packages/mcp/package.json packages/mcp/
 COPY packages/ui/package.json packages/ui/
-RUN --mount=type=cache,target=/pnpm/store pnpm install --frozen-lockfile
+RUN --mount=type=cache,target=/pnpm/store pnpm install --frozen-lockfile --ignore-scripts
 
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Re-run install to wire up workspace symlinks for the just-copied source.
-RUN --mount=type=cache,target=/pnpm/store pnpm install --frozen-lockfile --offline
+RUN --mount=type=cache,target=/pnpm/store pnpm install --frozen-lockfile --offline --ignore-scripts
 RUN pnpm --filter @offerkit/worker build
-RUN pnpm --filter @offerkit/web build
+RUN --mount=type=cache,target=/app/apps/web/.next/cache pnpm --filter @offerkit/web build
 
 FROM builder AS worker-prod-deps
-RUN --mount=type=cache,target=/pnpm/store pnpm --filter @offerkit/worker deploy --prod --legacy /prod/worker
+RUN --mount=type=cache,target=/pnpm/store pnpm --filter @offerkit/worker deploy --prod --legacy --ignore-scripts /prod/worker
 
-FROM node:24-alpine AS runtime
-WORKDIR /app
+FROM base AS runtime
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
@@ -51,6 +50,7 @@ COPY --from=builder /app/apps/worker/package.json ./apps/worker/package.json
 COPY --from=builder /app/apps/worker/dist ./apps/worker/dist
 COPY --from=worker-prod-deps /prod/worker/node_modules ./apps/worker/node_modules
 COPY --from=builder /app/packages/db/drizzle ./packages/db/drizzle
+RUN node -e "require('node:fs').writeFileSync('package.json', JSON.stringify({ scripts: { start: 'node apps/web/server.js', worker: 'node apps/worker/dist/index.js' } }, null, 2) + '\n')"
 
 EXPOSE 3000 9091
 CMD ["node", "apps/web/server.js"]
