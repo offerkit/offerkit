@@ -58,7 +58,7 @@ export default function UsersPage() {
   });
 
   const reset = useMutation({
-    mutationFn: (id: string) => ovx().users.resetPassword({ id }),
+    mutationFn: (id: string) => ovx().users.resetPassword({ params: { id } }),
     onSuccess: async (user) => {
       await queryClient.invalidateQueries({ queryKey: ["users"] });
       setGenerated({ email: user.email, password: user.password });
@@ -67,17 +67,18 @@ export default function UsersPage() {
   });
 
   const setRoleMut = useMutation({
-    mutationFn: (vars: { id: string; role: Role }) => ovx().users.setRole(vars),
+    mutationFn: (vars: { id: string; role: Role }) =>
+      ovx().users.setRole({ params: { id: vars.id }, body: { role: vars.role } }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
   });
 
   const disable = useMutation({
-    mutationFn: (id: string) => ovx().users.disable({ id }),
+    mutationFn: (id: string) => ovx().users.disable({ params: { id } }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
   });
 
   const enable = useMutation({
-    mutationFn: (id: string) => ovx().users.enable({ id }),
+    mutationFn: (id: string) => ovx().users.enable({ params: { id } }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
   });
 

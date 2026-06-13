@@ -45,7 +45,7 @@ export default function ApiKeysPage() {
   });
 
   const revoke = useMutation({
-    mutationFn: (id: string) => ovx().apiKeys.revoke({ id }),
+    mutationFn: (id: string) => ovx().apiKeys.revoke({ params: { id } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["apiKeys"] });
       toast.success(gt("API key revoked"));

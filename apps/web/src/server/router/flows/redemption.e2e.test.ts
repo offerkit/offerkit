@@ -46,9 +46,11 @@ describe.skipIf(!E2E_ENABLED)("redemption flows", () => {
 
     const idempotencyKey = randomId("idem");
     const first = await client.vouchers.redeem({
-      code,
-      order: { amount: 5_000, currency: "USD" },
-      idempotencyKey,
+      params: { code },
+      body: {
+        order: { amount: 5_000, currency: "USD" },
+        idempotencyKey,
+      },
     });
     expect(first.ok).toBe(true);
     expect(first.amount).toBe(1_000);
@@ -56,9 +58,11 @@ describe.skipIf(!E2E_ENABLED)("redemption flows", () => {
     expect(first.finalOrder?.amount).toBe(4_000);
 
     const replay = await client.vouchers.redeem({
-      code,
-      order: { amount: 5_000, currency: "USD" },
-      idempotencyKey,
+      params: { code },
+      body: {
+        order: { amount: 5_000, currency: "USD" },
+        idempotencyKey,
+      },
     });
     expect(replay.redemptionId).toBe(first.redemptionId);
     expect(replay.idempotent).toBe(true);
@@ -83,8 +87,8 @@ describe.skipIf(!E2E_ENABLED)("redemption flows", () => {
 
     // Partial spend: 600 against a 5_000 order leaves 400 on the card.
     const first = await client.vouchers.redeem({
-      code,
-      order: { amount: 5_000, currency: "USD" },
+      params: { code },
+      body: { order: { amount: 5_000, currency: "USD" } },
     });
     expect(first.ok).toBe(true);
     expect(first.amount).toBeGreaterThan(0);
@@ -92,22 +96,22 @@ describe.skipIf(!E2E_ENABLED)("redemption flows", () => {
 
     // Drain the rest (could be in one or two calls depending on logic).
     const second = await client.vouchers.redeem({
-      code,
-      order: { amount: 5_000, currency: "USD" },
+      params: { code },
+      body: { order: { amount: 5_000, currency: "USD" } },
     });
     // Either we drained it on this call, or it was already drained.
     expect(typeof second.ok).toBe("boolean");
 
     // The third call refuses because the gift card has nothing left.
     const third = await client.vouchers.redeem({
-      code,
-      order: { amount: 5_000, currency: "USD" },
+      params: { code },
+      body: { order: { amount: 5_000, currency: "USD" } },
     });
     expect(third.ok).toBe(false);
     expect(third.code).toBe("gift_balance_zero");
 
     // Ledger should record the credit + at least one redemption.
-    const tx = await client.vouchers.transactions({ code });
+    const tx = await client.vouchers.transactions({ params: { code } });
     const credit = tx.data.find((t) => t.reason === "CREDIT");
     expect(credit?.delta).toBe(1_000);
     const redemptions = tx.data.filter((t) => t.reason === "REDEMPTION");

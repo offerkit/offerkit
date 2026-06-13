@@ -27,17 +27,19 @@ export default function RewardTypeDetailPage({ params }: PageProps) {
 
   const { data, isLoading } = useQuery({
     queryKey: ["rewardTypes", id],
-    queryFn: () => ovx().rewardTypes.get({ id }),
+    queryFn: () => ovx().rewardTypes.get({ params: { id } }),
   });
 
   const update = useMutation({
     mutationFn: (state: RewardTypeFormState) =>
       ovx().rewardTypes.update({
-        id,
-        patch: {
-          name: state.name,
-          description: state.description || undefined,
-          payloadSchema: state.payloadSchema,
+        params: { id },
+        body: {
+          patch: {
+            name: state.name,
+            description: state.description || undefined,
+            payloadSchema: state.payloadSchema,
+          },
         },
       }),
     onSuccess: async () => {
@@ -50,7 +52,7 @@ export default function RewardTypeDetailPage({ params }: PageProps) {
   });
 
   const remove = useMutation({
-    mutationFn: () => ovx().rewardTypes.delete({ id }),
+    mutationFn: () => ovx().rewardTypes.delete({ params: { id } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["rewardTypes"] });
       toast.success(gt("Reward type deleted"));

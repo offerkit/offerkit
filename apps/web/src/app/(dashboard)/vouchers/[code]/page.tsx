@@ -44,35 +44,37 @@ export default function VoucherDetailPage({ params }: PageProps) {
 
   const { data, isLoading } = useQuery({
     queryKey: ["vouchers", "code", code],
-    queryFn: () => ovx().vouchers.get({ code }),
+    queryFn: () => ovx().vouchers.get({ params: { code } }),
   });
 
   const update = useMutation({
     mutationFn: (state: VoucherFormState) =>
       ovx().vouchers.update({
-        code,
-        patch: {
-          ...(state.type === "GIFT_CARD"
-            ? {
-                giftBalance: state.giftBalance === "" ? 0 : state.giftBalance,
-              }
-            : {
-                discount: {
-                  type: state.discountKind,
-                  ...(state.discountKind === "AMOUNT"
-                    ? { amount: state.discountValue }
-                    : { percent: state.discountValue }),
-                  ...(state.maxDiscountAmount !== ""
-                    ? { maxDiscountAmount: state.maxDiscountAmount }
-                    : {}),
-                },
-                priority: state.priority,
-                exclusive: state.exclusive,
-              }),
-          redemptionLimit: state.redemptionLimit === "" ? undefined : state.redemptionLimit,
-          active: state.active,
-          startDate: toIsoOrUndefined(state.startDate),
-          endDate: toIsoOrUndefined(state.endDate),
+        params: { code },
+        body: {
+          patch: {
+            ...(state.type === "GIFT_CARD"
+              ? {
+                  giftBalance: state.giftBalance === "" ? 0 : state.giftBalance,
+                }
+              : {
+                  discount: {
+                    type: state.discountKind,
+                    ...(state.discountKind === "AMOUNT"
+                      ? { amount: state.discountValue }
+                      : { percent: state.discountValue }),
+                    ...(state.maxDiscountAmount !== ""
+                      ? { maxDiscountAmount: state.maxDiscountAmount }
+                      : {}),
+                  },
+                  priority: state.priority,
+                  exclusive: state.exclusive,
+                }),
+            redemptionLimit: state.redemptionLimit === "" ? undefined : state.redemptionLimit,
+            active: state.active,
+            startDate: toIsoOrUndefined(state.startDate),
+            endDate: toIsoOrUndefined(state.endDate),
+          },
         },
       }),
     onSuccess: async () => {
@@ -85,7 +87,7 @@ export default function VoucherDetailPage({ params }: PageProps) {
   });
 
   const remove = useMutation({
-    mutationFn: () => ovx().vouchers.delete({ code }),
+    mutationFn: () => ovx().vouchers.delete({ params: { code } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["vouchers"] });
       toast.success(gt("Voucher deleted"));
@@ -99,17 +101,19 @@ export default function VoucherDetailPage({ params }: PageProps) {
   const validatePreview = useMutation({
     mutationFn: (amount: number) =>
       ovx().vouchers.validate({
-        code,
-        order: { amount, currency: "USD", items: [] },
+        params: { code },
+        body: { order: { amount, currency: "USD", items: [] } },
       }),
   });
 
   const redeem = useMutation({
     mutationFn: (vars: { amount: number; idempotencyKey?: string }) =>
       ovx().vouchers.redeem({
-        code,
-        order: { amount: vars.amount, currency: "USD", items: [] },
-        idempotencyKey: vars.idempotencyKey,
+        params: { code },
+        body: {
+          order: { amount: vars.amount, currency: "USD", items: [] },
+          idempotencyKey: vars.idempotencyKey,
+        },
       }),
     onSuccess: async (res) => {
       await queryClient.invalidateQueries({ queryKey: ["vouchers", "code", code] });
@@ -277,7 +281,7 @@ export default function VoucherDetailPage({ params }: PageProps) {
 function GiftCardLedger({ code, balance }: { code: string; balance: number }) {
   const { data, isLoading } = useQuery({
     queryKey: ["vouchers", "code", code, "transactions"],
-    queryFn: () => ovx().vouchers.transactions({ code }),
+    queryFn: () => ovx().vouchers.transactions({ params: { code } }),
   });
 
   return (

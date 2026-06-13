@@ -43,11 +43,11 @@ export default function LoyaltyProgramPage({ params }: PageProps) {
 
   const { data: program, isLoading } = useQuery({
     queryKey: ["loyaltyPrograms", id],
-    queryFn: () => ovx().loyalty.programs.get({ id }),
+    queryFn: () => ovx().loyalty.programs.get({ params: { id } }),
   });
 
   const remove = useMutation({
-    mutationFn: () => ovx().loyalty.programs.delete({ id }),
+    mutationFn: () => ovx().loyalty.programs.delete({ params: { id } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["loyaltyPrograms"] });
       toast.success(gt("Program deleted"));
@@ -147,7 +147,7 @@ function TiersTab({ programId }: { programId: string }) {
 
   const { data } = useQuery({
     queryKey: ["loyaltyTiers", programId],
-    queryFn: () => ovx().loyalty.tiers.list({ programId }),
+    queryFn: () => ovx().loyalty.tiers.list({ params: { programId } }),
   });
 
   const create = useMutation({
@@ -171,7 +171,7 @@ function TiersTab({ programId }: { programId: string }) {
   });
 
   const remove = useMutation({
-    mutationFn: (tierId: string) => ovx().loyalty.tiers.delete({ id: tierId }),
+    mutationFn: (tierId: string) => ovx().loyalty.tiers.delete({ params: { id: tierId } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["loyaltyTiers", programId] });
     },
@@ -295,7 +295,7 @@ function EarningRulesTab({ programId }: { programId: string }) {
 
   const { data } = useQuery({
     queryKey: ["loyaltyEarningRules", programId],
-    queryFn: () => ovx().loyalty.earningRules.list({ programId }),
+    queryFn: () => ovx().loyalty.earningRules.list({ params: { programId } }),
   });
 
   const create = useMutation({
@@ -316,7 +316,7 @@ function EarningRulesTab({ programId }: { programId: string }) {
   });
 
   const remove = useMutation({
-    mutationFn: (id: string) => ovx().loyalty.earningRules.delete({ id }),
+    mutationFn: (id: string) => ovx().loyalty.earningRules.delete({ params: { id } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["loyaltyEarningRules", programId] });
     },
@@ -452,7 +452,7 @@ function RewardsTab({ programId }: { programId: string }) {
 
   const { data } = useQuery({
     queryKey: ["loyaltyRewards", programId],
-    queryFn: () => ovx().loyalty.rewards.list({ programId }),
+    queryFn: () => ovx().loyalty.rewards.list({ params: { programId } }),
   });
 
   const create = useMutation({
@@ -478,7 +478,7 @@ function RewardsTab({ programId }: { programId: string }) {
   });
 
   const remove = useMutation({
-    mutationFn: (id: string) => ovx().loyalty.rewards.delete({ id }),
+    mutationFn: (id: string) => ovx().loyalty.rewards.delete({ params: { id } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["loyaltyRewards", programId] });
     },
@@ -606,7 +606,7 @@ function MembersTab({ programId }: { programId: string }) {
 
   const { data } = useQuery({
     queryKey: ["loyaltyMembers", programId],
-    queryFn: () => ovx().loyalty.members.list({ programId, limit: 50 }),
+    queryFn: () => ovx().loyalty.members.list({ params: { programId }, query: { limit: 50 } }),
   });
 
   const enroll = useMutation({

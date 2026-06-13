@@ -42,7 +42,7 @@ function CustomerForm({
 
   const update = useMutation({
     mutationFn: (input: { email?: string; name?: string; phone?: string }) =>
-      ovx().customers.update({ id: data.id, patch: input }),
+      ovx().customers.update({ params: { id: data.id }, body: { patch: input } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["customers"] });
       toast.success(gt("Customer updated"));
@@ -205,11 +205,11 @@ export default function CustomerDetailPage({ params }: PageProps) {
 
   const { data, isLoading } = useQuery({
     queryKey: ["customers", id],
-    queryFn: () => ovx().customers.get({ id }),
+    queryFn: () => ovx().customers.get({ params: { id } }),
   });
 
   const remove = useMutation({
-    mutationFn: () => ovx().customers.delete({ id }),
+    mutationFn: () => ovx().customers.delete({ params: { id } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["customers"] });
       toast.success(gt("Customer deleted"));

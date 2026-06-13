@@ -35,7 +35,7 @@ const list = os.orders.list.use(requireSession).handler(({ input }) => {
 
 const get = os.orders.get.use(requireSession).handler(async ({ input }) => {
   const row = await db().query.order.findFirst({
-    where: and(eq(schema.order.id, input.id), isNull(schema.order.deletedAt)),
+    where: and(eq(schema.order.id, input.params.id), isNull(schema.order.deletedAt)),
   });
   if (!row) throw new ORPCError("NOT_FOUND", { message: "Order not found" });
   return toOrder(row);
@@ -61,13 +61,14 @@ const create = os.orders.create.use(requireSession).handler(async ({ input }) =>
 
 const update = os.orders.update.use(requireSession).handler(async ({ input }) => {
   const patch: Partial<typeof schema.order.$inferInsert> = { updatedAt: new Date() };
-  if (input.patch.status !== undefined) patch.status = input.patch.status;
-  if (input.patch.discountAmount !== undefined) patch.discountAmount = input.patch.discountAmount;
-  if (input.patch.metadata !== undefined) patch.metadata = input.patch.metadata;
+  const { patch: inputPatch } = input.body;
+  if (inputPatch.status !== undefined) patch.status = inputPatch.status;
+  if (inputPatch.discountAmount !== undefined) patch.discountAmount = inputPatch.discountAmount;
+  if (inputPatch.metadata !== undefined) patch.metadata = inputPatch.metadata;
   const [row] = await db()
     .update(schema.order)
     .set(patch)
-    .where(and(eq(schema.order.id, input.id), isNull(schema.order.deletedAt)))
+    .where(and(eq(schema.order.id, input.params.id), isNull(schema.order.deletedAt)))
     .returning();
   if (!row) throw new ORPCError("NOT_FOUND", { message: "Order not found" });
   return toOrder(row);
@@ -85,14 +86,14 @@ async function setOrderStatus(id: string, status: "CANCELED" | "FULFILLED") {
 
 const cancel = os.orders.cancel
   .use(requireSession)
-  .handler(({ input }) => setOrderStatus(input.id, "CANCELED"));
+  .handler(({ input }) => setOrderStatus(input.params.id, "CANCELED"));
 
 const fulfill = os.orders.fulfill
   .use(requireSession)
-  .handler(({ input }) => setOrderStatus(input.id, "FULFILLED"));
+  .handler(({ input }) => setOrderStatus(input.params.id, "FULFILLED"));
 
 const remove = os.orders.delete.use(requireSession).handler(async ({ input }) => {
-  await softDeleteById(schema.order, input.id, "Order not found");
+  await softDeleteById(schema.order, input.params.id, "Order not found");
   return { ok: true as const };
 });
 
@@ -112,7 +113,7 @@ const redemptionsList = os.orders.redemptions
       })
       .from(schema.redemption)
       .innerJoin(schema.voucher, eq(schema.voucher.id, schema.redemption.voucherId))
-      .where(eq(schema.redemption.orderId, input.id))
+      .where(eq(schema.redemption.orderId, input.params.id))
       .orderBy(schema.redemption.createdAt);
 
     return {

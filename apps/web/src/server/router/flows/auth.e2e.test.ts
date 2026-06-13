@@ -43,7 +43,7 @@ describe.skipIf(!E2E_ENABLED)("auth + scopes + rate limit", () => {
     const list = await ephemeralClient.campaigns.list({ limit: 5 });
     expect(Array.isArray(list.data)).toBe(true);
 
-    await adminClient.apiKeys.revoke({ id: minted.id });
+    await adminClient.apiKeys.revoke({ params: { id: minted.id } });
 
     await expect(
       ephemeralClient.campaigns.list({ limit: 5 }),
@@ -63,8 +63,8 @@ describe.skipIf(!E2E_ENABLED)("auth + scopes + rate limit", () => {
     // Write-side on vouchers must fail.
     await expect(
       client.vouchers.redeem({
-        code: "DOES-NOT-EXIST",
-        order: { amount: 100, currency: "USD" },
+        params: { code: "DOES-NOT-EXIST" },
+        body: { order: { amount: 100, currency: "USD" } },
       }),
     ).rejects.toThrow(/missing required scope/i);
   });

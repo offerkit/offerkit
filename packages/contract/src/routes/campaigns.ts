@@ -16,19 +16,34 @@ export const campaigns = {
     .output(paginatedOutput(campaignOutput)),
   get: oc
     .meta(mcpMeta({ expose: true, riskLevel: "safe" }))
-    .route({ method: "GET", path: "/campaigns/{id}", summary: "Get campaign" })
-    .input(z.object({ id: z.string().uuid() }))
+    .route({
+      method: "GET",
+      path: "/campaigns/{id}",
+      summary: "Get campaign",
+      inputStructure: "detailed",
+    })
+    .input(z.object({ params: z.object({ id: z.string().uuid() }) }))
     .output(campaignOutput),
   create: oc
     .route({ method: "POST", path: "/campaigns", summary: "Create campaign" })
     .input(campaignCreateInput)
     .output(campaignOutput),
   update: oc
-    .route({ method: "PATCH", path: "/campaigns/{id}", summary: "Update campaign" })
-    .input(z.object({ id: z.string().uuid(), patch: campaignUpdateInput }))
+    .route({
+      method: "PATCH",
+      path: "/campaigns/{id}",
+      summary: "Update campaign",
+      inputStructure: "detailed",
+    })
+    .input(z.object({ params: z.object({ id: z.string().uuid() }), body: z.object({ patch: campaignUpdateInput }) }))
     .output(campaignOutput),
   delete: oc
-    .route({ method: "DELETE", path: "/campaigns/{id}", summary: "Soft-delete campaign" })
-    .input(z.object({ id: z.string().uuid() }))
+    .route({
+      method: "DELETE",
+      path: "/campaigns/{id}",
+      summary: "Soft-delete campaign",
+      inputStructure: "detailed",
+    })
+    .input(z.object({ params: z.object({ id: z.string().uuid() }) }))
     .output(z.object({ ok: z.literal(true) })),
 };

@@ -26,12 +26,22 @@ export const promotions = {
       .input(promotionTierCreateInput)
       .output(promotionTierOutput),
     update: oc
-      .route({ method: "PATCH", path: "/promotions/tiers/{id}", summary: "Update promotion tier" })
-      .input(z.object({ id: z.string().uuid(), patch: promotionTierUpdateInput }))
+      .route({
+        method: "PATCH",
+        path: "/promotions/tiers/{id}",
+        summary: "Update promotion tier",
+        inputStructure: "detailed",
+      })
+      .input(z.object({ params: z.object({ id: z.string().uuid() }), body: z.object({ patch: promotionTierUpdateInput }) }))
       .output(promotionTierOutput),
     delete: oc
-      .route({ method: "DELETE", path: "/promotions/tiers/{id}", summary: "Soft-delete promotion tier" })
-      .input(z.object({ id: z.string().uuid() }))
+      .route({
+        method: "DELETE",
+        path: "/promotions/tiers/{id}",
+        summary: "Soft-delete promotion tier",
+        inputStructure: "detailed",
+      })
+      .input(z.object({ params: z.object({ id: z.string().uuid() }) }))
       .output(z.object({ ok: z.literal(true) })),
   },
   qualify: oc

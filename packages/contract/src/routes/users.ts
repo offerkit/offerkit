@@ -20,31 +20,35 @@ export const users = {
       method: "POST",
       path: "/users/{id}/reset-password",
       summary: "Reset a staff user's password (admin)",
+      inputStructure: "detailed",
     })
-    .input(z.object({ id: z.string() }))
+    .input(z.object({ params: z.object({ id: z.string() }) }))
     .output(userCreateOutput),
   setRole: oc
     .route({
       method: "PATCH",
       path: "/users/{id}/role",
       summary: "Change a staff user's role (admin)",
+      inputStructure: "detailed",
     })
-    .input(z.object({ id: z.string(), role: userRole }))
+    .input(z.object({ params: z.object({ id: z.string() }), body: z.object({ role: userRole }) }))
     .output(userOutput),
   disable: oc
     .route({
       method: "POST",
       path: "/users/{id}/disable",
       summary: "Disable a staff user (admin)",
+      inputStructure: "detailed",
     })
-    .input(z.object({ id: z.string() }))
+    .input(z.object({ params: z.object({ id: z.string() }) }))
     .output(userOutput),
   enable: oc
     .route({
       method: "POST",
       path: "/users/{id}/enable",
       summary: "Re-enable a staff user (admin)",
+      inputStructure: "detailed",
     })
-    .input(z.object({ id: z.string() }))
+    .input(z.object({ params: z.object({ id: z.string() }) }))
     .output(userOutput),
 };

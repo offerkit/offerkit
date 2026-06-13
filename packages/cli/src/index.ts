@@ -88,7 +88,7 @@ vouchers
   .description("Show one voucher by code")
   .action(async (code: string) => {
     const c = await client();
-    printJSON(await c.vouchers.get({ code }).catch(fail));
+    printJSON(await c.vouchers.get({ params: { code } }).catch(fail));
   });
 
 vouchers
@@ -101,8 +101,10 @@ vouchers
     printJSON(
       await c.vouchers
         .validate({
-          code,
-          order: { amount: Number(opts.amount), currency: opts.currency, items: [] },
+          params: { code },
+          body: {
+            order: { amount: Number(opts.amount), currency: opts.currency, items: [] },
+          },
         })
         .catch(fail),
     );
@@ -123,9 +125,11 @@ vouchers
       printJSON(
         await c.vouchers
           .redeem({
-            code,
-            order: { amount: Number(opts.amount), currency: opts.currency, items: [] },
-            ...(opts.idempotencyKey ? { idempotencyKey: opts.idempotencyKey } : {}),
+            params: { code },
+            body: {
+              order: { amount: Number(opts.amount), currency: opts.currency, items: [] },
+              ...(opts.idempotencyKey ? { idempotencyKey: opts.idempotencyKey } : {}),
+            },
           })
           .catch(fail),
       );
@@ -184,7 +188,7 @@ customers
 
 customers.command("get <id>").action(async (id: string) => {
   const c = await client();
-  printJSON(await c.customers.get({ id }).catch(fail));
+  printJSON(await c.customers.get({ params: { id } }).catch(fail));
 });
 
 program.parseAsync(process.argv).catch(fail);

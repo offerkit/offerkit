@@ -34,20 +34,35 @@ export const vouchers = {
     .output(paginatedOutput(voucherOutput)),
   get: oc
     .meta(mcpMeta({ expose: true, riskLevel: "safe" }))
-    .route({ method: "GET", path: "/vouchers/{code}", summary: "Get voucher by code" })
-    .input(z.object({ code: z.string() }))
+    .route({
+      method: "GET",
+      path: "/vouchers/{code}",
+      summary: "Get voucher by code",
+      inputStructure: "detailed",
+    })
+    .input(z.object({ params: z.object({ code: z.string() }) }))
     .output(voucherOutput),
   create: oc
     .route({ method: "POST", path: "/vouchers", summary: "Create voucher" })
     .input(voucherCreateInput)
     .output(voucherOutput),
   update: oc
-    .route({ method: "PATCH", path: "/vouchers/{code}", summary: "Update voucher" })
-    .input(z.object({ code: z.string(), patch: voucherUpdateInput }))
+    .route({
+      method: "PATCH",
+      path: "/vouchers/{code}",
+      summary: "Update voucher",
+      inputStructure: "detailed",
+    })
+    .input(z.object({ params: z.object({ code: z.string() }), body: z.object({ patch: voucherUpdateInput }) }))
     .output(voucherOutput),
   delete: oc
-    .route({ method: "DELETE", path: "/vouchers/{code}", summary: "Soft-delete voucher" })
-    .input(z.object({ code: z.string() }))
+    .route({
+      method: "DELETE",
+      path: "/vouchers/{code}",
+      summary: "Soft-delete voucher",
+      inputStructure: "detailed",
+    })
+    .input(z.object({ params: z.object({ code: z.string() }) }))
     .output(z.object({ ok: z.literal(true) })),
   bulk: oc
     .route({ method: "POST", path: "/vouchers/bulk", summary: "Generate vouchers in bulk" })
@@ -69,8 +84,14 @@ export const vouchers = {
       method: "POST",
       path: "/vouchers/{code}/validate",
       summary: "Validate a voucher against an optional order context",
+      inputStructure: "detailed",
     })
-    .input(validateInput)
+    .input(
+      z.object({
+        params: z.object({ code: z.string().min(1) }),
+        body: validateInput.omit({ code: true }).optional(),
+      }),
+    )
     .output(validateOutput),
   qualify: oc
     .meta(mcpMeta({ expose: true, riskLevel: "safe" }))
@@ -94,8 +115,14 @@ export const vouchers = {
       method: "POST",
       path: "/vouchers/{code}/redemption",
       summary: "Redeem a voucher",
+      inputStructure: "detailed",
     })
-    .input(redeemInput)
+    .input(
+      z.object({
+        params: z.object({ code: z.string().min(1) }),
+        body: redeemInput.omit({ code: true }).optional(),
+      }),
+    )
     .output(redeemOutput),
 
   stackRedeem: oc
@@ -120,8 +147,9 @@ export const vouchers = {
       method: "GET",
       path: "/vouchers/{code}/transactions",
       summary: "Gift card balance ledger",
+      inputStructure: "detailed",
     })
-    .input(z.object({ code: z.string() }))
+    .input(z.object({ params: z.object({ code: z.string() }) }))
     .output(
       z.object({
         data: z.array(

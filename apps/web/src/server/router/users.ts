@@ -123,7 +123,7 @@ const resetPassword = os.users.resetPassword
   .use(requireSession)
   .handler(async ({ context, input }) => {
     requireAdmin(context.user.role);
-    const row = await findUserOrThrow(input.id);
+    const row = await findUserOrThrow(input.params.id);
     const password = generatePassword();
     await setUserPassword(row.id, password);
     await db()
@@ -142,30 +142,30 @@ const resetPassword = os.users.resetPassword
 
 const setRole = os.users.setRole.use(requireSession).handler(async ({ context, input }) => {
   requireAdmin(context.user.role);
-  if (context.user.id === input.id && input.role !== "admin") {
+  if (context.user.id === input.params.id && input.body.role !== "admin") {
     throw new ORPCError("CONFLICT", { message: "Cannot demote your own account" });
   }
   await db()
     .update(schema.user)
-    .set({ role: input.role, updatedAt: new Date() })
-    .where(eq(schema.user.id, input.id));
-  return toUserOutput(await findUserOrThrow(input.id));
+    .set({ role: input.body.role, updatedAt: new Date() })
+    .where(eq(schema.user.id, input.params.id));
+  return toUserOutput(await findUserOrThrow(input.params.id));
 });
 
 const disable = os.users.disable.use(requireSession).handler(async ({ context, input }) => {
   requireAdmin(context.user.role);
-  if (context.user.id === input.id) {
+  if (context.user.id === input.params.id) {
     throw new ORPCError("CONFLICT", { message: "Cannot disable your own account" });
   }
-  const row = await findUserOrThrow(input.id);
+  const row = await findUserOrThrow(input.params.id);
   if (row.disabledAt) return toUserOutput(row);
   // Revoke active sessions so the user can't continue using the app.
-  await db().delete(schema.session).where(eq(schema.session.userId, input.id));
+  await db().delete(schema.session).where(eq(schema.session.userId, input.params.id));
   await db()
     .update(schema.user)
     .set({ disabledAt: new Date(), updatedAt: new Date() })
-    .where(eq(schema.user.id, input.id));
-  return toUserOutput(await findUserOrThrow(input.id));
+    .where(eq(schema.user.id, input.params.id));
+  return toUserOutput(await findUserOrThrow(input.params.id));
 });
 
 const enable = os.users.enable.use(requireSession).handler(async ({ context, input }) => {
@@ -173,8 +173,8 @@ const enable = os.users.enable.use(requireSession).handler(async ({ context, inp
   await db()
     .update(schema.user)
     .set({ disabledAt: null, updatedAt: new Date() })
-    .where(and(eq(schema.user.id, input.id), isNotNull(schema.user.disabledAt)));
-  return toUserOutput(await findUserOrThrow(input.id));
+    .where(and(eq(schema.user.id, input.params.id), isNotNull(schema.user.disabledAt)));
+  return toUserOutput(await findUserOrThrow(input.params.id));
 });
 
 export const usersRouter = { list, create, resetPassword, setRole, disable, enable };

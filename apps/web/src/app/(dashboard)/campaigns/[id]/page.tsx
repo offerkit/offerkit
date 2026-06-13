@@ -52,7 +52,7 @@ export default function CampaignDetailPage({ params }: PageProps) {
 
   const { data, isLoading } = useQuery({
     queryKey: ["campaigns", id],
-    queryFn: () => ovx().campaigns.get({ id }),
+    queryFn: () => ovx().campaigns.get({ params: { id } }),
   });
 
   const { data: vouchers } = useQuery({
@@ -64,19 +64,21 @@ export default function CampaignDetailPage({ params }: PageProps) {
   const update = useMutation({
     mutationFn: (state: CampaignFormState) =>
       ovx().campaigns.update({
-        id,
-        patch: {
-          name: state.name,
-          description: state.description || undefined,
-          status: state.status,
-          currency: state.currency,
-          timezone: state.timezone || undefined,
-          startDate: toIsoOrUndefined(state.startDate),
-          endDate: toIsoOrUndefined(state.endDate),
-          autoApply: state.autoApply,
-          codeConfig: {
-            length: state.codeLength,
-            prefix: state.codePrefix || undefined,
+        params: { id },
+        body: {
+          patch: {
+            name: state.name,
+            description: state.description || undefined,
+            status: state.status,
+            currency: state.currency,
+            timezone: state.timezone || undefined,
+            startDate: toIsoOrUndefined(state.startDate),
+            endDate: toIsoOrUndefined(state.endDate),
+            autoApply: state.autoApply,
+            codeConfig: {
+              length: state.codeLength,
+              prefix: state.codePrefix || undefined,
+            },
           },
         },
       }),
@@ -90,7 +92,7 @@ export default function CampaignDetailPage({ params }: PageProps) {
   });
 
   const remove = useMutation({
-    mutationFn: () => ovx().campaigns.delete({ id }),
+    mutationFn: () => ovx().campaigns.delete({ params: { id } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["campaigns"] });
       toast.success(gt("Campaign deleted"));

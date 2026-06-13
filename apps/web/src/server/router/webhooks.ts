@@ -53,7 +53,7 @@ const list = os.webhooks.list.use(requireSession).handler(async () => {
 
 const get = os.webhooks.get.use(requireSession).handler(async ({ input }) => {
   const row = await db().query.webhook.findFirst({
-    where: and(eq(schema.webhook.id, input.id), isNull(schema.webhook.deletedAt)),
+    where: and(eq(schema.webhook.id, input.params.id), isNull(schema.webhook.deletedAt)),
   });
   if (!row) throw new ORPCError("NOT_FOUND", { message: "Webhook not found" });
   return toWebhook(row);
@@ -78,21 +78,22 @@ const create = os.webhooks.create.use(requireSession).handler(async ({ input }) 
 
 const update = os.webhooks.update.use(requireSession).handler(async ({ input }) => {
   const patch: Partial<typeof schema.webhook.$inferInsert> = { updatedAt: new Date() };
-  if (input.patch.name !== undefined) patch.name = input.patch.name;
-  if (input.patch.url !== undefined) patch.url = input.patch.url;
-  if (input.patch.events !== undefined) patch.events = input.patch.events;
-  if (input.patch.active !== undefined) patch.active = input.patch.active;
+  const { patch: inputPatch } = input.body;
+  if (inputPatch.name !== undefined) patch.name = inputPatch.name;
+  if (inputPatch.url !== undefined) patch.url = inputPatch.url;
+  if (inputPatch.events !== undefined) patch.events = inputPatch.events;
+  if (inputPatch.active !== undefined) patch.active = inputPatch.active;
   const [row] = await db()
     .update(schema.webhook)
     .set(patch)
-    .where(and(eq(schema.webhook.id, input.id), isNull(schema.webhook.deletedAt)))
+    .where(and(eq(schema.webhook.id, input.params.id), isNull(schema.webhook.deletedAt)))
     .returning();
   if (!row) throw new ORPCError("NOT_FOUND", { message: "Webhook not found" });
   return toWebhook(row);
 });
 
 const remove = os.webhooks.delete.use(requireSession).handler(async ({ input }) => {
-  await softDeleteById(schema.webhook, input.id, "Webhook not found");
+  await softDeleteById(schema.webhook, input.params.id, "Webhook not found");
   return { ok: true as const };
 });
 
@@ -104,9 +105,9 @@ const deliveries = os.webhooks.deliveries.use(requireSession).handler(async ({ i
     })
     .from(schema.webhookDelivery)
     .innerJoin(schema.event, eq(schema.event.id, schema.webhookDelivery.eventId))
-    .where(eq(schema.webhookDelivery.webhookId, input.id))
+    .where(eq(schema.webhookDelivery.webhookId, input.params.id))
     .orderBy(desc(schema.webhookDelivery.createdAt))
-    .limit(input.limit)) as { delivery: WebhookDeliveryRow; eventType: string }[];
+    .limit(input.query.limit)) as { delivery: WebhookDeliveryRow; eventType: string }[];
   return {
     data: rows.map(({ delivery, eventType }) => ({
       id: delivery.id,
@@ -127,7 +128,7 @@ const deliveries = os.webhooks.deliveries.use(requireSession).handler(async ({ i
 
 const replay = os.webhooks.replay.use(requireSession).handler(async ({ input }) => {
   const row = await db().query.webhookDelivery.findFirst({
-    where: eq(schema.webhookDelivery.id, input.id),
+    where: eq(schema.webhookDelivery.id, input.params.id),
   });
   if (!row) throw new ORPCError("NOT_FOUND", { message: "Delivery not found" });
   await db()
@@ -179,7 +180,7 @@ const eventsList = os.events.list.use(requireSession).handler(({ input }) => {
 
 const eventsGet = os.events.get.use(requireSession).handler(async ({ input }) => {
   const row = await db().query.event.findFirst({
-    where: eq(schema.event.id, input.id),
+    where: eq(schema.event.id, input.params.id),
   });
   if (!row) throw new ORPCError("NOT_FOUND", { message: "Event not found" });
   return toEvent(row);

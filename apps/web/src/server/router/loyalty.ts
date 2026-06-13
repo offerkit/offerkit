@@ -114,7 +114,10 @@ const programsList = os.loyalty.programs.list
 
 const programGet = os.loyalty.programs.get.use(requireSession).handler(async ({ input }) => {
   const row = await db().query.loyaltyProgram.findFirst({
-    where: and(eq(schema.loyaltyProgram.id, input.id), isNull(schema.loyaltyProgram.deletedAt)),
+    where: and(
+      eq(schema.loyaltyProgram.id, input.params.id),
+      isNull(schema.loyaltyProgram.deletedAt),
+    ),
   });
   if (!row) throw new ORPCError("NOT_FOUND", { message: "Loyalty program not found" });
   return toProgram(row);
@@ -149,15 +152,16 @@ const programUpdate = os.loyalty.programs.update
   .use(requireSession)
   .handler(async ({ input }) => {
     const patch: Partial<typeof schema.loyaltyProgram.$inferInsert> = { updatedAt: new Date() };
-    if (input.patch.pointsExpiryDays !== undefined)
-      patch.pointsExpiryDays = input.patch.pointsExpiryDays ?? null;
-    if (input.patch.metadata !== undefined) patch.metadata = input.patch.metadata;
+    const { patch: inputPatch } = input.body;
+    if (inputPatch.pointsExpiryDays !== undefined)
+      patch.pointsExpiryDays = inputPatch.pointsExpiryDays ?? null;
+    if (inputPatch.metadata !== undefined) patch.metadata = inputPatch.metadata;
     const [row] = await db()
       .update(schema.loyaltyProgram)
       .set(patch)
       .where(
         and(
-          eq(schema.loyaltyProgram.id, input.id),
+          eq(schema.loyaltyProgram.id, input.params.id),
           isNull(schema.loyaltyProgram.deletedAt),
         ),
       )
@@ -169,7 +173,7 @@ const programUpdate = os.loyalty.programs.update
 const programDelete = os.loyalty.programs.delete
   .use(requireSession)
   .handler(async ({ input }) => {
-    await softDeleteById(schema.loyaltyProgram, input.id, "Loyalty program not found");
+    await softDeleteById(schema.loyaltyProgram, input.params.id, "Loyalty program not found");
     return { ok: true as const };
   });
 
@@ -177,7 +181,7 @@ const tiersList = os.loyalty.tiers.list.use(requireSession).handler(async ({ inp
   const rows = (await db()
     .select()
     .from(schema.loyaltyTier)
-    .where(eq(schema.loyaltyTier.programId, input.programId))
+    .where(eq(schema.loyaltyTier.programId, input.params.programId))
     .orderBy(asc(schema.loyaltyTier.threshold))) as TierRow[];
   return { data: rows.map(toTier) };
 });
@@ -199,14 +203,15 @@ const tiersCreate = os.loyalty.tiers.create.use(requireSession).handler(async ({
 
 const tiersUpdate = os.loyalty.tiers.update.use(requireSession).handler(async ({ input }) => {
   const patch: Partial<typeof schema.loyaltyTier.$inferInsert> = { updatedAt: new Date() };
-  if (input.patch.name !== undefined) patch.name = input.patch.name;
-  if (input.patch.threshold !== undefined) patch.threshold = input.patch.threshold;
-  if (input.patch.earnMultiplier !== undefined) patch.earnMultiplier = input.patch.earnMultiplier;
-  if (input.patch.sortOrder !== undefined) patch.sortOrder = input.patch.sortOrder;
+  const { patch: inputPatch } = input.body;
+  if (inputPatch.name !== undefined) patch.name = inputPatch.name;
+  if (inputPatch.threshold !== undefined) patch.threshold = inputPatch.threshold;
+  if (inputPatch.earnMultiplier !== undefined) patch.earnMultiplier = inputPatch.earnMultiplier;
+  if (inputPatch.sortOrder !== undefined) patch.sortOrder = inputPatch.sortOrder;
   const [row] = await db()
     .update(schema.loyaltyTier)
     .set(patch)
-    .where(eq(schema.loyaltyTier.id, input.id))
+    .where(eq(schema.loyaltyTier.id, input.params.id))
     .returning();
   if (!row) throw new ORPCError("NOT_FOUND", { message: "Tier not found" });
   return toTier(row);
@@ -215,7 +220,7 @@ const tiersUpdate = os.loyalty.tiers.update.use(requireSession).handler(async ({
 const tiersDelete = os.loyalty.tiers.delete.use(requireSession).handler(async ({ input }) => {
   const [row] = await db()
     .delete(schema.loyaltyTier)
-    .where(eq(schema.loyaltyTier.id, input.id))
+    .where(eq(schema.loyaltyTier.id, input.params.id))
     .returning({ id: schema.loyaltyTier.id });
   if (!row) throw new ORPCError("NOT_FOUND", { message: "Tier not found" });
   return { ok: true as const };
@@ -227,7 +232,7 @@ const earningRulesList = os.loyalty.earningRules.list
     const rows = (await db()
       .select()
       .from(schema.loyaltyEarningRule)
-      .where(eq(schema.loyaltyEarningRule.programId, input.programId))
+      .where(eq(schema.loyaltyEarningRule.programId, input.params.programId))
       .orderBy(desc(schema.loyaltyEarningRule.createdAt))) as EarningRuleRow[];
     return { data: rows.map(toEarningRule) };
   });
@@ -256,16 +261,17 @@ const earningRulesUpdate = os.loyalty.earningRules.update
     const patch: Partial<typeof schema.loyaltyEarningRule.$inferInsert> = {
       updatedAt: new Date(),
     };
-    if (input.patch.name !== undefined) patch.name = input.patch.name;
-    if (input.patch.event !== undefined) patch.event = input.patch.event;
-    if (input.patch.validationRuleId !== undefined)
-      patch.validationRuleId = input.patch.validationRuleId ?? null;
-    if (input.patch.formula !== undefined) patch.formula = input.patch.formula;
-    if (input.patch.active !== undefined) patch.active = input.patch.active;
+    const { patch: inputPatch } = input.body;
+    if (inputPatch.name !== undefined) patch.name = inputPatch.name;
+    if (inputPatch.event !== undefined) patch.event = inputPatch.event;
+    if (inputPatch.validationRuleId !== undefined)
+      patch.validationRuleId = inputPatch.validationRuleId ?? null;
+    if (inputPatch.formula !== undefined) patch.formula = inputPatch.formula;
+    if (inputPatch.active !== undefined) patch.active = inputPatch.active;
     const [row] = await db()
       .update(schema.loyaltyEarningRule)
       .set(patch)
-      .where(eq(schema.loyaltyEarningRule.id, input.id))
+      .where(eq(schema.loyaltyEarningRule.id, input.params.id))
       .returning();
     if (!row) throw new ORPCError("NOT_FOUND", { message: "Earning rule not found" });
     return toEarningRule(row);
@@ -276,7 +282,7 @@ const earningRulesDelete = os.loyalty.earningRules.delete
   .handler(async ({ input }) => {
     const [row] = await db()
       .delete(schema.loyaltyEarningRule)
-      .where(eq(schema.loyaltyEarningRule.id, input.id))
+      .where(eq(schema.loyaltyEarningRule.id, input.params.id))
       .returning({ id: schema.loyaltyEarningRule.id });
     if (!row) throw new ORPCError("NOT_FOUND", { message: "Earning rule not found" });
     return { ok: true as const };
@@ -288,7 +294,7 @@ const rewardsList = os.loyalty.rewards.list.use(requireSession).handler(async ({
     .from(schema.loyaltyReward)
     .where(
       and(
-        eq(schema.loyaltyReward.programId, input.programId),
+        eq(schema.loyaltyReward.programId, input.params.programId),
         isNull(schema.loyaltyReward.deletedAt),
       ),
     )
@@ -313,16 +319,17 @@ const rewardsCreate = os.loyalty.rewards.create.use(requireSession).handler(asyn
 
 const rewardsUpdate = os.loyalty.rewards.update.use(requireSession).handler(async ({ input }) => {
   const patch: Partial<typeof schema.loyaltyReward.$inferInsert> = { updatedAt: new Date() };
-  if (input.patch.name !== undefined) patch.name = input.patch.name;
-  if (input.patch.description !== undefined)
-    patch.description = input.patch.description ?? null;
-  if (input.patch.cost !== undefined) patch.cost = input.patch.cost;
-  if (input.patch.payload !== undefined) patch.payload = input.patch.payload;
+  const { patch: inputPatch } = input.body;
+  if (inputPatch.name !== undefined) patch.name = inputPatch.name;
+  if (inputPatch.description !== undefined)
+    patch.description = inputPatch.description ?? null;
+  if (inputPatch.cost !== undefined) patch.cost = inputPatch.cost;
+  if (inputPatch.payload !== undefined) patch.payload = inputPatch.payload;
   const [row] = await db()
     .update(schema.loyaltyReward)
     .set(patch)
     .where(
-      and(eq(schema.loyaltyReward.id, input.id), isNull(schema.loyaltyReward.deletedAt)),
+      and(eq(schema.loyaltyReward.id, input.params.id), isNull(schema.loyaltyReward.deletedAt)),
     )
     .returning();
   if (!row) throw new ORPCError("NOT_FOUND", { message: "Reward not found" });
@@ -330,14 +337,14 @@ const rewardsUpdate = os.loyalty.rewards.update.use(requireSession).handler(asyn
 });
 
 const rewardsDelete = os.loyalty.rewards.delete.use(requireSession).handler(async ({ input }) => {
-  await softDeleteById(schema.loyaltyReward, input.id, "Reward not found");
+  await softDeleteById(schema.loyaltyReward, input.params.id, "Reward not found");
   return { ok: true as const };
 });
 
 const membersList = os.loyalty.members.list.use(requireSession).handler(async ({ input }) => {
-  const limit = input.limit;
-  const cursor = decodeCursor(input.cursor);
-  const filters = [eq(schema.loyaltyMember.programId, input.programId)];
+  const limit = input.query.limit;
+  const cursor = decodeCursor(input.query.cursor);
+  const filters = [eq(schema.loyaltyMember.programId, input.params.programId)];
   if (cursor) {
     filters.push(
       sql`(${schema.loyaltyMember.createdAt}, ${schema.loyaltyMember.id}) < (${cursor.createdAt}, ${cursor.id})`,
@@ -363,7 +370,7 @@ const membersList = os.loyalty.members.list.use(requireSession).handler(async ({
 
 const membersGet = os.loyalty.members.get.use(requireSession).handler(async ({ input }) => {
   const row = await db().query.loyaltyMember.findFirst({
-    where: eq(schema.loyaltyMember.id, input.id),
+    where: eq(schema.loyaltyMember.id, input.params.id),
   });
   if (!row) throw new ORPCError("NOT_FOUND", { message: "Member not found" });
   return toMember(row);
@@ -434,7 +441,7 @@ const membersRedeem = os.loyalty.members.redeem
 const membersHistory = os.loyalty.members.history
   .use(requireSession)
   .handler(async ({ input }) => {
-    const rows = await listHistory(db(), input.id);
+    const rows = await listHistory(db(), input.params.id);
     return { data: rows.map(toTransaction) };
   });
 

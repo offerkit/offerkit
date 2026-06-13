@@ -37,12 +37,12 @@ export default function ReferralProgramDetail({ params }: PageProps) {
 
   const { data: program, isLoading } = useQuery({
     queryKey: ["referralPrograms", id],
-    queryFn: () => ovx().referrals.programs.get({ id }),
+    queryFn: () => ovx().referrals.programs.get({ params: { id } }),
   });
 
   const { data: list } = useQuery({
     queryKey: ["referralCodes", id],
-    queryFn: () => ovx().referrals.listCodes({ programId: id, limit: 50 }),
+    queryFn: () => ovx().referrals.listCodes({ params: { programId: id }, query: { limit: 50 } }),
   });
 
   const refresh = async () => {
@@ -77,7 +77,7 @@ export default function ReferralProgramDetail({ params }: PageProps) {
   });
 
   const remove = useMutation({
-    mutationFn: () => ovx().referrals.programs.delete({ id }),
+    mutationFn: () => ovx().referrals.programs.delete({ params: { id } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["referralPrograms"] });
       toast.success(gt("Program deleted"));

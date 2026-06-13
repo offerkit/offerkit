@@ -27,8 +27,9 @@ const programs = {
       method: "GET",
       path: "/referral-programs/{id}",
       summary: "Get referral program",
+      inputStructure: "detailed",
     })
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ params: z.object({ id: z.string().uuid() }) }))
     .output(referralProgramOutput),
   create: oc
     .route({
@@ -43,16 +44,18 @@ const programs = {
       method: "PATCH",
       path: "/referral-programs/{id}",
       summary: "Update referral program",
+      inputStructure: "detailed",
     })
-    .input(z.object({ id: z.string().uuid(), patch: referralProgramUpdateInput }))
+    .input(z.object({ params: z.object({ id: z.string().uuid() }), body: z.object({ patch: referralProgramUpdateInput }) }))
     .output(referralProgramOutput),
   delete: oc
     .route({
       method: "DELETE",
       path: "/referral-programs/{id}",
       summary: "Soft-delete referral program",
+      inputStructure: "detailed",
     })
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ params: z.object({ id: z.string().uuid() }) }))
     .output(z.object({ ok: z.literal(true) })),
 };
 
@@ -63,24 +66,27 @@ export const referrals = {
       method: "GET",
       path: "/referral-programs/{programId}/codes",
       summary: "List referral codes in a program",
+      inputStructure: "detailed",
     })
-    .input(paginationInput.extend({ programId: z.string().uuid() }))
+    .input(z.object({ params: z.object({ programId: z.string().uuid() }), query: paginationInput }))
     .output(paginatedOutput(referralCodeOutput)),
   listConversions: oc
     .route({
       method: "GET",
       path: "/referral-codes/{codeId}/conversions",
       summary: "List conversions for a referral code",
+      inputStructure: "detailed",
     })
-    .input(paginationInput.extend({ codeId: z.string().uuid() }))
+    .input(z.object({ params: z.object({ codeId: z.string().uuid() }), query: paginationInput }))
     .output(paginatedOutput(referralConversionOutput)),
   getByCode: oc
     .route({
       method: "GET",
       path: "/referrals/{code}",
       summary: "Look up a referral code",
+      inputStructure: "detailed",
     })
-    .input(z.object({ code: z.string() }))
+    .input(z.object({ params: z.object({ code: z.string() }) }))
     .output(referralCodeOutput),
   issue: oc
     .route({

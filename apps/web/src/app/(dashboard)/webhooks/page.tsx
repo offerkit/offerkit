@@ -59,7 +59,7 @@ export default function WebhooksPage() {
   });
 
   const remove = useMutation({
-    mutationFn: (id: string) => ovx().webhooks.delete({ id }),
+    mutationFn: (id: string) => ovx().webhooks.delete({ params: { id } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["webhooks"] });
     },

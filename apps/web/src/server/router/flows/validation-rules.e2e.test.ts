@@ -49,20 +49,20 @@ describe.skipIf(!E2E_ENABLED)("validation rules CRUD + attach to campaign", () =
     expect(campaign.validationRuleId).toBe(rule.id);
 
     const updated = await client.validationRules.update({
-      id: rule.id,
-      patch: { description: "min order $10" },
+      params: { id: rule.id },
+      body: { patch: { description: "min order $10" } },
     });
     expect(updated.description).toBe("min order $10");
 
     // Detach so the FK doesn't block the soft-delete.
     await client.campaigns.update({
-      id: campaign.id,
-      patch: { validationRuleId: null },
+      params: { id: campaign.id },
+      body: { patch: { validationRuleId: null } },
     });
 
-    await client.validationRules.delete({ id: rule.id });
+    await client.validationRules.delete({ params: { id: rule.id } });
 
-    await expect(client.validationRules.get({ id: rule.id })).rejects.toThrow(
+    await expect(client.validationRules.get({ params: { id: rule.id } })).rejects.toThrow(
       /not found/i,
     );
   });

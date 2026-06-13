@@ -56,8 +56,8 @@ describe.skipIf(!E2E_ENABLED)("insights summary", () => {
 
     for (const code of codes) {
       const r = await client.vouchers.redeem({
-        code,
-        order: { amount: 5_000, currency: "USD" },
+        params: { code },
+        body: { order: { amount: 5_000, currency: "USD" } },
       });
       expect(r.ok).toBe(true);
     }

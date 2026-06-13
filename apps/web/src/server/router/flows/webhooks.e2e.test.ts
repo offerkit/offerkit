@@ -44,7 +44,7 @@ describe.skipIf(!E2E_ENABLED)("webhooks: register + signature verification", () 
     // List/get round-trip works.
     const list = await client.webhooks.list({});
     expect(list.data.find((w) => w.id === created.id)).toBeDefined();
-    const fetched = await client.webhooks.get({ id: created.id });
+    const fetched = await client.webhooks.get({ params: { id: created.id } });
     expect(fetched.id).toBe(created.id);
     // Plaintext is never returned again — only the prefix.
     expect((fetched as unknown as { secret?: string }).secret).toBeUndefined();
@@ -78,6 +78,6 @@ describe.skipIf(!E2E_ENABLED)("webhooks: register + signature verification", () 
     expect(bad).toBe(false);
 
     // Soft-delete cleanup.
-    await client.webhooks.delete({ id: created.id });
+    await client.webhooks.delete({ params: { id: created.id } });
   });
 });

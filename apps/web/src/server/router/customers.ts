@@ -41,7 +41,7 @@ const get = os.customers.get
   .use(requireSession)
   .handler(async ({ input }) => {
     const row = await db().query.customer.findFirst({
-      where: and(eq(schema.customer.id, input.id), isNull(schema.customer.deletedAt)),
+      where: and(eq(schema.customer.id, input.params.id), isNull(schema.customer.deletedAt)),
     });
     if (!row) throw new ORPCError("NOT_FOUND", { message: "Customer not found" });
     return toCustomer(row);
@@ -52,7 +52,7 @@ const getByExternalId = os.customers.getByExternalId
   .handler(async ({ input }) => {
     const row = await db().query.customer.findFirst({
       where: and(
-        eq(schema.customer.externalId, input.externalId),
+        eq(schema.customer.externalId, input.params.externalId),
         isNull(schema.customer.deletedAt),
       ),
     });
@@ -159,17 +159,18 @@ const update = os.customers.update
     const patch: Partial<typeof schema.customer.$inferInsert> = {
       updatedAt: new Date(),
     };
-    if (input.patch.email !== undefined) patch.email = input.patch.email ?? null;
-    if (input.patch.name !== undefined) patch.name = input.patch.name ?? null;
-    if (input.patch.phone !== undefined) patch.phone = input.patch.phone ?? null;
-    if (input.patch.externalId !== undefined) patch.externalId = input.patch.externalId ?? null;
-    if (input.patch.address !== undefined) patch.address = input.patch.address ?? null;
-    if (input.patch.metadata !== undefined) patch.metadata = input.patch.metadata;
+    const { patch: inputPatch } = input.body;
+    if (inputPatch.email !== undefined) patch.email = inputPatch.email ?? null;
+    if (inputPatch.name !== undefined) patch.name = inputPatch.name ?? null;
+    if (inputPatch.phone !== undefined) patch.phone = inputPatch.phone ?? null;
+    if (inputPatch.externalId !== undefined) patch.externalId = inputPatch.externalId ?? null;
+    if (inputPatch.address !== undefined) patch.address = inputPatch.address ?? null;
+    if (inputPatch.metadata !== undefined) patch.metadata = inputPatch.metadata;
 
     const [row] = await db()
       .update(schema.customer)
       .set(patch)
-      .where(and(eq(schema.customer.id, input.id), isNull(schema.customer.deletedAt)))
+      .where(and(eq(schema.customer.id, input.params.id), isNull(schema.customer.deletedAt)))
       .returning();
     if (!row) throw new ORPCError("NOT_FOUND", { message: "Customer not found" });
     return toCustomer(row);
@@ -178,7 +179,7 @@ const update = os.customers.update
 const remove = os.customers.delete
   .use(requireSession)
   .handler(async ({ input }) => {
-    await softDeleteById(schema.customer, input.id, "Customer not found");
+    await softDeleteById(schema.customer, input.params.id, "Customer not found");
     return { ok: true as const };
   });
 
