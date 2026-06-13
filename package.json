@@ -23,6 +23,6 @@
     "@changesets/cli": "^2.31.0",
     "eslint": "^9.39.4",
     "lefthook": "^2.1.6",
-    "turbo": "^2.9.10"
+    "turbo": "^2.9.14"
   }
 }
