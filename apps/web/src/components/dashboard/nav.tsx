@@ -32,7 +32,11 @@ export function DashboardNav({ role }: { role: "admin" | "member" }) {
                   const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
                   return (
                     <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton isActive={active} render={<Link href={item.href} />}>
+                      <SidebarMenuButton
+                        isActive={active}
+                        render={<Link href={item.href} />}
+                        tooltip={{ children: <T>{item.label}</T> }}
+                      >
                         <Icon className="size-4" />
                         <span>
                           <T>{item.label}</T>
