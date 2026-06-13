@@ -23,7 +23,7 @@ name: Release
 #
 # Setup (one-time, per package on npmjs.com):
 # - Package Settings → Trusted Publisher → Add publisher → GitHub Actions
-# - owner: akshitkrnagpal · repository: offerkit
+# - owner: offerkit · repository: offerkit
 # - workflow filename: release.yml · environment: (blank)
 # - Repeat for @offerkit/sdk, @offerkit/cli, @offerkit/mcp.
 #

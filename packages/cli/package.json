@@ -3,10 +3,10 @@
   "version": "0.1.4",
   "license": "MIT",
   "type": "module",
-  "description": "Offerkit command-line interface.",
+  "description": "OfferKit command-line interface.",
   "repository": {
     "type": "git",
-    "url": "https://github.com/akshitkrnagpal/offerkit.git",
+    "url": "https://github.com/offerkit/offerkit.git",
     "directory": "packages/cli"
   },
   "exports": {

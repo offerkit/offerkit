@@ -1,0 +1,38 @@
+name: Feature request
+description: Suggest a capability or improvement for OfferKit.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user or integration problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What should OfferKit do?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface area
+      options:
+        - Dashboard
+        - REST API
+        - SDK
+        - CLI
+        - MCP
+        - Worker
+        - Database
+        - Documentation
+        - Other

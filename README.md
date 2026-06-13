@@ -23,7 +23,7 @@ OfferKit is a complete promotion engine — coupons, gift cards, loyalty, referr
 
 **Agent-first.** The MCP server is a first-class surface, not bolted on. Every mutating endpoint declares its risk level (`safe` / `mutating` / `destructive`) so LLM hosts can render the right confirmation. New procedures opt into MCP exposure declaratively via `.meta()` — no separate package to update.
 
-**Dev-friendly.** The typed SDK is derived directly from the oRPC contract, so client types stay in lockstep with the server with zero codegen. Strict TypeScript, no `any`, no `as` casts. The `/docs` site lives inside the app (Fumadocs). Local-first dev — Docker compose, no CI, lefthook is the only quality gate.
+**Dev-friendly.** The typed SDK is derived directly from the oRPC contract, so client types stay in lockstep with the server with zero codegen. Strict TypeScript, no `any`, no `as` casts. The `/docs` site lives inside the app (Fumadocs). Local-first dev with Docker compose, plus CI and lefthook quality gates.
 
 **Open source.** MIT throughout the monorepo. No CLA at v1.0. No commercial features paywalled. Built entirely on top of MIT/Apache OSS.
 
@@ -172,9 +172,9 @@ pnpm -r lint
 pnpm -r test
 ```
 
-## ✅ Quality Gate
+## ✅ Quality Gates
 
-No CI. Local-only enforcement via [lefthook](https://github.com/evilmartians/lefthook):
+Pull requests and pushes to `main` run typecheck, lint, tests, and production build in GitHub Actions. Local commits also run the same checks through [lefthook](https://github.com/evilmartians/lefthook):
 
 ```bash
 pnpm install            # auto-runs `lefthook install`
