@@ -9,7 +9,7 @@ ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 ENV CI=true
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN corepack enable && corepack prepare pnpm@10.23.0 --activate
+RUN npm install -g pnpm@10.23.0
 WORKDIR /app
 
 FROM base AS deps
