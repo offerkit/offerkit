@@ -21,6 +21,10 @@ updates:
       day: monday
       time: "09:00"
       timezone: Etc/UTC
+    groups:
+      github-actions:
+        patterns:
+          - "*"
 
   - package-ecosystem: docker
     directory: /
@@ -29,3 +33,7 @@ updates:
       day: monday
       time: "09:00"
       timezone: Etc/UTC
+    groups:
+      docker:
+        patterns:
+          - "*"
