@@ -5,6 +5,10 @@
 # started with: node apps/worker/dist/index.js
 
 FROM node:24-alpine AS base
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+ENV CI=true
+ENV NEXT_TELEMETRY_DISABLED=1
 RUN corepack enable && corepack prepare pnpm@10.23.0 --activate
 WORKDIR /app
 
@@ -20,28 +24,32 @@ COPY packages/sdk/package.json packages/sdk/
 COPY packages/cli/package.json packages/cli/
 COPY packages/mcp/package.json packages/mcp/
 COPY packages/ui/package.json packages/ui/
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,target=/pnpm/store pnpm install --frozen-lockfile
 
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Re-run install to wire up workspace symlinks for the just-copied source.
-RUN pnpm install --frozen-lockfile --offline
+RUN --mount=type=cache,target=/pnpm/store pnpm install --frozen-lockfile --offline
 RUN pnpm --filter @offerkit/worker build
 RUN pnpm --filter @offerkit/web build
+
+FROM builder AS worker-prod-deps
+RUN --mount=type=cache,target=/pnpm/store pnpm --filter @offerkit/worker deploy --prod --legacy /prod/worker
 
 FROM node:24-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY --from=builder /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder /app/apps/web/public ./apps/web/public
-COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/worker/package.json ./apps/worker/package.json
 COPY --from=builder /app/apps/worker/dist ./apps/worker/dist
+COPY --from=worker-prod-deps /prod/worker/node_modules ./apps/worker/node_modules
 COPY --from=builder /app/packages/db/drizzle ./packages/db/drizzle
 
 EXPOSE 3000 9091
