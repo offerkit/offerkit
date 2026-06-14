@@ -33,6 +33,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
               alt="OfferKit"
               width={32}
               height={32}
+              unoptimized
               className="size-8 rounded-md"
               priority
             />
