@@ -7,6 +7,7 @@ import { logger, withSpan } from "../observability/index.ts";
 import {
   checkActivation,
   checkCampaignActivation,
+  checkCampaignValidationRule,
   messageFor,
   previewDiscount,
   previewGiftCard,
@@ -14,8 +15,10 @@ import {
 import type {
   RedeemInput,
   RedeemResult,
+  RedemptionCustomerRow,
   RedemptionCampaignRow,
   RedemptionFailureCode,
+  RedemptionValidationRuleRow,
   VoucherRow,
 } from "./types.ts";
 
@@ -97,6 +100,43 @@ function redeemImpl(db: Db, input: RedeemInput): Promise<RedeemResult> {
         code: campaignFailure,
         message: messageFor(campaignFailure),
         explanations: [failureExplanation(campaignFailure, voucher)],
+      };
+    }
+
+    const validationRule = campaign?.validationRuleId
+      ? ((await tx.query.validationRule.findFirst({
+          where: eq(schema.validationRule.id, campaign.validationRuleId),
+        })) as RedemptionValidationRuleRow | undefined)
+      : undefined;
+    const customerId = input.customerId ?? voucher.customerId ?? undefined;
+    const customer = customerId
+      ? ((await tx.query.customer.findFirst({
+          where: and(eq(schema.customer.id, customerId), isNull(schema.customer.deletedAt)),
+        })) as RedemptionCustomerRow | undefined)
+      : undefined;
+    const ruleFailure = checkCampaignValidationRule(
+      voucher,
+      campaign,
+      validationRule,
+      customer,
+      input.order,
+      now,
+    );
+    if (ruleFailure) {
+      await tx.insert(schema.redemption).values({
+        voucherId: voucher.id,
+        customerId: input.customerId ?? null,
+        orderId: input.orderId ?? null,
+        externalOrderId: input.externalOrderId ?? null,
+        result: "FAILURE",
+        failureReason: ruleFailure.code,
+        idempotencyKey: input.idempotencyKey ?? null,
+      });
+      return {
+        ok: false,
+        code: ruleFailure.code ?? "validation_failed",
+        message: ruleFailure.message ?? messageFor("validation_failed"),
+        explanations: ruleFailure.explanations,
       };
     }
 

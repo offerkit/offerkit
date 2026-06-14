@@ -4,7 +4,9 @@ import { withSpan } from "../observability/index.ts";
 import { validateVoucher } from "./shared.ts";
 import type {
   QualifyInput,
+  RedemptionCustomerRow,
   RedemptionCampaignRow,
+  RedemptionValidationRuleRow,
   VoucherQualificationResult,
   VoucherQualificationSkipped,
   VoucherRow,
@@ -42,6 +44,9 @@ async function qualifyImpl(db: Db, input: QualifyInput): Promise<VoucherQualific
 
   const eligible: VoucherQualificationResult["eligible"] = [];
   const skipped: VoucherQualificationSkipped[] = [];
+  const customer = (await db.query.customer.findFirst({
+    where: and(eq(schema.customer.id, input.customerId), isNull(schema.customer.deletedAt)),
+  })) as RedemptionCustomerRow | undefined;
 
   for (const voucher of vouchers) {
     const campaign = voucher.campaignId
@@ -49,7 +54,15 @@ async function qualifyImpl(db: Db, input: QualifyInput): Promise<VoucherQualific
           where: and(eq(schema.campaign.id, voucher.campaignId), isNull(schema.campaign.deletedAt)),
         })) as RedemptionCampaignRow | undefined)
       : undefined;
-    const result = validateVoucher(voucher, input.order, campaign);
+    const validationRule = campaign?.validationRuleId
+      ? ((await db.query.validationRule.findFirst({
+          where: eq(schema.validationRule.id, campaign.validationRuleId),
+        })) as RedemptionValidationRuleRow | undefined)
+      : undefined;
+    const result = validateVoucher(voucher, input.order, campaign, {
+      validationRule,
+      customer,
+    });
     if (result.valid) {
       eligible.push({
         code: voucher.code,

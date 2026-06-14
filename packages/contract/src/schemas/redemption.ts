@@ -43,6 +43,7 @@ export const redemptionExplanation = z.object({
     "voucher_disabled",
     "voucher_expired",
     "redemption_limit_reached",
+    "validation_failed",
     "currency_mismatch",
     "gift_balance_zero",
     "no_discount_effect",

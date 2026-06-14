@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { schema, type Db } from "@offerkit/db";
-import { qualify, redeem, rollback } from "./index.ts";
+import { qualify, redeem, rollback, validate } from "./index.ts";
 import { getTestDb } from "./_test-db.ts";
 
 // Live-DB redemption suite. Skips without TEST_DATABASE_URL so the
@@ -114,6 +114,54 @@ describe.skipIf(!enabled)("redeem (live DB)", () => {
     if (!r.ok) expect(r.code).toBe("no_discount_effect");
 
     await cleanup(db, v.id);
+  });
+
+  it("refuses redemption when the campaign validation rule does not match", async () => {
+    if (!db) throw new Error("db not initialized");
+    const [rule] = await db
+      .insert(schema.validationRule)
+      .values({
+        name: "High minimum order",
+        rule: { ">=": [{ var: "order.amount" }, 10_000] },
+        appliesTo: "voucher",
+      })
+      .returning({ id: schema.validationRule.id });
+    const [campaign] = await db
+      .insert(schema.campaign)
+      .values({
+        name: "Rule gated redemption campaign",
+        type: "DISCOUNT",
+        status: "active",
+        currency: "USD",
+        validationRuleId: rule?.id,
+      })
+      .returning({ id: schema.campaign.id });
+    if (!rule || !campaign) throw new Error("campaign rule fixture insert failed");
+
+    const v = await makeVoucher(db, { campaignId: campaign.id });
+    const validation = await validate(db, {
+      voucherCode: v.code,
+      order: { amount: 5_000, currency: "USD" },
+    });
+    expect(validation.valid).toBe(false);
+    expect(validation.code).toBe("validation_failed");
+
+    const r = await redeem(db, {
+      voucherCode: v.code,
+      order: { amount: 5_000, currency: "USD" },
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.code).toBe("validation_failed");
+
+    const fresh = await db
+      .select({ count: schema.voucher.redemptionCount })
+      .from(schema.voucher)
+      .where(eq(schema.voucher.id, v.id));
+    expect(fresh[0]?.count).toBe(0);
+
+    await cleanup(db, v.id);
+    await db.delete(schema.campaign).where(eq(schema.campaign.id, campaign.id));
+    await db.delete(schema.validationRule).where(eq(schema.validationRule.id, rule.id));
   });
 
   it("refuses redemption outside the activation window", async () => {

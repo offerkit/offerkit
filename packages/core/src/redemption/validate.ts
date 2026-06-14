@@ -3,7 +3,9 @@ import { schema, type Db } from "@offerkit/db";
 import { withSpan } from "../observability/index.ts";
 import { validateVoucher } from "./shared.ts";
 import type {
+  RedemptionCustomerRow,
   RedemptionCampaignRow,
+  RedemptionValidationRuleRow,
   ValidateInput,
   ValidateResult,
   VoucherRow,
@@ -32,5 +34,16 @@ async function validateImpl(db: Db, input: ValidateInput): Promise<ValidateResul
         where: and(eq(schema.campaign.id, voucher.campaignId), isNull(schema.campaign.deletedAt)),
       })) as RedemptionCampaignRow | undefined)
     : undefined;
-  return validateVoucher(voucher, input.order, campaign);
+  const validationRule = campaign?.validationRuleId
+    ? ((await db.query.validationRule.findFirst({
+        where: eq(schema.validationRule.id, campaign.validationRuleId),
+      })) as RedemptionValidationRuleRow | undefined)
+    : undefined;
+  const customerId = input.customerId ?? voucher?.customerId ?? undefined;
+  const customer = customerId
+    ? ((await db.query.customer.findFirst({
+        where: and(eq(schema.customer.id, customerId), isNull(schema.customer.deletedAt)),
+      })) as RedemptionCustomerRow | undefined)
+    : undefined;
+  return validateVoucher(voucher, input.order, campaign, { validationRule, customer });
 }
