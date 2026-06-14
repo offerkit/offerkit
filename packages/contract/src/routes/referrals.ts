@@ -8,6 +8,7 @@ import {
   referralConvertOutput,
   referralIssueInput,
   referralIssueOutput,
+  referralProgramConversionOutput,
   referralProgramCreateInput,
   referralProgramOutput,
   referralProgramUpdateInput,
@@ -79,6 +80,15 @@ export const referrals = {
     })
     .input(z.object({ params: z.object({ codeId: z.string().uuid() }), query: paginationInput }))
     .output(paginatedOutput(referralConversionOutput)),
+  listProgramConversions: oc
+    .route({
+      method: "GET",
+      path: "/referral-programs/{programId}/conversions",
+      summary: "List conversions in a referral program",
+      inputStructure: "detailed",
+    })
+    .input(z.object({ params: z.object({ programId: z.string().uuid() }), query: paginationInput }))
+    .output(paginatedOutput(referralProgramConversionOutput)),
   getByCode: oc
     .route({
       method: "GET",

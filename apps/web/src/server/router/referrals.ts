@@ -18,6 +18,10 @@ const os = implement(contract).$context<RequestContext>();
 type ProgramRow = typeof schema.referralProgram.$inferSelect;
 type ReferralCodeRow = typeof schema.referralCode.$inferSelect;
 type ReferralConversionRow = typeof schema.referralConversion.$inferSelect;
+type ReferralProgramConversionRow = ReferralConversionRow & {
+  code: string;
+  referrerCustomerId: string;
+};
 
 function toProgram(row: ProgramRow) {
   return {
@@ -56,6 +60,14 @@ function toReferralConversion(row: ReferralConversionRow) {
     refereeOutcome: row.refereeOutcome,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+function toReferralProgramConversion(row: ReferralProgramConversionRow) {
+  return {
+    ...toReferralConversion(row),
+    code: row.code,
+    referrerCustomerId: row.referrerCustomerId,
   };
 }
 
@@ -200,6 +212,49 @@ const listConversions = os.referrals.listConversions
     };
   });
 
+const listProgramConversions = os.referrals.listProgramConversions
+  .use(requireSession)
+  .handler(async ({ input }) => {
+    const limit = input.query.limit;
+    const cursor = decodeCursor(input.query.cursor);
+    const filters = [eq(schema.referralCode.programId, input.params.programId)];
+    if (cursor) {
+      filters.push(
+        sql`(${schema.referralConversion.createdAt}, ${schema.referralConversion.id}) < (${cursor.createdAt}, ${cursor.id})`,
+      );
+    }
+    const rows = (await db()
+      .select({
+        id: schema.referralConversion.id,
+        codeId: schema.referralConversion.codeId,
+        refereeCustomerId: schema.referralConversion.refereeCustomerId,
+        status: schema.referralConversion.status,
+        convertedAt: schema.referralConversion.convertedAt,
+        conversionEventId: schema.referralConversion.conversionEventId,
+        referrerOutcome: schema.referralConversion.referrerOutcome,
+        refereeOutcome: schema.referralConversion.refereeOutcome,
+        createdAt: schema.referralConversion.createdAt,
+        updatedAt: schema.referralConversion.updatedAt,
+        code: schema.referralCode.code,
+        referrerCustomerId: schema.referralCode.referrerCustomerId,
+      })
+      .from(schema.referralConversion)
+      .innerJoin(schema.referralCode, eq(schema.referralConversion.codeId, schema.referralCode.id))
+      .where(and(...filters))
+      .orderBy(desc(schema.referralConversion.createdAt), desc(schema.referralConversion.id))
+      .limit(limit + 1)) as ReferralProgramConversionRow[];
+    const hasMore = rows.length > limit;
+    const data = rows.slice(0, limit);
+    const last = data[data.length - 1];
+    return {
+      data: data.map(toReferralProgramConversion),
+      next:
+        hasMore && last
+          ? encodeCursor({ createdAt: last.createdAt.toISOString(), id: last.id })
+          : undefined,
+    };
+  });
+
 const getByCode = os.referrals.getByCode.use(requireSession).handler(async ({ input }) => {
   const row = await db().query.referralCode.findFirst({
     where: eq(schema.referralCode.code, input.params.code),
@@ -244,6 +299,7 @@ export const referralsRouter = {
   },
   listCodes,
   listConversions,
+  listProgramConversions,
   getByCode,
   issue,
   convert,

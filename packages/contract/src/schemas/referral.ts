@@ -72,6 +72,11 @@ export const referralConversionOutput = z.object({
   updatedAt: z.string().datetime(),
 });
 
+export const referralProgramConversionOutput = referralConversionOutput.extend({
+  code: z.string(),
+  referrerCustomerId: z.string().uuid(),
+});
+
 export const referralIssueInput = z.object({
   programId: z.string().uuid(),
   referrerCustomerId: z.string().uuid(),

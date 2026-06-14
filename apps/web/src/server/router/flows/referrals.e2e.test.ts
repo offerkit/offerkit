@@ -147,5 +147,14 @@ describe.skipIf(!E2E_ENABLED)("referrals: program → issue → convert → both
       query: { limit: 10 },
     });
     expect(conversions.data.length).toBe(3);
+
+    const programConversions = await client.referrals.listProgramConversions({
+      params: { programId: program.id },
+      query: { limit: 10 },
+    });
+    expect(programConversions.data).toHaveLength(3);
+    expect(programConversions.data[0]?.code).toBe(issuedCode);
+    expect(programConversions.data[0]?.referrerCustomerId).toBe(referrer.id);
+    expect(programConversions.data[0]?.referrerOutcome.voucherCode).toBeDefined();
   });
 });

@@ -15,6 +15,19 @@ import {
 } from "@/components/ui/table";
 import { ovx } from "@/lib/sdk";
 
+function rewardLabel(kind: "discount" | "gift_card" | "loyalty_points" | "custom"): string {
+  switch (kind) {
+    case "discount":
+      return "Discount voucher";
+    case "gift_card":
+      return "Gift card";
+    case "loyalty_points":
+      return "Loyalty points";
+    case "custom":
+      return "Custom reward";
+  }
+}
+
 export default function ReferralsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["referralPrograms"],
@@ -84,10 +97,10 @@ export default function ReferralsPage() {
                     </Link>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {p.referrerReward.kind}
+                    {rewardLabel(p.referrerReward.kind)}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {p.refereeReward.kind}
+                    {rewardLabel(p.refereeReward.kind)}
                   </TableCell>
                   <TableCell className="text-right text-muted-foreground">
                     {new Date(p.createdAt).toLocaleDateString()}
