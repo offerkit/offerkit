@@ -49,6 +49,8 @@ export default function CampaignDetailPage({ params }: PageProps) {
   const queryClient = useQueryClient();
   const gt = useGT();
   const [bulkCount, setBulkCount] = useState(10);
+  const [bulkDiscountAmount, setBulkDiscountAmount] = useState(1000);
+  const [bulkGiftBalance, setBulkGiftBalance] = useState(10000);
 
   const { data, isLoading } = useQuery({
     queryKey: ["campaigns", id],
@@ -104,11 +106,19 @@ export default function CampaignDetailPage({ params }: PageProps) {
   });
 
   const bulk = useMutation({
-    mutationFn: (count: number) => ovx().vouchers.bulk({ campaignId: id, count }),
+    mutationFn: (input: {
+      count: number;
+      discount?: { type: "AMOUNT"; amount: number };
+      giftBalance?: number;
+    }) => ovx().vouchers.bulk({ campaignId: id, ...input }),
     onSuccess: async (res) => {
       await queryClient.invalidateQueries({ queryKey: ["vouchers"] });
       await queryClient.invalidateQueries({ queryKey: ["campaigns", id] });
-      toast.success(gt("Generated {n} vouchers").replace("{n}", String(res.generated)));
+      toast.success(
+        res.jobId
+          ? gt("Bulk generation queued")
+          : `Generated ${res.generated} voucher${res.generated === 1 ? "" : "s"}`,
+      );
     },
     onError: (err: unknown) => {
       toast.error(err instanceof Error ? err.message : gt("Bulk generate failed"));
@@ -129,6 +139,11 @@ export default function CampaignDetailPage({ params }: PageProps) {
     );
 
   const cfg = data.codeConfig as { length?: number; prefix?: string };
+  const supportsVouchers = data.type === "DISCOUNT" || data.type === "GIFT_VOUCHERS";
+  const isGiftVoucherCampaign = data.type === "GIFT_VOUCHERS";
+  const bulkValueInvalid = isGiftVoucherCampaign
+    ? bulkGiftBalance < 1
+    : bulkDiscountAmount < 1;
 
   return (
     <div className="space-y-4">
@@ -190,95 +205,135 @@ export default function CampaignDetailPage({ params }: PageProps) {
         onSubmit={(state) => update.mutate(state)}
       />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <T>Vouchers</T>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-end gap-2">
-            <div className="space-y-2">
-              <Label htmlFor="bulk-count">
-                <T>Bulk generate</T>
-              </Label>
-              <Input
-                id="bulk-count"
-                type="number"
-                min={1}
-                max={100000}
-                value={bulkCount}
-                onChange={(e) => setBulkCount(Number(e.target.value))}
-                className="w-32"
-              />
+      {supportsVouchers ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <T>Vouchers</T>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="space-y-2">
+                <Label htmlFor="bulk-count">
+                  <T>Bulk generate</T>
+                </Label>
+                <Input
+                  id="bulk-count"
+                  type="number"
+                  min={1}
+                  max={100000}
+                  value={bulkCount}
+                  onChange={(e) => setBulkCount(Number(e.target.value))}
+                  className="w-32"
+                />
+              </div>
+              {isGiftVoucherCampaign ? (
+                <div className="space-y-2">
+                  <Label htmlFor="bulk-gift-balance">
+                    <T>Gift card balance (cents)</T>
+                  </Label>
+                  <Input
+                    id="bulk-gift-balance"
+                    type="number"
+                    min={1}
+                    value={bulkGiftBalance}
+                    onChange={(e) => setBulkGiftBalance(Number(e.target.value))}
+                    className="w-44"
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="bulk-discount-amount">
+                    <T>Discount amount (cents)</T>
+                  </Label>
+                  <Input
+                    id="bulk-discount-amount"
+                    type="number"
+                    min={1}
+                    value={bulkDiscountAmount}
+                    onChange={(e) => setBulkDiscountAmount(Number(e.target.value))}
+                    className="w-44"
+                  />
+                </div>
+              )}
+              <Button
+                type="button"
+                onClick={() =>
+                  bulk.mutate(
+                    isGiftVoucherCampaign
+                      ? { count: bulkCount, giftBalance: bulkGiftBalance }
+                      : {
+                          count: bulkCount,
+                          discount: { type: "AMOUNT", amount: bulkDiscountAmount },
+                        },
+                  )
+                }
+                disabled={bulk.isPending || bulkCount < 1 || bulkValueInvalid}
+              >
+                <Plus className="size-4" />
+                {bulk.isPending ? <T>Generating…</T> : <T>Generate codes</T>}
+              </Button>
+              <Button variant="outline" render={<Link href={`/vouchers/new?campaignId=${id}`} />}>
+                <T>Single voucher</T>
+              </Button>
             </div>
-            <Button
-              type="button"
-              onClick={() => bulk.mutate(bulkCount)}
-              disabled={bulk.isPending || bulkCount < 1}
-            >
-              <Plus className="size-4" />
-              {bulk.isPending ? <T>Generating…</T> : <T>Generate codes</T>}
-            </Button>
-            <Button variant="outline" render={<Link href={`/vouchers/new?campaignId=${id}`} />}>
-              <T>Single voucher</T>
-            </Button>
-          </div>
 
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>
-                    <T>Code</T>
-                  </TableHead>
-                  <TableHead>
-                    <T>Type</T>
-                  </TableHead>
-                  <TableHead className="text-right">
-                    <T>Redemptions</T>
-                  </TableHead>
-                  <TableHead className="text-right">
-                    <T>Active</T>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {!vouchers || vouchers.data.length === 0 ? (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
-                      <T>No vouchers in this campaign.</T>
-                    </TableCell>
+                    <TableHead>
+                      <T>Code</T>
+                    </TableHead>
+                    <TableHead>
+                      <T>Type</T>
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <T>Redemptions</T>
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <T>Active</T>
+                    </TableHead>
                   </TableRow>
-                ) : (
-                  vouchers.data.map((v) => (
-                    <TableRow key={v.id}>
-                      <TableCell>
-                        <Link
-                          className="font-mono text-sm hover:underline"
-                          href={`/vouchers/${v.code}`}
-                        >
-                          {v.code}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{v.type}</TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        {v.redemptionCount}
-                        {v.redemptionLimit ? ` / ${String(v.redemptionLimit)}` : ""}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Badge variant={v.active ? "default" : "secondary"}>
-                          {v.active ? gt("yes") : gt("no")}
-                        </Badge>
+                </TableHeader>
+                <TableBody>
+                  {!vouchers || vouchers.data.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
+                        <T>No vouchers in this campaign.</T>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+                  ) : (
+                    vouchers.data.map((v) => (
+                      <TableRow key={v.id}>
+                        <TableCell>
+                          <Link
+                            className="font-mono text-sm hover:underline"
+                            href={`/vouchers/${v.code}`}
+                          >
+                            {v.code}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{v.type}</TableCell>
+                        <TableCell className="text-right text-muted-foreground">
+                          {v.redemptionCount}
+                          {v.redemptionLimit ? ` / ${String(v.redemptionLimit)}` : ""}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Badge variant={v.active ? "default" : "secondary"}>
+                            {v.active ? gt("yes") : gt("no")}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }

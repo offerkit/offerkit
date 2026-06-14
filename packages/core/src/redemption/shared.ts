@@ -1,6 +1,11 @@
 import { calculateDiscount, type DiscountOrder, type DiscountResult } from "../discount/index.ts";
 import { failureExplanation } from "./explanations.ts";
-import type { RedemptionFailureCode, ValidateResult, VoucherRow } from "./types.ts";
+import type {
+  RedemptionCampaignRow,
+  RedemptionFailureCode,
+  ValidateResult,
+  VoucherRow,
+} from "./types.ts";
 
 export function checkActivation(v: VoucherRow, now: Date): RedemptionFailureCode | null {
   if (!v.active) return "voucher_disabled";
@@ -12,6 +17,19 @@ export function checkActivation(v: VoucherRow, now: Date): RedemptionFailureCode
   if (v.type === "GIFT_CARD" && (v.giftBalance ?? 0) <= 0) {
     return "gift_balance_zero";
   }
+  return null;
+}
+
+export function checkCampaignActivation(
+  campaign: RedemptionCampaignRow | null | undefined,
+  orderCurrency: string | undefined,
+  now: Date,
+): RedemptionFailureCode | null {
+  if (!campaign) return null;
+  if (campaign.deletedAt || campaign.status !== "active") return "campaign_inactive";
+  if (campaign.startDate && campaign.startDate > now) return "campaign_inactive";
+  if (campaign.endDate && campaign.endDate < now) return "campaign_inactive";
+  if (orderCurrency && campaign.currency !== orderCurrency) return "currency_mismatch";
   return null;
 }
 
@@ -82,7 +100,11 @@ export function previewDiscount(
   });
 }
 
-export function validateVoucher(voucher: VoucherRow | undefined, order: DiscountOrder | undefined): ValidateResult {
+export function validateVoucher(
+  voucher: VoucherRow | undefined,
+  order: DiscountOrder | undefined,
+  campaign?: RedemptionCampaignRow | null,
+): ValidateResult {
   if (!voucher) {
     return {
       valid: false,
@@ -99,6 +121,16 @@ export function validateVoucher(voucher: VoucherRow | undefined, order: Discount
       code: failure,
       message: messageFor(failure),
       explanations: [failureExplanation(failure, voucher)],
+    };
+  }
+
+  const campaignFailure = checkCampaignActivation(campaign, order?.currency, new Date());
+  if (campaignFailure) {
+    return {
+      valid: false,
+      code: campaignFailure,
+      message: messageFor(campaignFailure),
+      explanations: [failureExplanation(campaignFailure, voucher)],
     };
   }
 
@@ -119,10 +151,19 @@ export function validateVoucher(voucher: VoucherRow | undefined, order: Discount
   }
 
   const preview = previewDiscount(voucher, order);
+  const amount = preview.appliedDiscounts.reduce((s, a) => s + a.amount, 0);
+  if (order && amount <= 0 && (voucher.customRewards?.length ?? 0) === 0) {
+    return {
+      valid: false,
+      code: "no_discount_effect",
+      message: messageFor("no_discount_effect"),
+      explanations: [failureExplanation("no_discount_effect", voucher)],
+    };
+  }
   return {
     valid: true,
     preview: {
-      amount: preview.appliedDiscounts.reduce((s, a) => s + a.amount, 0),
+      amount,
       finalOrder: preview.finalOrder,
       breakdown: preview.breakdown,
     },
@@ -143,6 +184,10 @@ export function messageFor(code: RedemptionFailureCode): string {
       return "Voucher currency does not match the order currency";
     case "gift_balance_zero":
       return "Gift card has no remaining balance";
+    case "campaign_inactive":
+      return "Campaign is not active";
+    case "no_discount_effect":
+      return "Voucher does not discount this order";
     case "order_required":
       return "An order is required to redeem this voucher";
   }

@@ -8,6 +8,7 @@ const baseVoucher: VoucherRow = {
   campaignId: null,
   type: "DISCOUNT",
   discount: { type: "AMOUNT", amount: 500 },
+  customRewards: [],
   giftBalance: null,
   redemptionLimit: 1,
   redemptionCount: 1,

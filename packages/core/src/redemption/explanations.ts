@@ -8,6 +8,7 @@ export function failureExplanation(
     VoucherRow,
     | "id"
     | "code"
+    | "campaignId"
     | "active"
     | "startDate"
     | "endDate"
@@ -31,6 +32,8 @@ export function failureExplanation(
       safeDetails.redemptionLimit = voucher.redemptionLimit;
     }
     if (code === "gift_balance_zero") safeDetails.giftBalance = voucher.giftBalance ?? 0;
+    if (code === "campaign_inactive") safeDetails.campaignId = voucher.campaignId ?? null;
+    if (code === "no_discount_effect") safeDetails.type = voucher.type;
   }
 
   return {

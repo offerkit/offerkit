@@ -1,5 +1,6 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { schema, type Db } from "@offerkit/db";
+import type { VoucherDiscount } from "@offerkit/db/schema";
 import { logger } from "../observability/index.ts";
 import { generateUniqueCodes } from "./generate.ts";
 
@@ -17,6 +18,8 @@ const BULK_BATCH_SIZE = 1_000;
 export interface BulkCodesPayload {
   campaignId: string;
   count: number;
+  discount?: VoucherDiscount;
+  giftBalance?: number;
 }
 
 /** Worker handler for the `bulk_codes.generate` job. */
@@ -55,7 +58,32 @@ export async function bulkGenerateCodes(
     );
     await db
       .insert(schema.voucher)
-      .values(codes.map((code) => ({ code, campaignId: campaign.id, type })));
+      .values(
+        codes.map((code) => ({
+          code,
+          campaignId: campaign.id,
+          type,
+          discount: type === "DISCOUNT" ? payload.discount : null,
+          giftBalance: type === "GIFT_CARD" ? payload.giftBalance : null,
+        })),
+      );
+    if (type === "GIFT_CARD" && payload.giftBalance) {
+      const giftBalance = payload.giftBalance;
+      const inserted = await db
+        .select({ id: schema.voucher.id })
+        .from(schema.voucher)
+        .where(and(eq(schema.voucher.campaignId, campaign.id), inArray(schema.voucher.code, codes)));
+      if (inserted.length > 0) {
+        await db.insert(schema.giftCardTransaction).values(
+          inserted.map((v) => ({
+            voucherId: v.id,
+            delta: giftBalance,
+            balanceAfter: giftBalance,
+            reason: "CREDIT" as const,
+          })),
+        );
+      }
+    }
     await db
       .update(schema.campaign)
       .set({

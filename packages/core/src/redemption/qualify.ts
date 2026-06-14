@@ -4,6 +4,7 @@ import { withSpan } from "../observability/index.ts";
 import { validateVoucher } from "./shared.ts";
 import type {
   QualifyInput,
+  RedemptionCampaignRow,
   VoucherQualificationResult,
   VoucherQualificationSkipped,
   VoucherRow,
@@ -43,7 +44,12 @@ async function qualifyImpl(db: Db, input: QualifyInput): Promise<VoucherQualific
   const skipped: VoucherQualificationSkipped[] = [];
 
   for (const voucher of vouchers) {
-    const result = validateVoucher(voucher, input.order);
+    const campaign = voucher.campaignId
+      ? ((await db.query.campaign.findFirst({
+          where: and(eq(schema.campaign.id, voucher.campaignId), isNull(schema.campaign.deletedAt)),
+        })) as RedemptionCampaignRow | undefined)
+      : undefined;
+    const result = validateVoucher(voucher, input.order, campaign);
     if (result.valid) {
       eligible.push({
         code: voucher.code,

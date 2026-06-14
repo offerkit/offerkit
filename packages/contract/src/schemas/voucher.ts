@@ -64,4 +64,6 @@ export const voucherUpdateInput = voucherCreateInput.omit({ type: true, code: tr
 export const voucherBulkCreateInput = z.object({
   campaignId: z.string().uuid(),
   count: z.number().int().min(1).max(100_000),
+  discount: voucherDiscount.optional(),
+  giftBalance: z.number().int().min(1).optional(),
 });

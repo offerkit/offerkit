@@ -87,6 +87,35 @@ describe.skipIf(!enabled)("redeem (live DB)", () => {
     await cleanup(db, v.id);
   });
 
+  it("refuses redemption for vouchers attached to inactive campaigns", async () => {
+    if (!db) throw new Error("db not initialized");
+    const [campaign] = await db
+      .insert(schema.campaign)
+      .values({ name: "Draft redemption campaign", type: "DISCOUNT", status: "draft", currency: "USD" })
+      .returning({ id: schema.campaign.id });
+    if (!campaign) throw new Error("campaign insert failed");
+
+    const v = await makeVoucher(db, { campaignId: campaign.id });
+    const r = await redeem(db, { voucherCode: v.code, order: { amount: 5_000, currency: "USD" } });
+
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.code).toBe("campaign_inactive");
+
+    await cleanup(db, v.id);
+    await db.delete(schema.campaign).where(eq(schema.campaign.id, campaign.id));
+  });
+
+  it("refuses redemption when a discount has no effect", async () => {
+    if (!db) throw new Error("db not initialized");
+    const v = await makeVoucher(db, { discount: { type: "AMOUNT", amount: 0 } });
+    const r = await redeem(db, { voucherCode: v.code, order: { amount: 5_000, currency: "USD" } });
+
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.code).toBe("no_discount_effect");
+
+    await cleanup(db, v.id);
+  });
+
   it("refuses redemption outside the activation window", async () => {
     if (!db) throw new Error("db not initialized");
     const past = new Date(Date.now() - 24 * 60 * 60_000);

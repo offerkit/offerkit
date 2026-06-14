@@ -4,10 +4,17 @@ import type { DiscountResult } from "../discount/index.ts";
 import { emitEvent } from "../events/index.ts";
 import { failureExplanation } from "./explanations.ts";
 import { logger, withSpan } from "../observability/index.ts";
-import { checkActivation, messageFor, previewDiscount, previewGiftCard } from "./shared.ts";
+import {
+  checkActivation,
+  checkCampaignActivation,
+  messageFor,
+  previewDiscount,
+  previewGiftCard,
+} from "./shared.ts";
 import type {
   RedeemInput,
   RedeemResult,
+  RedemptionCampaignRow,
   RedemptionFailureCode,
   VoucherRow,
 } from "./types.ts";
@@ -66,6 +73,30 @@ function redeemImpl(db: Db, input: RedeemInput): Promise<RedeemResult> {
         code: failure,
         message: messageFor(failure),
         explanations: [failureExplanation(failure, voucher)],
+      };
+    }
+
+    const campaign = voucher.campaignId
+      ? ((await tx.query.campaign.findFirst({
+          where: and(eq(schema.campaign.id, voucher.campaignId), isNull(schema.campaign.deletedAt)),
+        })) as RedemptionCampaignRow | undefined)
+      : undefined;
+    const campaignFailure = checkCampaignActivation(campaign, input.order?.currency, now);
+    if (campaignFailure) {
+      await tx.insert(schema.redemption).values({
+        voucherId: voucher.id,
+        customerId: input.customerId ?? null,
+        orderId: input.orderId ?? null,
+        externalOrderId: input.externalOrderId ?? null,
+        result: "FAILURE",
+        failureReason: campaignFailure,
+        idempotencyKey: input.idempotencyKey ?? null,
+      });
+      return {
+        ok: false,
+        code: campaignFailure,
+        message: messageFor(campaignFailure),
+        explanations: [failureExplanation(campaignFailure, voucher)],
       };
     }
 
@@ -190,6 +221,23 @@ async function redeemDiscount(
 ): Promise<RedeemResult> {
   const preview = previewDiscount(voucher, input.order);
   const amount = preview.appliedDiscounts.reduce((s, a) => s + a.amount, 0);
+  if (input.order && amount <= 0 && (voucher.customRewards?.length ?? 0) === 0) {
+    await tx.insert(schema.redemption).values({
+      voucherId: voucher.id,
+      customerId: input.customerId ?? null,
+      orderId: input.orderId ?? null,
+      externalOrderId: input.externalOrderId ?? null,
+      result: "FAILURE",
+      failureReason: "no_discount_effect",
+      idempotencyKey: input.idempotencyKey ?? null,
+    });
+    return {
+      ok: false,
+      code: "no_discount_effect",
+      message: messageFor("no_discount_effect"),
+      explanations: [failureExplanation("no_discount_effect", voucher)],
+    };
+  }
 
   await tx
     .update(schema.voucher)

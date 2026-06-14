@@ -5,8 +5,9 @@ import { calculateDiscount, type DiscountResult } from "../discount/index.ts";
 import { emitEvent } from "../events/index.ts";
 import { failureExplanation, stackBreakdownExplanations } from "./explanations.ts";
 import { logger, withSpan } from "../observability/index.ts";
-import { checkActivation, messageFor } from "./shared.ts";
+import { checkActivation, checkCampaignActivation, messageFor } from "./shared.ts";
 import type {
+  RedemptionCampaignRow,
   StackEntry,
   StackRedeemInput,
   StackRedeemResult,
@@ -99,6 +100,20 @@ async function stackRedeemImpl(
           explanations: [failureExplanation(failure, v)],
         };
       }
+      const campaign = v.campaignId
+        ? ((await tx.query.campaign.findFirst({
+            where: and(eq(schema.campaign.id, v.campaignId), isNull(schema.campaign.deletedAt)),
+          })) as RedemptionCampaignRow | undefined)
+        : undefined;
+      const campaignFailure = checkCampaignActivation(campaign, input.order.currency, now);
+      if (campaignFailure) {
+        return {
+          ok: false,
+          code: campaignFailure,
+          message: messageFor(campaignFailure),
+          explanations: [failureExplanation(campaignFailure, v)],
+        };
+      }
       // Stackable redemptions don't support gift cards yet — they need
       // partial-spend semantics that don't compose with calculateDiscount.
       if (v.type === "GIFT_CARD") {
@@ -135,6 +150,15 @@ async function stackRedeemImpl(
           createdAt: v.createdAt.toISOString(),
         })),
     });
+
+    if (result.appliedDiscounts.length === 0) {
+      return {
+        ok: false,
+        code: "no_discount_effect",
+        message: messageFor("no_discount_effect"),
+        explanations: lockedRows.map((v) => failureExplanation("no_discount_effect", v)),
+      };
+    }
 
     const batchId = randomUUID();
     const entries: StackEntry[] = [];

@@ -57,6 +57,10 @@ describe.skipIf(!E2E_ENABLED)("orders CRUD + lifecycle + redemption attachment",
       type: "DISCOUNT",
       currency: "USD",
     });
+    await client.campaigns.update({
+      params: { id: campaign.id },
+      body: { patch: { status: "active" } },
+    });
     const code = randomId("ORD").toUpperCase();
     await client.vouchers.create({
       code,

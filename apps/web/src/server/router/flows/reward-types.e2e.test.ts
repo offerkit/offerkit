@@ -55,6 +55,10 @@ describe.skipIf(!E2E_ENABLED)("custom reward types CRUD + voucher payload roundt
       type: "DISCOUNT",
       currency: "USD",
     });
+    await client.campaigns.update({
+      params: { id: campaign.id },
+      body: { patch: { status: "active" } },
+    });
     const code = randomId("RT").toUpperCase();
     const voucher = await client.vouchers.create({
       code,

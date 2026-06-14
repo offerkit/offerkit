@@ -115,7 +115,7 @@ export function VoucherForm({
                   onValueChange={(v) => field.handleChange(v as VoucherType)}
                   disabled={mode === "edit"}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger aria-label={gt("Voucher type")}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -170,7 +170,7 @@ export function VoucherForm({
                       <Input
                         id={field.name}
                         type="number"
-                        min={0}
+                        min={1}
                         value={field.state.value}
                         onChange={(e) =>
                           field.handleChange(
@@ -225,7 +225,7 @@ export function VoucherForm({
                   value={field.state.value}
                   onValueChange={(v) => field.handleChange(v as DiscountKind)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger aria-label={gt("Discount kind")}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -245,7 +245,8 @@ export function VoucherForm({
                 <Input
                   id={field.name}
                   type="number"
-                  min={0}
+                  min={1}
+                  max={field.form.state.values.discountKind === "PERCENTAGE" ? 10000 : undefined}
                   value={field.state.value}
                   onChange={(e) => field.handleChange(Number(e.target.value))}
                 />
@@ -364,12 +365,22 @@ export function VoucherForm({
       </form.Subscribe>
 
       <div className="flex justify-end gap-2">
-        <form.Subscribe selector={(s) => s.isSubmitting}>
-          {(isSubmitting) => (
-            <Button type="submit" disabled={pending || isSubmitting}>
-              {pending || isSubmitting ? <T>Saving…</T> : submitLabel}
-            </Button>
-          )}
+        <form.Subscribe selector={(s) => [s.values, s.isSubmitting] as const}>
+          {([values, isSubmitting]) => {
+            const discountInvalid = values.type === "DISCOUNT" && values.discountValue < 1;
+            const newGiftCardInvalid =
+              mode === "create" &&
+              values.type === "GIFT_CARD" &&
+              (values.giftBalance === "" || values.giftBalance < 1);
+            return (
+              <Button
+                type="submit"
+                disabled={pending || isSubmitting || discountInvalid || newGiftCardInvalid}
+              >
+                {pending || isSubmitting ? <T>Saving…</T> : submitLabel}
+              </Button>
+            );
+          }}
         </form.Subscribe>
       </div>
     </form>
