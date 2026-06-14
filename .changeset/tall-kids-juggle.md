@@ -1,6 +1,6 @@
 ---
-"@offerkit/sdk": minor
-"@offerkit/mcp": minor
+"@offerkit/sdk": patch
+"@offerkit/mcp": patch
 "@offerkit/cli": patch
 ---
 
