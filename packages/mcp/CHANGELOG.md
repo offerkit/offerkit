@@ -1,5 +1,18 @@
 # @offerkit/mcp
 
+## 0.1.4
+
+### Patch Changes
+
+- 39f20da: Add package README files so npm displays installation, configuration, and usage guidance for each public package.
+- 49702f8: Path-bearing SDK procedures now use oRPC's detailed input structure. Pass path values under `params`, request payloads under `body`, and query parameters under `query` for routes such as `vouchers.get({ params: { code } })`, `campaigns.update({ params: { id }, body: { patch } })`, and `referrals.listCodes({ params: { programId }, query: { limit } })`.
+
+  CLI and MCP callers were updated for the detailed contract shape, and `/api/openapi.json` now emits the generated OpenAPI document instead of an empty stub.
+
+- Updated dependencies [39f20da]
+- Updated dependencies [49702f8]
+  - @offerkit/sdk@0.2.4
+
 ## 0.1.3
 
 ### Patch Changes
