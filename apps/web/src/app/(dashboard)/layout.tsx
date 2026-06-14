@@ -1,8 +1,11 @@
-import { headers } from "next/headers";
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { T } from "gt-next";
-import { auth } from "@/lib/auth";
+import {
+  getDashboardRole,
+  requireDashboardSession,
+  userMustChangePassword,
+} from "@/lib/session";
 import {
   Sidebar,
   SidebarContent,
@@ -20,8 +23,8 @@ import { DashboardNav } from "@/components/dashboard/nav";
 import { UserMenu } from "@/components/dashboard/user-menu";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth().api.getSession({ headers: await headers() });
-  if (!session) redirect("/sign-in");
+  const session = await requireDashboardSession();
+  if (userMustChangePassword(session)) redirect("/change-password");
 
   return (
     <SidebarProvider>
@@ -46,9 +49,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </div>
         </SidebarHeader>
         <SidebarContent>
-          <DashboardNav
-            role={(session.user as { role?: "admin" | "member" }).role ?? "member"}
-          />
+          <DashboardNav role={getDashboardRole(session)} />
         </SidebarContent>
         <SidebarFooter>
           <SidebarMenu>

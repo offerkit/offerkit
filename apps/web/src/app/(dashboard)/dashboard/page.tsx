@@ -1,16 +1,11 @@
 import Link from "next/link";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import { T } from "gt-next";
-import { auth } from "@/lib/auth";
+import { getDashboardRole, requireDashboardSession } from "@/lib/session";
 import { dashboardSections } from "@/components/dashboard/sections";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function DashboardPage() {
-  const session = await auth().api.getSession({ headers: await headers() });
-  if (!session) redirect("/sign-in");
-
-  const role = (session.user as { role?: "admin" | "member" }).role ?? "member";
+  const role = getDashboardRole(await requireDashboardSession());
   const sections = dashboardSections
     .filter((section) => section.label !== "Overview")
     .map((section) => ({
