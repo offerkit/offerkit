@@ -39,11 +39,13 @@ export const breakdownEntry = z.object({
 export const redemptionExplanation = z.object({
   code: z.enum([
     "voucher_not_found",
+    "campaign_inactive",
     "voucher_disabled",
     "voucher_expired",
     "redemption_limit_reached",
     "currency_mismatch",
     "gift_balance_zero",
+    "no_discount_effect",
     "order_required",
     "exclusivity_lost",
     "zero_after_running_total",

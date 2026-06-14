@@ -51,6 +51,10 @@ describe.skipIf(!E2E_ENABLED)("stackable redemption", () => {
       type: "DISCOUNT",
       currency: "USD",
     });
+    await client.campaigns.update({
+      params: { id: campaign.id },
+      body: { patch: { status: "active" } },
+    });
 
     const c1 = await makeDiscountVoucher(client, campaign.id, 500);
     const c2 = await makeDiscountVoucher(client, campaign.id, 700);
@@ -84,10 +88,18 @@ describe.skipIf(!E2E_ENABLED)("stackable redemption", () => {
       type: "DISCOUNT",
       currency: "USD",
     });
+    await client.campaigns.update({
+      params: { id: discCampaign.id },
+      body: { patch: { status: "active" } },
+    });
     const gcCampaign = await client.campaigns.create({
       name: randomId("camp-stack-gc"),
       type: "GIFT_VOUCHERS",
       currency: "USD",
+    });
+    await client.campaigns.update({
+      params: { id: gcCampaign.id },
+      body: { patch: { status: "active" } },
     });
 
     const disc = await makeDiscountVoucher(client, discCampaign.id, 500);

@@ -36,6 +36,10 @@ describe.skipIf(!E2E_ENABLED)("redemption flows", () => {
       type: "DISCOUNT",
       currency: "USD",
     });
+    await client.campaigns.update({
+      params: { id: campaign.id },
+      body: { patch: { status: "active" } },
+    });
     const code = randomId("DISC").toUpperCase();
     await client.vouchers.create({
       code,
@@ -76,6 +80,10 @@ describe.skipIf(!E2E_ENABLED)("redemption flows", () => {
       name: randomId("camp-gc"),
       type: "GIFT_VOUCHERS",
       currency: "USD",
+    });
+    await client.campaigns.update({
+      params: { id: campaign.id },
+      body: { patch: { status: "active" } },
     });
     const code = randomId("GC").toUpperCase();
     await client.vouchers.create({

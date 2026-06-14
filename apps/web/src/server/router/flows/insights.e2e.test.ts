@@ -40,6 +40,10 @@ describe.skipIf(!E2E_ENABLED)("insights summary", () => {
         type: "DISCOUNT",
         currency: "USD",
       });
+      await client.campaigns.update({
+        params: { id: camp.id },
+        body: { patch: { status: "active" } },
+      });
       campaigns.push(camp.id);
       for (let j = 0; j < 2; j++) {
         const code = randomId(`INS${String(i)}${String(j)}`).toUpperCase();

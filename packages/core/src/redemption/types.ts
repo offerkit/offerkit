@@ -2,11 +2,13 @@ import type { DiscountOrder, DiscountResult } from "../discount/index.ts";
 
 export type RedemptionFailureCode =
   | "voucher_not_found"
+  | "campaign_inactive"
   | "voucher_disabled"
   | "voucher_expired"
   | "redemption_limit_reached"
   | "currency_mismatch"
   | "gift_balance_zero"
+  | "no_discount_effect"
   | "order_required";
 
 export type RedemptionExplanationCode =
@@ -131,6 +133,7 @@ export interface VoucherRow extends Record<string, unknown> {
   campaignId: string | null;
   type: string;
   discount: { type: "AMOUNT" | "PERCENTAGE"; amount?: number; percent?: number; maxDiscountAmount?: number } | null;
+  customRewards: unknown[];
   giftBalance: number | null;
   redemptionLimit: number | null;
   redemptionCount: number;
@@ -142,4 +145,13 @@ export interface VoucherRow extends Record<string, unknown> {
   exclusive: boolean;
   deletedAt: Date | null;
   createdAt: Date;
+}
+
+export interface RedemptionCampaignRow {
+  id: string;
+  status: string;
+  currency: string;
+  startDate: Date | null;
+  endDate: Date | null;
+  deletedAt: Date | null;
 }

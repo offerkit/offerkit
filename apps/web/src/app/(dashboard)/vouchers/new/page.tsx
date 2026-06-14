@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { VoucherForm, type VoucherFormState } from "@/components/dashboard/voucher-form";
@@ -19,6 +19,12 @@ export default function NewVoucherPage() {
   const gt = useGT();
   const search = useSearchParams();
   const campaignId = search.get("campaignId") ?? "";
+
+  const { data: campaign } = useQuery({
+    queryKey: ["campaigns", campaignId],
+    queryFn: () => ovx().campaigns.get({ params: { id: campaignId } }),
+    enabled: campaignId !== "",
+  });
 
   const create = useMutation({
     mutationFn: (state: VoucherFormState) =>
@@ -68,15 +74,16 @@ export default function NewVoucherPage() {
         </p>
       </header>
       <VoucherForm
+        key={`${campaignId}:${campaign?.type ?? "default"}`}
         mode="create"
         initial={{
           code: "",
           campaignId,
-          type: "DISCOUNT",
+          type: campaign?.type === "GIFT_VOUCHERS" ? "GIFT_CARD" : "DISCOUNT",
           discountKind: "AMOUNT",
           discountValue: 1000,
           maxDiscountAmount: "",
-          giftBalance: "",
+          giftBalance: campaign?.type === "GIFT_VOUCHERS" ? 10000 : "",
           redemptionLimit: "",
           priority: 0,
           exclusive: false,

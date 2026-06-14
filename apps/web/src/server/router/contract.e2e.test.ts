@@ -106,11 +106,16 @@ describe.skipIf(!enabled)("SDK contract e2e", () => {
       type: "DISCOUNT",
       currency: "USD",
     });
+    await client.campaigns.update({
+      params: { id: campaign.id },
+      body: { patch: { status: "active" } },
+    });
     expect(campaign.id).toMatch(/^[0-9a-f-]{36}$/);
 
     const bulk = await client.vouchers.bulk({
       campaignId: campaign.id,
       count: 1,
+      discount: { type: "AMOUNT", amount: 500 },
     });
     expect(bulk.generated).toBe(1);
 
@@ -130,10 +135,7 @@ describe.skipIf(!enabled)("SDK contract e2e", () => {
       body: { order: { amount: 5_000, currency: "USD" } },
     });
     expect(redeemed.ok).toBe(true);
-    // Bulk-minted vouchers have no discount jsonb, so the calculation
-    // legitimately returns 0. The point of this test is the round trip
-    // through SDK -> oRPC -> router -> DB; the discount math is covered
-    // by the unit + property tests in @offerkit/core.
     expect(redeemed.redemptionId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(redeemed.amount).toBe(500);
   }, 30_000);
 });

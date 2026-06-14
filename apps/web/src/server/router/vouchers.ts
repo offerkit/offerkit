@@ -1,6 +1,7 @@
 import { ORPCError, implement } from "@orpc/server";
-import { and, eq, ilike, isNull, sql } from "drizzle-orm";
+import { and, eq, ilike, inArray, isNull, sql } from "drizzle-orm";
 import { schema } from "@offerkit/db";
+import type { VoucherDiscount } from "@offerkit/db/schema";
 import { contract } from "@offerkit/contract/router";
 import { generateUniqueCodes, BULK_INLINE_THRESHOLD } from "@offerkit/core/codes";
 import { enqueueJob } from "@offerkit/core/jobs";
@@ -30,6 +31,69 @@ async function generateUnique(config: Record<string, unknown> | undefined): Prom
   const code = codes[0];
   if (!code) throw new ORPCError("INTERNAL_SERVER_ERROR", { message: "Code generation failed" });
   return code;
+}
+
+type CampaignRow = typeof schema.campaign.$inferSelect;
+type VoucherInputType = "DISCOUNT" | "GIFT_CARD";
+type VoucherDiscountInput = VoucherDiscount;
+
+function voucherTypeForCampaign(campaign: CampaignRow): VoucherInputType {
+  return campaign.type === "GIFT_VOUCHERS" ? "GIFT_CARD" : "DISCOUNT";
+}
+
+function assertCampaignAllowsVoucher(campaign: CampaignRow, voucherType: VoucherInputType): void {
+  if (campaign.type === "GIFT_VOUCHERS" && voucherType !== "GIFT_CARD") {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Gift voucher campaigns can only issue gift cards",
+    });
+  }
+  if (campaign.type === "DISCOUNT" && voucherType !== "DISCOUNT") {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Discount campaigns can only issue discount vouchers",
+    });
+  }
+  if (campaign.type === "LOYALTY_PROGRAM" || campaign.type === "PROMOTION") {
+    throw new ORPCError("BAD_REQUEST", {
+      message: `${campaign.type} campaigns do not issue voucher codes`,
+    });
+  }
+}
+
+function assertCampaignAllowsBulk(campaign: CampaignRow): void {
+  if (campaign.type === "REFERRAL_PROGRAM") {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Referral programs issue codes from the referral page",
+    });
+  }
+  assertCampaignAllowsVoucher(campaign, voucherTypeForCampaign(campaign));
+}
+
+function discountHasValue(discount: VoucherDiscountInput | null | undefined): boolean {
+  if (!discount) return false;
+  if (discount.type === "AMOUNT") return (discount.amount ?? 0) > 0;
+  return (discount.percent ?? 0) > 0;
+}
+
+function assertVoucherHasValue(input: {
+  type: VoucherInputType;
+  discount?: VoucherDiscountInput | null;
+  customRewards?: unknown[];
+  giftBalance?: number | null;
+}): void {
+  if (input.type === "GIFT_CARD" && (input.giftBalance ?? 0) <= 0) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Gift cards require a positive starting balance",
+    });
+  }
+  if (
+    input.type === "DISCOUNT" &&
+    !discountHasValue(input.discount) &&
+    (input.customRewards?.length ?? 0) === 0
+  ) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Discount vouchers require a positive discount or custom reward",
+    });
+  }
 }
 
 const list = os.vouchers.list
@@ -63,18 +127,26 @@ const get = os.vouchers.get
 const create = os.vouchers.create
   .use(requireSession)
   .handler(async ({ input }) => {
+    const campaign = input.campaignId
+      ? await db().query.campaign.findFirst({
+          where: and(eq(schema.campaign.id, input.campaignId), isNull(schema.campaign.deletedAt)),
+        })
+      : undefined;
+    if (input.campaignId && !campaign) {
+      throw new ORPCError("NOT_FOUND", { message: "Campaign not found" });
+    }
+    if (campaign) assertCampaignAllowsVoucher(campaign, input.type);
+    assertVoucherHasValue({
+      type: input.type,
+      discount: input.discount,
+      customRewards: input.customRewards,
+      giftBalance: input.giftBalance,
+    });
+
     let code = input.code;
     if (!code) {
       let codeConfig: Record<string, unknown> = {};
-      if (input.campaignId) {
-        const campaign = await db().query.campaign.findFirst({
-          where: and(
-            eq(schema.campaign.id, input.campaignId),
-            isNull(schema.campaign.deletedAt),
-          ),
-        });
-        if (!campaign)
-          throw new ORPCError("NOT_FOUND", { message: "Campaign not found" });
+      if (campaign) {
         codeConfig = (campaign.codeConfig ?? {}) as Record<string, unknown>;
       }
       code = await generateUnique(codeConfig);
@@ -89,9 +161,9 @@ const create = os.vouchers.create
           code,
           campaignId: input.campaignId ?? null,
           type: input.type,
-          discount: input.discount ?? null,
+          discount: input.type === "DISCOUNT" ? (input.discount ?? null) : null,
           customRewards: input.customRewards ?? [],
-          giftBalance: input.giftBalance ?? null,
+          giftBalance: input.type === "GIFT_CARD" ? (input.giftBalance ?? null) : null,
           redemptionLimit: input.redemptionLimit ?? null,
           priority: input.priority ?? 0,
           exclusive: input.exclusive ?? false,
@@ -142,9 +214,49 @@ const update = os.vouchers.update
 
       const patch: Partial<typeof schema.voucher.$inferInsert> = { updatedAt: new Date() };
       if (inputPatch.campaignId !== undefined) patch.campaignId = inputPatch.campaignId ?? null;
-      if (inputPatch.discount !== undefined) patch.discount = inputPatch.discount ?? null;
+      const nextCampaignId =
+        inputPatch.campaignId !== undefined ? (inputPatch.campaignId ?? null) : existing.campaignId;
+      if (nextCampaignId) {
+        const campaign = await tx.query.campaign.findFirst({
+          where: and(eq(schema.campaign.id, nextCampaignId), isNull(schema.campaign.deletedAt)),
+        });
+        if (!campaign) throw new ORPCError("NOT_FOUND", { message: "Campaign not found" });
+        assertCampaignAllowsVoucher(campaign, existing.type);
+      }
+
+      const nextDiscount =
+        inputPatch.discount !== undefined ? (inputPatch.discount ?? null) : existing.discount;
+      const nextCustomRewards =
+        inputPatch.customRewards !== undefined
+          ? inputPatch.customRewards
+          : existing.customRewards;
+      const nextGiftBalance =
+        inputPatch.giftBalance !== undefined
+          ? (inputPatch.giftBalance ?? null)
+          : existing.giftBalance;
+      const valueChanged =
+        inputPatch.campaignId !== undefined ||
+        (existing.type === "DISCOUNT" &&
+          (inputPatch.discount !== undefined || inputPatch.customRewards !== undefined)) ||
+        (existing.type === "GIFT_CARD" &&
+          inputPatch.giftBalance !== undefined &&
+          inputPatch.giftBalance !== existing.giftBalance);
+      if (valueChanged) {
+        assertVoucherHasValue({
+          type: existing.type,
+          discount: existing.type === "DISCOUNT" ? nextDiscount : null,
+          customRewards: nextCustomRewards,
+          giftBalance: existing.type === "GIFT_CARD" ? nextGiftBalance : null,
+        });
+      }
+
+      if (inputPatch.discount !== undefined && existing.type === "DISCOUNT") {
+        patch.discount = inputPatch.discount ?? null;
+      }
       if (inputPatch.customRewards !== undefined) patch.customRewards = inputPatch.customRewards;
-      if (inputPatch.giftBalance !== undefined) patch.giftBalance = inputPatch.giftBalance ?? null;
+      if (inputPatch.giftBalance !== undefined && existing.type === "GIFT_CARD") {
+        patch.giftBalance = inputPatch.giftBalance ?? null;
+      }
       if (inputPatch.redemptionLimit !== undefined)
         patch.redemptionLimit = inputPatch.redemptionLimit ?? null;
       if (inputPatch.priority !== undefined) patch.priority = inputPatch.priority;
@@ -220,16 +332,20 @@ const bulk = os.vouchers.bulk
     });
     if (!campaign) throw new ORPCError("NOT_FOUND", { message: "Campaign not found" });
 
-    if (campaign.type === "LOYALTY_PROGRAM") {
-      throw new ORPCError("BAD_REQUEST", {
-        message: "Loyalty programs use members + points, not voucher codes",
-      });
-    }
+    assertCampaignAllowsBulk(campaign);
+    const type = voucherTypeForCampaign(campaign);
+    assertVoucherHasValue({
+      type,
+      discount: input.discount,
+      giftBalance: input.giftBalance,
+    });
 
     if (input.count > BULK_INLINE_THRESHOLD) {
       const jobId = await enqueueJob(db(), "bulk_codes.generate", {
         campaignId: campaign.id,
         count: input.count,
+        discount: input.discount,
+        giftBalance: input.giftBalance,
       });
       return { campaignId: campaign.id, generated: 0, jobId };
     }
@@ -240,12 +356,35 @@ const bulk = os.vouchers.bulk
       codeExists,
     );
 
-    const type: "DISCOUNT" | "GIFT_CARD" =
-      campaign.type === "GIFT_VOUCHERS" ? "GIFT_CARD" : "DISCOUNT";
-
     await db()
       .insert(schema.voucher)
-      .values(codes.map((code) => ({ code, campaignId: campaign.id, type })));
+      .values(
+        codes.map((code) => ({
+          code,
+          campaignId: campaign.id,
+          type,
+          discount: type === "DISCOUNT" ? input.discount : null,
+          giftBalance: type === "GIFT_CARD" ? input.giftBalance : null,
+        })),
+      );
+
+    if (type === "GIFT_CARD" && input.giftBalance) {
+      const giftBalance = input.giftBalance;
+      const inserted = await db()
+        .select({ id: schema.voucher.id })
+        .from(schema.voucher)
+        .where(and(eq(schema.voucher.campaignId, campaign.id), inArray(schema.voucher.code, codes)));
+      if (inserted.length > 0) {
+        await db().insert(schema.giftCardTransaction).values(
+          inserted.map((v) => ({
+            voucherId: v.id,
+            delta: giftBalance,
+            balanceAfter: giftBalance,
+            reason: "CREDIT" as const,
+          })),
+        );
+      }
+    }
 
     await db()
       .update(schema.campaign)

@@ -40,6 +40,7 @@ describe.skipIf(!E2E_ENABLED)("vouchers bulk + CRUD + transactions", () => {
     const result = await client.vouchers.bulk({
       campaignId: campaign.id,
       count: 5,
+      discount: { type: "AMOUNT", amount: 500 },
     });
     expect(result.generated).toBe(5);
     expect(result.jobId).toBeUndefined();
@@ -61,10 +62,75 @@ describe.skipIf(!E2E_ENABLED)("vouchers bulk + CRUD + transactions", () => {
     const result = await client.vouchers.bulk({
       campaignId: campaign.id,
       count: 10_001,
+      discount: { type: "AMOUNT", amount: 500 },
     });
     expect(result.generated).toBe(0);
     expect(result.jobId).toMatch(/^[0-9a-f-]{36}$/);
   });
+
+  it("rejects discount bulk mint without a positive discount", async () => {
+    if (!token) throw new Error("setup failed");
+    const client = makeClient(token);
+
+    const campaign = await client.campaigns.create({
+      name: randomId("camp-bulk-empty"),
+      type: "DISCOUNT",
+      currency: "USD",
+    });
+
+    await expect(
+      client.vouchers.bulk({
+        campaignId: campaign.id,
+        count: 5,
+      }),
+    ).rejects.toThrow(/positive discount/i);
+  }, 30_000);
+
+  it("rejects gift cards without a positive starting balance", async () => {
+    if (!token) throw new Error("setup failed");
+    const client = makeClient(token);
+
+    const campaign = await client.campaigns.create({
+      name: randomId("camp-gc-empty"),
+      type: "GIFT_VOUCHERS",
+      currency: "USD",
+    });
+
+    await expect(
+      client.vouchers.create({
+        code: randomId("GC-EMPTY").toUpperCase(),
+        campaignId: campaign.id,
+        type: "GIFT_CARD",
+        giftBalance: 0,
+      }),
+    ).rejects.toThrow(/positive starting balance/i);
+    await expect(
+      client.vouchers.bulk({
+        campaignId: campaign.id,
+        count: 5,
+      }),
+    ).rejects.toThrow(/positive starting balance/i);
+  }, 30_000);
+
+  it("rejects discount vouchers in gift-voucher campaigns", async () => {
+    if (!token) throw new Error("setup failed");
+    const client = makeClient(token);
+
+    const campaign = await client.campaigns.create({
+      name: randomId("camp-gc-type"),
+      type: "GIFT_VOUCHERS",
+      currency: "USD",
+    });
+
+    await expect(
+      client.vouchers.create({
+        code: randomId("GC-WRONG").toUpperCase(),
+        campaignId: campaign.id,
+        type: "DISCOUNT",
+        discount: { type: "AMOUNT", amount: 500 },
+      }),
+    ).rejects.toThrow(/gift voucher campaigns can only issue gift cards/i);
+  }, 30_000);
 
   it("per-voucher CRUD: get → update active=false → soft-delete", async () => {
     if (!token) throw new Error("setup failed");
