@@ -1,8 +1,8 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { loadConfig, saveConfig } from "./index";
+import { callBySdkPath, loadConfig, parseJsonInput, saveConfig } from "./index";
 
 let home: string;
 
@@ -43,5 +43,40 @@ describe("CLI config", () => {
       baseUrl: "https://env.example.com",
       apiKey: "offerkit_env_secret",
     });
+  });
+});
+
+describe("generic api command helpers", () => {
+  it("parses inline JSON input", async () => {
+    await expect(parseJsonInput('{"params":{"code":"WAPP25"}}')).resolves.toEqual({
+      params: { code: "WAPP25" },
+    });
+  });
+
+  it("parses JSON input from @file", async () => {
+    const file = join(home, "input.json");
+    await writeFile(file, '{"name":"WAPP25"}', "utf8");
+
+    await expect(parseJsonInput(`@${file}`)).resolves.toEqual({ name: "WAPP25" });
+  });
+
+  it("calls nested SDK procedures by dotted path", async () => {
+    const create = vi.fn(async (input: unknown) => ({ ok: true, input }));
+    const client = {
+      vouchers: {
+        create,
+      },
+    };
+
+    await expect(
+      callBySdkPath(client as never, "vouchers.create", { code: "WAPP25" }),
+    ).resolves.toEqual({ ok: true, input: { code: "WAPP25" } });
+    expect(create).toHaveBeenCalledWith({ code: "WAPP25" });
+  });
+
+  it("fails when the dotted path is not callable", async () => {
+    await expect(callBySdkPath({ vouchers: {} } as never, "vouchers.create", {})).rejects.toThrow(
+      /did not resolve to a callable/,
+    );
   });
 });
