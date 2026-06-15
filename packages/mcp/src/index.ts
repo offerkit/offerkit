@@ -5,6 +5,7 @@ import { isContractProcedure, type AnyContractRouter } from "@orpc/contract";
 import { z, type ZodRawShape } from "zod";
 import { contract, type McpExposure, type ProcedureMeta } from "@offerkit/contract";
 import { createClient, type Client } from "@offerkit/sdk";
+import { callBySdkPath } from "./sdk-path.ts";
 
 const baseUrl = process.env["OFFERKIT_API_URL"] ?? "http://localhost:3000";
 const apiKey = process.env["OFFERKIT_API_KEY"];
@@ -75,26 +76,6 @@ function extractShape(input: unknown): ZodRawShape | undefined {
   return undefined;
 }
 
-/**
- * Reach into the typed SDK client by procedure path and invoke it. The
- * `unknown`-everywhere shape is unavoidable for dynamic indexing — the
- * type safety is provided by the contract's zod input schema, validated
- * by oRPC at call time.
- */
-async function callBySdkPath(path: readonly string[], args: unknown): Promise<unknown> {
-  let node: unknown = offerkit;
-  for (const seg of path) {
-    if (!node || typeof node !== "object") {
-      throw new Error(`MCP tool path ${path.join(".")} not reachable on SDK client`);
-    }
-    node = (node as Record<string, unknown>)[seg];
-  }
-  if (typeof node !== "function") {
-    throw new Error(`MCP tool path ${path.join(".")} did not resolve to a callable`);
-  }
-  return (node as (input: unknown) => Promise<unknown>)(args);
-}
-
 const RISK_HINT: Record<McpExposure["riskLevel"], string> = {
   safe: "Read-only.",
   mutating: "Mutating — confirm with the user before calling. Use idempotencyKey to safely retry.",
@@ -117,7 +98,7 @@ for (const proc of discover(contract)) {
       description: description(proc),
       ...(proc.inputShape ? { inputSchema: proc.inputShape } : {}),
     },
-    async (args: unknown) => jsonContent(await callBySdkPath(proc.path, args ?? {})),
+    async (args: unknown) => jsonContent(await callBySdkPath(offerkit, proc.path, args ?? {})),
   );
 }
 
