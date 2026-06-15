@@ -1,5 +1,11 @@
 # @offerkit/sdk
 
+## 0.2.5
+
+### Patch Changes
+
+- 4e29487: Publish a CommonJS-compatible SDK entrypoint for Node require resolution.
+
 ## 0.2.4
 
 ### Patch Changes
