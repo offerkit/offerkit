@@ -51,7 +51,6 @@ export const referralProgram = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     campaignId: uuid("campaign_id")
       .notNull()
-      .unique()
       .references(() => campaign.id, { onDelete: "cascade" }),
     referrerReward: jsonb("referrer_reward").$type<ReferralReward>().notNull(),
     refereeReward: jsonb("referee_reward").$type<ReferralReward>().notNull(),
@@ -62,7 +61,12 @@ export const referralProgram = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("referral_program_deleted_at_idx").on(t.deletedAt)],
+  (t) => [
+    index("referral_program_deleted_at_idx").on(t.deletedAt),
+    uniqueIndex("referral_program_active_campaign_id_unique")
+      .on(t.campaignId)
+      .where(sql`${t.deletedAt} IS NULL`),
+  ],
 );
 
 // A stable per-customer referral code. Idempotent: one row per

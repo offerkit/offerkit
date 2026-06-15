@@ -1,0 +1,2 @@
+ALTER TABLE "referral_program" DROP CONSTRAINT "referral_program_campaign_id_unique";--> statement-breakpoint
+CREATE UNIQUE INDEX "referral_program_active_campaign_id_unique" ON "referral_program" USING btree ("campaign_id") WHERE "referral_program"."deleted_at" IS NULL;

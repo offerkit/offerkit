@@ -8,6 +8,7 @@ import {
   makeClient,
   mintTestKey,
   randomId,
+  rawRequest,
 } from "./_helpers";
 
 let db: Db | undefined;
@@ -27,6 +28,84 @@ afterAll(async () => {
 });
 
 describe.skipIf(!E2E_ENABLED)("referrals: program → issue → convert → both rewards", () => {
+  it("returns a conflict when creating a second active program for a campaign", async () => {
+    if (!token) throw new Error("setup failed");
+    const client = makeClient(token);
+
+    const campaign = await client.campaigns.create({
+      name: randomId("camp-ref-dupe"),
+      type: "REFERRAL_PROGRAM",
+      currency: "USD",
+    });
+    const referrerReward = {
+      kind: "discount" as const,
+      discount: { type: "AMOUNT" as const, amount: 1_000 },
+    };
+    const refereeReward = {
+      kind: "discount" as const,
+      discount: { type: "AMOUNT" as const, amount: 500 },
+    };
+
+    await client.referrals.programs.create({
+      campaignId: campaign.id,
+      referrerReward,
+      refereeReward,
+    });
+
+    const response = await rawRequest(
+      new Request("http://test.local/api/v1/referral-programs", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          campaignId: campaign.id,
+          referrerReward,
+          refereeReward,
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(409);
+    await expect(response.text()).resolves.toMatch(/active referral program/i);
+  });
+
+  it("allows creating a new program for a campaign after soft delete", async () => {
+    if (!token) throw new Error("setup failed");
+    const client = makeClient(token);
+
+    const campaign = await client.campaigns.create({
+      name: randomId("camp-ref-recreate"),
+      type: "REFERRAL_PROGRAM",
+      currency: "USD",
+    });
+    const referrerReward = {
+      kind: "discount" as const,
+      discount: { type: "AMOUNT" as const, amount: 1_000 },
+    };
+    const refereeReward = {
+      kind: "discount" as const,
+      discount: { type: "AMOUNT" as const, amount: 500 },
+    };
+
+    const deleted = await client.referrals.programs.create({
+      campaignId: campaign.id,
+      referrerReward,
+      refereeReward,
+    });
+    await client.referrals.programs.delete({ params: { id: deleted.id } });
+
+    const recreated = await client.referrals.programs.create({
+      campaignId: campaign.id,
+      referrerReward,
+      refereeReward,
+    });
+
+    expect(recreated.id).not.toBe(deleted.id);
+    expect(recreated.campaignId).toBe(campaign.id);
+  });
+
   it("issues a stable code and supports many conversions per code", async () => {
     if (!token) throw new Error("setup failed");
     const client = makeClient(token);
