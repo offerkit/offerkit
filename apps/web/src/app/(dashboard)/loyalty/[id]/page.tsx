@@ -352,7 +352,15 @@ function EarningRulesTab({ programId }: { programId: string }) {
             <Label>
               <T>Kind</T>
             </Label>
-            <Select value={kind} onValueChange={(v) => setKind(v as typeof kind)}>
+            <Select
+              items={[
+                { label: gt("Fixed"), value: "fixed" },
+                { label: gt("Per cents"), value: "per_cents" },
+                { label: gt("Custom"), value: "custom" },
+              ]}
+              value={kind}
+              onValueChange={(v) => setKind(v as typeof kind)}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -515,7 +523,15 @@ function RewardsTab({ programId }: { programId: string }) {
             <Label>
               <T>Kind</T>
             </Label>
-            <Select value={kind} onValueChange={(v) => setKind(v as typeof kind)}>
+            <Select
+              items={[
+                { label: gt("Discount"), value: "discount" },
+                { label: gt("Gift card"), value: "gift_card" },
+                { label: gt("Custom"), value: "custom" },
+              ]}
+              value={kind}
+              onValueChange={(v) => setKind(v as typeof kind)}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>

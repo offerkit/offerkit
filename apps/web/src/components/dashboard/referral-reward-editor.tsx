@@ -62,6 +62,12 @@ export function ReferralRewardEditor({
             <T>Kind</T>
           </Label>
           <Select
+            items={[
+              { label: gt("Discount voucher"), value: "discount" },
+              { label: gt("Gift card"), value: "gift_card" },
+              { label: gt("Loyalty points"), value: "loyalty_points" },
+              { label: gt("Custom (emit only)"), value: "custom" },
+            ]}
             value={state.kind}
             onValueChange={(v) => set("kind", (v ?? "discount") as ReferralRewardKind)}
           >
@@ -84,6 +90,10 @@ export function ReferralRewardEditor({
                 <T>Discount type</T>
               </Label>
               <Select
+                items={[
+                  { label: gt("Amount (cents)"), value: "AMOUNT" },
+                  { label: gt("Percentage (basis points)"), value: "PERCENTAGE" },
+                ]}
                 value={state.discountKind}
                 onValueChange={(v) =>
                   set("discountKind", (v ?? "AMOUNT") as "AMOUNT" | "PERCENTAGE")

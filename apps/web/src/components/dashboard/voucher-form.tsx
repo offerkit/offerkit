@@ -222,6 +222,10 @@ export function VoucherForm({
                   <T>Kind</T>
                 </Label>
                 <Select
+                  items={[
+                    { label: gt("Amount (cents)"), value: "AMOUNT" },
+                    { label: gt("Percentage (basis points)"), value: "PERCENTAGE" },
+                  ]}
                   value={field.state.value}
                   onValueChange={(v) => field.handleChange(v as DiscountKind)}
                 >

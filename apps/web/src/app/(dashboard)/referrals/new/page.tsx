@@ -75,7 +75,11 @@ export default function NewReferralProgramPage() {
             <Label>
               <T>Campaign</T>
             </Label>
-            <Select value={campaignId} onValueChange={(v) => setCampaignId(v ?? "")}>
+            <Select
+              items={eligible.map((c) => ({ label: c.name, value: c.id }))}
+              value={campaignId}
+              onValueChange={(v) => setCampaignId(v ?? "")}
+            >
               <SelectTrigger>
                 <SelectValue
                   placeholder={

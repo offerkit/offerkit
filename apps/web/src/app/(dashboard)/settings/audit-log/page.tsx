@@ -61,6 +61,12 @@ export default function AuditLogPage() {
 
       <div className="flex items-center gap-2">
         <Select
+          items={[
+            { label: gt("All actors"), value: "" },
+            { label: gt("Users"), value: "user" },
+            { label: gt("API keys"), value: "api_key" },
+            { label: gt("System"), value: "system" },
+          ]}
           value={actor}
           onValueChange={(v) => {
             setActor(v as Actor);

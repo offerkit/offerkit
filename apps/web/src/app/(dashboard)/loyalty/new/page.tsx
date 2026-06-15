@@ -85,6 +85,7 @@ export default function NewLoyaltyProgramPage() {
                     <T>Campaign</T>
                   </Label>
                   <Select
+                    items={eligible.map((c) => ({ label: c.name, value: c.id }))}
                     value={field.state.value}
                     onValueChange={(v) => field.handleChange(v ?? "")}
                   >

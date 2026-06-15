@@ -248,6 +248,10 @@ export function RuleEditor({ value, onChange }: RuleEditorProps) {
             {conditions.map((condition) => (
               <div key={condition.id} className="grid gap-2 rounded-md border p-3 md:grid-cols-[220px_1fr_1fr_auto]">
                 <Select
+                  items={(Object.keys(CONDITION_LABELS) as ConditionType[]).map((type) => ({
+                    label: CONDITION_LABELS[type],
+                    value: type,
+                  }))}
                   value={condition.type}
                   onValueChange={(v) => updateCondition(condition.id, { type: v as ConditionType })}
                 >

@@ -33,6 +33,10 @@ type Role = "admin" | "member";
 export default function UsersPage() {
   const queryClient = useQueryClient();
   const gt = useGT();
+  const roleItems = [
+    { label: gt("Member"), value: "member" },
+    { label: gt("Admin"), value: "admin" },
+  ];
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState<Role>("member");
@@ -127,7 +131,7 @@ export default function UsersPage() {
             <Label htmlFor="user-role">
               <T>Role</T>
             </Label>
-            <Select value={role} onValueChange={(v) => setRole(v as Role)}>
+            <Select items={roleItems} value={role} onValueChange={(v) => setRole(v as Role)}>
               <SelectTrigger id="user-role">
                 <SelectValue />
               </SelectTrigger>
@@ -227,6 +231,7 @@ export default function UsersPage() {
                     <TableCell>{u.name ?? "—"}</TableCell>
                     <TableCell>
                       <Select
+                        items={roleItems}
                         value={u.role}
                         onValueChange={(v) =>
                           setRoleMut.mutate({ id: u.id, role: v as Role })

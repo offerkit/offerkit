@@ -84,6 +84,13 @@ export default function OrdersPage() {
           />
         </div>
         <Select
+          items={[
+            { label: gt("All statuses"), value: "" },
+            { label: gt("Created"), value: "CREATED" },
+            { label: gt("Paid"), value: "PAID" },
+            { label: gt("Fulfilled"), value: "FULFILLED" },
+            { label: gt("Canceled"), value: "CANCELED" },
+          ]}
           value={status}
           onValueChange={(v) => {
             setStatus(v as Status);

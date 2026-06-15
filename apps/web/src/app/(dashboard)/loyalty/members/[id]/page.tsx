@@ -209,7 +209,14 @@ export default function LoyaltyMemberPage({ params }: PageProps) {
               <Label>
                 <T>Reward</T>
               </Label>
-              <Select value={rewardId} onValueChange={(v) => setRewardId(v ?? "")}>
+              <Select
+                items={(rewards?.data ?? []).map((r) => ({
+                  label: `${r.name} (${r.cost} pts)`,
+                  value: r.id,
+                }))}
+                value={rewardId}
+                onValueChange={(v) => setRewardId(v ?? "")}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder={gt("Pick a reward")} />
                 </SelectTrigger>
