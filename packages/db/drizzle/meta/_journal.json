@@ -127,6 +127,13 @@
       "when": 1779393320864,
       "tag": "0017_superb_thunderbird",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1781483337218,
+      "tag": "0018_absurd_stingray",
+      "breakpoints": true
     }
   ]
 }

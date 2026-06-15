@@ -71,6 +71,10 @@ function toReferralProgramConversion(row: ReferralProgramConversionRow) {
   };
 }
 
+function isUniqueViolation(err: unknown): boolean {
+  return typeof err === "object" && err !== null && "code" in err && err.code === "23505";
+}
+
 const programsList = os.referrals.programs.list
   .use(requireSession)
   .handler(({ input }) =>
@@ -110,16 +114,39 @@ const programCreate = os.referrals.programs.create
         message: "Campaign type must be REFERRAL_PROGRAM",
       });
     }
-    const [row] = await db()
-      .insert(schema.referralProgram)
-      .values({
-        campaignId: input.campaignId,
-        referrerReward: input.referrerReward,
-        refereeReward: input.refereeReward,
-        codeLength: input.codeLength ?? 8,
-        metadata: input.metadata ?? {},
-      })
-      .returning();
+
+    const existing = await db().query.referralProgram.findFirst({
+      where: and(
+        eq(schema.referralProgram.campaignId, input.campaignId),
+        isNull(schema.referralProgram.deletedAt),
+      ),
+    });
+    if (existing) {
+      throw new ORPCError("CONFLICT", {
+        message: "Campaign already has an active referral program",
+      });
+    }
+
+    let row: ProgramRow | undefined;
+    try {
+      [row] = await db()
+        .insert(schema.referralProgram)
+        .values({
+          campaignId: input.campaignId,
+          referrerReward: input.referrerReward,
+          refereeReward: input.refereeReward,
+          codeLength: input.codeLength ?? 8,
+          metadata: input.metadata ?? {},
+        })
+        .returning();
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        throw new ORPCError("CONFLICT", {
+          message: "Campaign already has an active referral program",
+        });
+      }
+      throw err;
+    }
     if (!row) throw new ORPCError("INTERNAL_SERVER_ERROR", { message: "Insert failed" });
     return toProgram(row);
   });
