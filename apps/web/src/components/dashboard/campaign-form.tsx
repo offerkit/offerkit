@@ -15,6 +15,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import {
+  CURRENCY_OPTIONS,
+  TIMEZONE_OPTIONS,
+  optionsWithCurrent,
+} from "@/lib/locale-options";
 
 export type CampaignType =
   | "DISCOUNT"
@@ -171,15 +176,24 @@ export function CampaignForm({
                 <Label htmlFor={field.name}>
                   <T>Currency</T>
                 </Label>
-                <Input
-                  id={field.name}
+                <Select
                   value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value.toUpperCase())}
                   required
-                  maxLength={3}
-                  minLength={3}
-                  placeholder="USD"
-                />
+                  onValueChange={(value) => {
+                    if (value) field.handleChange(value);
+                  }}
+                >
+                  <SelectTrigger id={field.name} className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {optionsWithCurrent(CURRENCY_OPTIONS, field.state.value).map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
           </form.Field>
@@ -189,12 +203,23 @@ export function CampaignForm({
                 <Label htmlFor={field.name}>
                   <T>Timezone</T>
                 </Label>
-                <Input
-                  id={field.name}
+                <Select
                   value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  placeholder="UTC"
-                />
+                  onValueChange={(value) => {
+                    if (value) field.handleChange(value);
+                  }}
+                >
+                  <SelectTrigger id={field.name} className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {optionsWithCurrent(TIMEZONE_OPTIONS, field.state.value).map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
           </form.Field>
