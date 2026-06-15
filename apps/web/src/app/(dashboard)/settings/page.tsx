@@ -11,6 +11,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  CURRENCY_OPTIONS,
+  TIMEZONE_OPTIONS,
+  optionsWithCurrent,
+} from "@/lib/locale-options";
 import { ovx } from "@/lib/sdk";
 
 interface WorkspaceData {
@@ -97,25 +109,46 @@ function WorkspaceForm({ initial }: { initial: WorkspaceData }) {
               <Label htmlFor="ws-currency">
                 <T>Default currency (ISO 4217)</T>
               </Label>
-              <Input
-                id="ws-currency"
+              <Select
                 value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                maxLength={3}
-                className="uppercase"
-              />
+                onValueChange={(value) => {
+                  if (value) setCurrency(value);
+                }}
+              >
+                <SelectTrigger id="ws-currency" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {optionsWithCurrent(CURRENCY_OPTIONS, currency).map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="ws-tz">
               <T>Default timezone (IANA)</T>
             </Label>
-            <Input
-              id="ws-tz"
+            <Select
               value={timezone}
-              onChange={(e) => setTimezone(e.target.value)}
-              placeholder={gt("e.g. UTC, Europe/Berlin, America/Los_Angeles")}
-            />
+              onValueChange={(value) => {
+                if (value) setTimezone(value);
+              }}
+            >
+              <SelectTrigger id="ws-tz" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {optionsWithCurrent(TIMEZONE_OPTIONS, timezone).map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex justify-end">
             <Button onClick={() => save.mutate()} disabled={save.isPending}>
