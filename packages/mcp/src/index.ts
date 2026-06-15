@@ -41,16 +41,33 @@ interface DiscoveredProc {
   summary: string | undefined;
 }
 
-/** Walk the contract tree and yield every procedure tagged with `meta.mcp.expose`. */
+function exposureFor(def: {
+  meta?: ProcedureMeta;
+  route?: { method?: string; summary?: string };
+}): McpExposure {
+  const explicit = def.meta?.mcp;
+  if (explicit?.expose) return explicit;
+
+  const method = def.route?.method?.toUpperCase();
+  if (method === "GET") return { expose: true, riskLevel: "safe" };
+  if (method === "DELETE") return { expose: true, riskLevel: "destructive" };
+  return { expose: true, riskLevel: "mutating" };
+}
+
+/** Walk the contract tree and yield every API procedure. */
 function* discover(node: AnyContractRouter, path: string[] = []): Generator<DiscoveredProc> {
   if (isContractProcedure(node)) {
-    const def = (node as { "~orpc": { meta?: ProcedureMeta; inputSchema?: unknown; route?: { summary?: string } } })["~orpc"];
-    const exposure = def.meta?.mcp;
-    if (!exposure?.expose) return;
+    const def = (node as {
+      "~orpc": {
+        meta?: ProcedureMeta;
+        inputSchema?: unknown;
+        route?: { method?: string; summary?: string };
+      };
+    })["~orpc"];
     yield {
       path,
       inputShape: extractShape(def.inputSchema),
-      exposure,
+      exposure: exposureFor(def),
       summary: def.route?.summary,
     };
     return;
