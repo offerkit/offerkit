@@ -1,5 +1,11 @@
 # @offerkit/cli
 
+## 0.2.0
+
+### Minor Changes
+
+- 2785e8c: Expose the full OfferKit API surface through MCP and add a generic CLI `api` command that can invoke any SDK procedure by dotted path with JSON input.
+
 ## 0.1.6
 
 ### Patch Changes
