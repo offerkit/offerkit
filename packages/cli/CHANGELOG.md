@@ -1,5 +1,11 @@
 # @offerkit/cli
 
+## 0.1.6
+
+### Patch Changes
+
+- 2bf459f: Fix CLI login config loading so saved deployment URLs are used unless explicit environment variables override them.
+
 ## 0.1.5
 
 ### Patch Changes
