@@ -2,6 +2,7 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { readFile, writeFile, chmod, mkdir } from "node:fs/promises";
+import { pathToFileURL } from "node:url";
 import { Command } from "commander";
 import { createClient, type Client } from "@offerkit/sdk";
 
@@ -10,26 +11,28 @@ interface Config {
   apiKey?: string;
 }
 
-const RC_PATH = join(homedir(), ".offerkitrc");
-
-async function loadConfig(): Promise<Config> {
-  const fromEnv: Config = {
-    baseUrl: process.env["OFFERKIT_API_URL"] ?? "http://localhost:3000",
-    ...(process.env["OFFERKIT_API_KEY"] ? { apiKey: process.env["OFFERKIT_API_KEY"] } : {}),
-  };
-  try {
-    const raw = await readFile(RC_PATH, "utf8");
-    const fromFile = JSON.parse(raw) as Config;
-    return { ...fromFile, ...fromEnv };
-  } catch {
-    return fromEnv;
-  }
+function rcPath(): string {
+  return join(homedir(), ".offerkitrc");
 }
 
-async function saveConfig(cfg: Config): Promise<void> {
+export async function loadConfig(): Promise<Config> {
+  let cfg: Config = { baseUrl: "http://localhost:3000" };
+  try {
+    const raw = await readFile(rcPath(), "utf8");
+    const fromFile = JSON.parse(raw) as Config;
+    cfg = { ...cfg, ...fromFile };
+  } catch {
+    // Missing or unreadable config files fall back to explicit env or localhost.
+  }
+  if (process.env["OFFERKIT_API_URL"]) cfg.baseUrl = process.env["OFFERKIT_API_URL"];
+  if (process.env["OFFERKIT_API_KEY"]) cfg.apiKey = process.env["OFFERKIT_API_KEY"];
+  return cfg;
+}
+
+export async function saveConfig(cfg: Config): Promise<void> {
   await mkdir(homedir(), { recursive: true });
-  await writeFile(RC_PATH, JSON.stringify(cfg, null, 2), "utf8");
-  await chmod(RC_PATH, 0o600);
+  await writeFile(rcPath(), JSON.stringify(cfg, null, 2), "utf8");
+  await chmod(rcPath(), 0o600);
 }
 
 async function client(): Promise<Client> {
@@ -62,7 +65,7 @@ program
   .requiredOption("--api-key <key>", "API key (offerkit_<prefix>_<secret>)")
   .action(async (opts: { url: string; apiKey: string }) => {
     await saveConfig({ baseUrl: opts.url, apiKey: opts.apiKey });
-    process.stdout.write(`Saved to ${RC_PATH}\n`);
+    process.stdout.write(`Saved to ${rcPath()}\n`);
   });
 
 const vouchers = program.command("vouchers").description("Manage vouchers");
@@ -191,4 +194,10 @@ customers.command("get <id>").action(async (id: string) => {
   printJSON(await c.customers.get({ params: { id } }).catch(fail));
 });
 
-program.parseAsync(process.argv).catch(fail);
+export async function main(argv = process.argv): Promise<void> {
+  await program.parseAsync(argv);
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch(fail);
+}
