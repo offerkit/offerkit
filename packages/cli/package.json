@@ -19,6 +19,7 @@
   "scripts": {
     "build": "tsdown",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
     "prepublishOnly": "tsdown"
   },
   "publishConfig": {
@@ -44,6 +45,7 @@
     "@offerkit/config": "workspace:*",
     "@types/node": "^25.6.2",
     "tsdown": "^0.22.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
   }
 }
