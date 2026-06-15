@@ -6,6 +6,7 @@ export type RedemptionFailureCode =
   | "voucher_disabled"
   | "voucher_expired"
   | "redemption_limit_reached"
+  | "validation_failed"
   | "currency_mismatch"
   | "gift_balance_zero"
   | "no_discount_effect"
@@ -153,5 +154,23 @@ export interface RedemptionCampaignRow {
   currency: string;
   startDate: Date | null;
   endDate: Date | null;
+  validationRuleId: string | null;
+  deletedAt: Date | null;
+}
+
+export interface RedemptionCustomerRow {
+  id: string;
+  email: string | null;
+  name: string | null;
+  phone: string | null;
+  address: Record<string, unknown> | null | undefined;
+  metadata: Record<string, unknown>;
+  summary: { totalSpent?: number; redemptionCount?: number; lastRedeemedAt?: string };
+}
+
+export interface RedemptionValidationRuleRow {
+  id: string;
+  rule: Record<string, unknown>;
+  appliesTo: string;
   deletedAt: Date | null;
 }

@@ -5,9 +5,16 @@ import { calculateDiscount, type DiscountResult } from "../discount/index.ts";
 import { emitEvent } from "../events/index.ts";
 import { failureExplanation, stackBreakdownExplanations } from "./explanations.ts";
 import { logger, withSpan } from "../observability/index.ts";
-import { checkActivation, checkCampaignActivation, messageFor } from "./shared.ts";
+import {
+  checkActivation,
+  checkCampaignActivation,
+  checkCampaignValidationRule,
+  messageFor,
+} from "./shared.ts";
 import type {
+  RedemptionCustomerRow,
   RedemptionCampaignRow,
+  RedemptionValidationRuleRow,
   StackEntry,
   StackRedeemInput,
   StackRedeemResult,
@@ -90,6 +97,11 @@ async function stackRedeemImpl(
     }
 
     const now = new Date();
+    const customer = input.customerId
+      ? ((await tx.query.customer.findFirst({
+          where: and(eq(schema.customer.id, input.customerId), isNull(schema.customer.deletedAt)),
+        })) as RedemptionCustomerRow | undefined)
+      : undefined;
     for (const v of lockedRows) {
       const failure = checkActivation(v, now);
       if (failure) {
@@ -112,6 +124,27 @@ async function stackRedeemImpl(
           code: campaignFailure,
           message: messageFor(campaignFailure),
           explanations: [failureExplanation(campaignFailure, v)],
+        };
+      }
+      const validationRule = campaign?.validationRuleId
+        ? ((await tx.query.validationRule.findFirst({
+            where: eq(schema.validationRule.id, campaign.validationRuleId),
+          })) as RedemptionValidationRuleRow | undefined)
+        : undefined;
+      const ruleFailure = checkCampaignValidationRule(
+        v,
+        campaign,
+        validationRule,
+        customer,
+        input.order,
+        now,
+      );
+      if (ruleFailure) {
+        return {
+          ok: false,
+          code: ruleFailure.code ?? "validation_failed",
+          message: ruleFailure.message ?? messageFor("validation_failed"),
+          explanations: ruleFailure.explanations,
         };
       }
       // Stackable redemptions don't support gift cards yet — they need
