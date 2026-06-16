@@ -8,6 +8,8 @@ import {
   checkActivation,
   checkCampaignActivation,
   checkCampaignValidationRule,
+  checkCustomerBinding,
+  checkPerUserRedemptionLimit,
   messageFor,
   previewDiscount,
   previewGiftCard,
@@ -78,7 +80,6 @@ function redeemImpl(db: Db, input: RedeemInput): Promise<RedeemResult> {
         explanations: [failureExplanation(failure, voucher)],
       };
     }
-
     const campaign = voucher.campaignId
       ? ((await tx.query.campaign.findFirst({
           where: and(eq(schema.campaign.id, voucher.campaignId), isNull(schema.campaign.deletedAt)),
@@ -100,6 +101,49 @@ function redeemImpl(db: Db, input: RedeemInput): Promise<RedeemResult> {
         code: campaignFailure,
         message: messageFor(campaignFailure),
         explanations: [failureExplanation(campaignFailure, voucher)],
+      };
+    }
+    const customerFailure = checkCustomerBinding(voucher, campaign, input.customerId);
+    if (customerFailure) {
+      await tx.insert(schema.redemption).values({
+        voucherId: voucher.id,
+        customerId: input.customerId ?? null,
+        orderId: input.orderId ?? null,
+        externalOrderId: input.externalOrderId ?? null,
+        result: "FAILURE",
+        failureReason: customerFailure,
+        idempotencyKey: input.idempotencyKey ?? null,
+      });
+      return {
+        ok: false,
+        code: customerFailure,
+        message: messageFor(customerFailure),
+        explanations: [failureExplanation(customerFailure, voucher)],
+      };
+    }
+    const customerLimitFailure = await checkPerUserRedemptionLimit(
+      tx,
+      voucher,
+      campaign,
+      input.customerId,
+    );
+    if (customerLimitFailure) {
+      await tx.insert(schema.redemption).values({
+        voucherId: voucher.id,
+        customerId: input.customerId ?? null,
+        orderId: input.orderId ?? null,
+        externalOrderId: input.externalOrderId ?? null,
+        result: "FAILURE",
+        failureReason: customerLimitFailure.code,
+        idempotencyKey: input.idempotencyKey ?? null,
+      });
+      return {
+        ok: false,
+        code: customerLimitFailure.code,
+        message: messageFor(customerLimitFailure.code),
+        explanations: [
+          failureExplanation(customerLimitFailure.code, voucher, customerLimitFailure.details),
+        ],
       };
     }
 

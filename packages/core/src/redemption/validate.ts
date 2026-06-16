@@ -45,5 +45,10 @@ async function validateImpl(db: Db, input: ValidateInput): Promise<ValidateResul
         where: and(eq(schema.customer.id, customerId), isNull(schema.customer.deletedAt)),
       })) as RedemptionCustomerRow | undefined)
     : undefined;
-  return validateVoucher(voucher, input.order, campaign, { validationRule, customer });
+  return validateVoucher(voucher, input.order, campaign, {
+    db,
+    validationRule,
+    customer,
+    customerId: input.customerId,
+  });
 }

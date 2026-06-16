@@ -59,9 +59,11 @@ async function qualifyImpl(db: Db, input: QualifyInput): Promise<VoucherQualific
           where: eq(schema.validationRule.id, campaign.validationRuleId),
         })) as RedemptionValidationRuleRow | undefined)
       : undefined;
-    const result = validateVoucher(voucher, input.order, campaign, {
+    const result = await validateVoucher(voucher, input.order, campaign, {
+      db,
       validationRule,
       customer,
+      customerId: input.customerId,
     });
     if (result.valid) {
       eligible.push({

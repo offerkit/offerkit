@@ -29,6 +29,7 @@ export const campaignOutput = z.object({
   endDate: z.string().datetime().nullable(),
   codeConfig,
   validationRuleId: z.string().uuid().nullable(),
+  perUserRedemptionLimit: z.number().int().nullable(),
   autoApply: z.boolean(),
   voucherCount: z.number().int(),
   metadata: z.record(z.string(), z.unknown()),
@@ -46,6 +47,7 @@ export const campaignCreateInput = z.object({
   endDate: z.string().datetime().optional(),
   codeConfig: codeConfig.optional(),
   validationRuleId: z.string().uuid().nullable().optional(),
+  perUserRedemptionLimit: z.number().int().min(1).optional(),
   autoApply: z.boolean().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });

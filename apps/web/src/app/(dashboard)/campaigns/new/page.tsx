@@ -28,6 +28,8 @@ export default function NewCampaignPage() {
         timezone: state.timezone || undefined,
         startDate: toIsoOrUndefined(state.startDate),
         endDate: toIsoOrUndefined(state.endDate),
+        perUserRedemptionLimit:
+          state.perUserRedemptionLimit === "" ? undefined : state.perUserRedemptionLimit,
         autoApply: state.autoApply,
         codeConfig: {
           length: state.codeLength,
@@ -65,6 +67,7 @@ export default function NewCampaignPage() {
           timezone: "UTC",
           startDate: "",
           endDate: "",
+          perUserRedemptionLimit: "",
           autoApply: false,
           codeLength: 8,
           codePrefix: "",

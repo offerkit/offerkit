@@ -71,6 +71,11 @@ export default function VoucherDetailPage({ params }: PageProps) {
                   exclusive: state.exclusive,
                 }),
             redemptionLimit: state.redemptionLimit === "" ? undefined : state.redemptionLimit,
+            perUserRedemptionLimit:
+              state.perUserRedemptionLimit === ""
+                ? undefined
+                : state.perUserRedemptionLimit,
+            customerId: state.customerId || undefined,
             active: state.active,
             startDate: toIsoOrUndefined(state.startDate),
             endDate: toIsoOrUndefined(state.endDate),
@@ -148,6 +153,8 @@ export default function VoucherDetailPage({ params }: PageProps) {
     maxDiscountAmount: discount?.maxDiscountAmount ?? "",
     giftBalance: data.giftBalance ?? "",
     redemptionLimit: data.redemptionLimit ?? "",
+    perUserRedemptionLimit: data.perUserRedemptionLimit ?? "",
+    customerId: data.customerId ?? "",
     priority: data.priority,
     exclusive: data.exclusive,
     active: data.active,

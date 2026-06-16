@@ -39,6 +39,7 @@ export interface CampaignFormState {
   timezone: string;
   startDate: string;
   endDate: string;
+  perUserRedemptionLimit: number | "";
   autoApply: boolean;
   codeLength: number;
   codePrefix: string;
@@ -264,6 +265,25 @@ export function CampaignForm({
                 <Label htmlFor={field.name} className="cursor-pointer">
                   <T>Auto-apply at checkout</T>
                 </Label>
+              </div>
+            )}
+          </form.Field>
+          <form.Field name="perUserRedemptionLimit">
+            {(field) => (
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor={field.name}>
+                  <T>Per-user redemption limit</T>
+                </Label>
+                <Input
+                  id={field.name}
+                  type="number"
+                  min={1}
+                  value={field.state.value}
+                  onChange={(e) =>
+                    field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
+                  }
+                  placeholder={gt("No campaign-level user cap")}
+                />
               </div>
             )}
           </form.Field>

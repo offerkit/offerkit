@@ -31,6 +31,7 @@ export const voucher = pgTable(
     customRewards: jsonb("custom_rewards").$type<CustomReward[]>().notNull().default([]),
     giftBalance: integer("gift_balance"),
     redemptionLimit: integer("redemption_limit"),
+    perUserRedemptionLimit: integer("per_user_redemption_limit"),
     redemptionCount: integer("redemption_count").notNull().default(0),
     priority: integer("priority").notNull().default(0),
     exclusive: boolean("exclusive").notNull().default(false),

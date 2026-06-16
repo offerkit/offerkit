@@ -165,6 +165,7 @@ const create = os.vouchers.create
           customRewards: input.customRewards ?? [],
           giftBalance: input.type === "GIFT_CARD" ? (input.giftBalance ?? null) : null,
           redemptionLimit: input.redemptionLimit ?? null,
+          perUserRedemptionLimit: input.perUserRedemptionLimit ?? null,
           priority: input.priority ?? 0,
           exclusive: input.exclusive ?? false,
           startDate: input.startDate ? new Date(input.startDate) : null,
@@ -259,6 +260,9 @@ const update = os.vouchers.update
       }
       if (inputPatch.redemptionLimit !== undefined)
         patch.redemptionLimit = inputPatch.redemptionLimit ?? null;
+      if (inputPatch.perUserRedemptionLimit !== undefined) {
+        patch.perUserRedemptionLimit = inputPatch.perUserRedemptionLimit ?? null;
+      }
       if (inputPatch.priority !== undefined) patch.priority = inputPatch.priority;
       if (inputPatch.exclusive !== undefined) patch.exclusive = inputPatch.exclusive;
       if (inputPatch.active !== undefined) patch.active = inputPatch.active;

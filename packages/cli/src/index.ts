@@ -288,6 +288,7 @@ addJsonDataOption(
     .option("--max-discount-amount <cents>", "Max percentage discount cap in cents", intOption)
     .option("--gift-balance <cents>", "Gift card starting balance in cents", intOption)
     .option("--redemption-limit <n>", "Redemption limit", intOption)
+    .option("--per-user-redemption-limit <n>", "Per-user redemption limit", intOption)
     .option("--customer-id <id>", "Customer id")
     .option("--priority <n>", "Priority", intOption)
     .option("--exclusive", "Prevent stacking")
@@ -305,6 +306,7 @@ addJsonDataOption(
     maxDiscountAmount?: number;
     giftBalance?: number;
     redemptionLimit?: number;
+    perUserRedemptionLimit?: number;
     customerId?: string;
     priority?: number;
     exclusive?: boolean;
@@ -342,6 +344,7 @@ addJsonDataOption(
         discount,
         giftBalance: opts.giftBalance,
         redemptionLimit: opts.redemptionLimit,
+        perUserRedemptionLimit: opts.perUserRedemptionLimit,
         customerId: opts.customerId,
         priority: opts.priority,
         exclusive: opts.exclusive,
@@ -507,6 +510,7 @@ campaigns
   .option("--start-date <iso>", "Start date ISO string")
   .option("--end-date <iso>", "End date ISO string")
   .option("--validation-rule-id <id>", "Validation rule id")
+  .option("--per-user-redemption-limit <n>", "Per-user redemption limit", intOption)
   .option("--auto-apply", "Auto-apply campaign")
   .option("--code-length <n>", "Generated code length", intOption)
   .option("--code-prefix <prefix>", "Generated code prefix")
@@ -522,6 +526,7 @@ campaigns
       startDate?: string;
       endDate?: string;
       validationRuleId?: string;
+      perUserRedemptionLimit?: number;
       autoApply?: boolean;
       codeLength?: number;
       codePrefix?: string;
@@ -545,6 +550,7 @@ campaigns
           startDate: opts.startDate,
           endDate: opts.endDate,
           validationRuleId: opts.validationRuleId,
+          perUserRedemptionLimit: opts.perUserRedemptionLimit,
           autoApply: opts.autoApply,
           codeConfig,
           metadata,
@@ -559,11 +565,18 @@ addJsonDataOption(
     .description("Update a campaign")
     .option("--status <status>", "draft | active | paused | ended")
     .option("--validation-rule-id <id>", "Validation rule id")
+    .option("--per-user-redemption-limit <n>", "Per-user redemption limit", intOption)
     .option("--auto-apply <value>", "true | false"),
 ).action(
   async (
     id: string,
-    opts: { data?: string; status?: string; validationRuleId?: string; autoApply?: string },
+    opts: {
+      data?: string;
+      status?: string;
+      validationRuleId?: string;
+      perUserRedemptionLimit?: number;
+      autoApply?: string;
+    },
   ) => {
     const patch = await parseJsonObject(opts.data).catch(fail);
     await callAndPrint("campaigns.update", {
@@ -572,6 +585,7 @@ addJsonDataOption(
         patch: assignDefined(patch, {
           status: opts.status,
           validationRuleId: opts.validationRuleId,
+          perUserRedemptionLimit: opts.perUserRedemptionLimit,
           autoApply:
             opts.autoApply === undefined ? undefined : opts.autoApply.toLowerCase() === "true",
         }),

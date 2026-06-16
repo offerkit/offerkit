@@ -6,6 +6,9 @@ export type RedemptionFailureCode =
   | "voucher_disabled"
   | "voucher_expired"
   | "redemption_limit_reached"
+  | "per_user_redemption_limit_reached"
+  | "customer_required"
+  | "customer_mismatch"
   | "validation_failed"
   | "currency_mismatch"
   | "gift_balance_zero"
@@ -137,6 +140,7 @@ export interface VoucherRow extends Record<string, unknown> {
   customRewards: unknown[];
   giftBalance: number | null;
   redemptionLimit: number | null;
+  perUserRedemptionLimit: number | null;
   redemptionCount: number;
   active: boolean;
   startDate: Date | null;
@@ -155,6 +159,7 @@ export interface RedemptionCampaignRow {
   startDate: Date | null;
   endDate: Date | null;
   validationRuleId: string | null;
+  perUserRedemptionLimit: number | null;
   deletedAt: Date | null;
 }
 

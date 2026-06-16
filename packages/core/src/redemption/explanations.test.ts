@@ -11,6 +11,7 @@ const baseVoucher: VoucherRow = {
   customRewards: [],
   giftBalance: null,
   redemptionLimit: 1,
+  perUserRedemptionLimit: null,
   redemptionCount: 1,
   active: true,
   startDate: null,

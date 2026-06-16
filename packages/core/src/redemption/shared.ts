@@ -1,3 +1,5 @@
+import { and, eq, sql } from "drizzle-orm";
+import { schema, type Db } from "@offerkit/db";
 import { calculateDiscount, type DiscountOrder, type DiscountResult } from "../discount/index.ts";
 import { evaluateRule, type Rule, type RuleContext } from "../rules/index.ts";
 import { failureExplanation } from "./explanations.ts";
@@ -10,6 +12,8 @@ import type {
   VoucherRow,
 } from "./types.ts";
 
+type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+
 export function checkActivation(v: VoucherRow, now: Date): RedemptionFailureCode | null {
   if (!v.active) return "voucher_disabled";
   if (v.startDate && v.startDate > now) return "voucher_expired";
@@ -21,6 +25,93 @@ export function checkActivation(v: VoucherRow, now: Date): RedemptionFailureCode
     return "gift_balance_zero";
   }
   return null;
+}
+
+export function checkCustomerBinding(
+  v: VoucherRow,
+  campaign: RedemptionCampaignRow | null | undefined,
+  customerId: string | undefined,
+): RedemptionFailureCode | null {
+  if (v.customerId && !customerId) return "customer_required";
+  if (v.customerId && customerId !== v.customerId) return "customer_mismatch";
+  if (
+    (v.perUserRedemptionLimit != null || campaign?.perUserRedemptionLimit != null) &&
+    !customerId
+  ) {
+    return "customer_required";
+  }
+  return null;
+}
+
+export async function checkPerUserRedemptionLimit(
+  db: Db | Tx,
+  v: VoucherRow,
+  campaign: RedemptionCampaignRow | null | undefined,
+  customerId: string | undefined,
+): Promise<{
+  code: RedemptionFailureCode;
+  details?: Record<string, string | number | boolean | null>;
+} | null> {
+  if (v.perUserRedemptionLimit == null && campaign?.perUserRedemptionLimit == null) return null;
+  if (!customerId) return { code: "customer_required" };
+
+  if (v.perUserRedemptionLimit != null) {
+    const count = await countNetSuccessfulRedemptions(
+      db,
+      customerId,
+      eq(schema.redemption.voucherId, v.id),
+    );
+    if (count >= v.perUserRedemptionLimit) {
+      return { code: "per_user_redemption_limit_reached" };
+    }
+  }
+
+  if (campaign?.perUserRedemptionLimit != null) {
+    const count = await countNetSuccessfulRedemptions(
+      db,
+      customerId,
+      sql`${schema.redemption.voucherId} IN (
+        SELECT "id" FROM "voucher" WHERE "campaign_id" = ${campaign.id}
+      )`,
+    );
+    if (count >= campaign.perUserRedemptionLimit) {
+      return {
+        code: "per_user_redemption_limit_reached",
+        details: {
+          campaignId: campaign.id,
+          perUserRedemptionLimit: campaign.perUserRedemptionLimit,
+        },
+      };
+    }
+  }
+
+  return null;
+}
+
+async function countNetSuccessfulRedemptions(
+  db: Db | Tx,
+  customerId: string,
+  scope: ReturnType<typeof eq> | ReturnType<typeof sql>,
+): Promise<number> {
+  const [row] = await db
+    .select({
+      count: sql<number>`count(*)::int`,
+    })
+    .from(schema.redemption)
+    .where(
+      and(
+        scope,
+        eq(schema.redemption.customerId, customerId),
+        eq(schema.redemption.result, "SUCCESS"),
+        sql`NOT EXISTS (
+          SELECT 1 FROM "redemption" AS rollback
+          WHERE rollback."parent_redemption_id" = ${schema.redemption.id}
+            AND rollback."result" = 'ROLLBACK'
+        )`,
+      ),
+    );
+
+  return row?.count ?? 0;
 }
 
 export function checkCampaignActivation(
@@ -174,16 +265,18 @@ export function previewDiscount(
   });
 }
 
-export function validateVoucher(
+export async function validateVoucher(
   voucher: VoucherRow | undefined,
   order: DiscountOrder | undefined,
   campaign?: RedemptionCampaignRow | null,
   options: {
+    db?: Db | Tx;
     validationRule?: RedemptionValidationRuleRow | null;
     customer?: RedemptionCustomerRow | null;
+    customerId?: string;
     now?: Date;
   } = {},
-): ValidateResult {
+): Promise<ValidateResult> {
   if (!voucher) {
     return {
       valid: false,
@@ -201,6 +294,29 @@ export function validateVoucher(
       code: failure,
       message: messageFor(failure),
       explanations: [failureExplanation(failure, voucher)],
+    };
+  }
+
+  const customerFailure = checkCustomerBinding(voucher, campaign, options.customerId);
+  if (customerFailure) {
+    return {
+      valid: false,
+      code: customerFailure,
+      message: messageFor(customerFailure),
+      explanations: [failureExplanation(customerFailure, voucher)],
+    };
+  }
+  const customerLimitFailure = options.db
+    ? await checkPerUserRedemptionLimit(options.db, voucher, campaign, options.customerId)
+    : null;
+  if (customerLimitFailure) {
+    return {
+      valid: false,
+      code: customerLimitFailure.code,
+      message: messageFor(customerLimitFailure.code),
+      explanations: [
+        failureExplanation(customerLimitFailure.code, voucher, customerLimitFailure.details),
+      ],
     };
   }
 
@@ -270,6 +386,12 @@ export function messageFor(code: RedemptionFailureCode): string {
       return "Voucher is outside its active window";
     case "redemption_limit_reached":
       return "Voucher has reached its redemption limit";
+    case "per_user_redemption_limit_reached":
+      return "Customer has reached this voucher's redemption limit";
+    case "customer_required":
+      return "A customer is required to use this voucher";
+    case "customer_mismatch":
+      return "Voucher is assigned to a different customer";
     case "validation_failed":
       return "Voucher validation rule did not match";
     case "currency_mismatch":
