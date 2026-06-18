@@ -1,5 +1,11 @@
 # @offerkit/sdk
 
+## 0.2.6
+
+### Patch Changes
+
+- cb3928b: Publish per-user redemption limit support for voucher and campaign create/update surfaces.
+
 ## 0.2.5
 
 ### Patch Changes

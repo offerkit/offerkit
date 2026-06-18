@@ -1,6 +1,6 @@
 {
   "name": "@offerkit/sdk",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "license": "MIT",
   "type": "module",
   "description": "Typed client for the OfferKit promotions API.",
