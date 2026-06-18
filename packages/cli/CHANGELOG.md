@@ -1,5 +1,13 @@
 # @offerkit/cli
 
+## 0.2.2
+
+### Patch Changes
+
+- 483f977: Report runtime versions from package metadata instead of hardcoded placeholders.
+- 8e3ea96: Add config, whoami, and doctor commands for CLI setup diagnostics.
+- 1f761d3: Fix generic API command calls against the SDK function-proxy client.
+
 ## 0.2.1
 
 ### Patch Changes

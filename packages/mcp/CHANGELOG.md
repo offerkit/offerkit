@@ -1,5 +1,11 @@
 # @offerkit/mcp
 
+## 0.2.2
+
+### Patch Changes
+
+- 483f977: Report runtime versions from package metadata instead of hardcoded placeholders.
+
 ## 0.2.1
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@offerkit/mcp",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "license": "MIT",
   "type": "module",
   "description": "OfferKit MCP server - exposes the OfferKit API as Model Context Protocol tools.",
