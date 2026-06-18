@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: "Git ref to publish, for example main or v1.2.3"
+        description: "Git ref to publish, for example main or v0.1.0"
         required: false
         default: main
 
@@ -55,8 +55,9 @@ jobs:
             tags="${tags}"$'\n'"${image}:edge"
           fi
 
-          if [[ "${ref_name}" == v* ]]; then
-            tags="${tags}"$'\n'"${image}:${ref_name}"$'\n'"${image}:latest"
+          if [[ "${ref_name}" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            version="${ref_name#v}"
+            tags="${tags}"$'\n'"${image}:v${version}"$'\n'"${image}:${version}"$'\n'"${image}:latest"
             platforms="linux/amd64,linux/arm64"
           elif [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" && "${ref_name}" == "main" ]]; then
             tags="${tags}"$'\n'"${image}:edge"

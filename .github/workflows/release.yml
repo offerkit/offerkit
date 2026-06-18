@@ -8,8 +8,9 @@ name: Release
 #      All in the runner's working tree only; nothing pushed yet.
 #   2. Build @offerkit/sdk, @offerkit/cli, @offerkit/mcp from the bumped
 #      working tree.
-#   3. `changeset publish` — push the new versions to npm via npm's
-#      trusted-publishing OIDC flow (no NPM_TOKEN secret needed).
+#   3. `changeset publish --tag latest` — push the new versions to npm
+#      via npm's trusted-publishing OIDC flow (no NPM_TOKEN secret needed)
+#      and point npm's `latest` channel at the released versions.
 #   4. Only if publish succeeded: commit the version bumps + consumed
 #      changesets as github-actions[bot] and push to main.
 #
@@ -86,7 +87,7 @@ jobs:
         # permission above). Requires trusted publisher configured on
         # npmjs.com for each package.
         if: steps.version.outputs.changed == 'true'
-        run: pnpm changeset publish
+        run: pnpm changeset publish --tag latest
 
       - name: Commit + push version bumps
         if: steps.version.outputs.changed == 'true'
