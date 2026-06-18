@@ -28,8 +28,10 @@ docker compose up -d
 Pin a release by setting `OFFERKIT_IMAGE_TAG`, for example:
 
 ```bash
-OFFERKIT_IMAGE_TAG=v1.2.3 docker compose up -d
+OFFERKIT_IMAGE_TAG=v0.1.0 docker compose up -d
 ```
+
+Image channels are intentionally narrow: `edge` follows the latest `main` commit, `latest` follows the newest stable version, and stable versions are published as both `v0.1.0` and `0.1.0`.
 
 Contributors who need to test local source changes can build the same image shape:
 
@@ -48,7 +50,7 @@ In one Railway project, create:
 - `web` Docker Image service using `ghcr.io/offerkit/offerkit:latest`
 - `worker` Docker Image service using `ghcr.io/offerkit/offerkit:latest`
 
-For production, pin both image services to a version tag such as `ghcr.io/offerkit/offerkit:v1.2.3` instead of `latest`.
+For production, pin both image services to a version tag such as `ghcr.io/offerkit/offerkit:v0.1.0` instead of `latest`.
 
 Set these variables on `web`:
 
