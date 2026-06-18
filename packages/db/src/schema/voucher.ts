@@ -1,4 +1,15 @@
-import { boolean, index, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import {
+  boolean,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { campaign } from "./campaign.ts";
 import { customer } from "./customer.ts";
 
@@ -24,7 +35,7 @@ export const voucher = pgTable(
   "voucher",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    code: text("code").notNull().unique(),
+    code: text("code").notNull(),
     campaignId: uuid("campaign_id").references(() => campaign.id, { onDelete: "cascade" }),
     type: text("type", { enum: ["DISCOUNT", "GIFT_CARD"] }).notNull(),
     discount: jsonb("discount").$type<VoucherDiscount>(),
@@ -49,5 +60,8 @@ export const voucher = pgTable(
     index("voucher_customer_id_idx").on(t.customerId),
     index("voucher_active_idx").on(t.active),
     index("voucher_deleted_at_idx").on(t.deletedAt),
+    uniqueIndex("voucher_code_active_unique")
+      .on(t.code)
+      .where(sql`${t.deletedAt} IS NULL`),
   ],
 );

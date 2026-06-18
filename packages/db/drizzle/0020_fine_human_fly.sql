@@ -1,0 +1,2 @@
+ALTER TABLE "voucher" DROP CONSTRAINT "voucher_code_unique";--> statement-breakpoint
+CREATE UNIQUE INDEX "voucher_code_active_unique" ON "voucher" USING btree ("code") WHERE "voucher"."deleted_at" IS NULL;

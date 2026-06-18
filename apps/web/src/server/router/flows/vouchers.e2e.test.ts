@@ -166,6 +166,45 @@ describe.skipIf(!E2E_ENABLED)("vouchers bulk + CRUD + transactions", () => {
     await expect(client.vouchers.get({ params: { code } })).rejects.toThrow(/not found/i);
   });
 
+  it("allows recreating a voucher code after soft delete", async () => {
+    if (!token) throw new Error("setup failed");
+    const client = makeClient(token);
+
+    const campaign = await client.campaigns.create({
+      name: randomId("camp-recreate"),
+      type: "DISCOUNT",
+      currency: "USD",
+    });
+
+    const code = randomId("V-REUSE").toUpperCase();
+    const first = await client.vouchers.create({
+      code,
+      campaignId: campaign.id,
+      type: "DISCOUNT",
+      discount: { type: "AMOUNT", amount: 500 },
+    });
+
+    await expect(
+      client.vouchers.create({
+        code,
+        campaignId: campaign.id,
+        type: "DISCOUNT",
+        discount: { type: "AMOUNT", amount: 500 },
+      }),
+    ).rejects.toThrow(/already exists/i);
+
+    await client.vouchers.delete({ params: { code } });
+
+    const recreated = await client.vouchers.create({
+      code,
+      campaignId: campaign.id,
+      type: "DISCOUNT",
+      discount: { type: "AMOUNT", amount: 700 },
+    });
+    expect(recreated.code).toBe(code);
+    expect(recreated.id).not.toBe(first.id);
+  });
+
   it("transactions endpoint returns the gift-card credit ledger", async () => {
     if (!token) throw new Error("setup failed");
     const client = makeClient(token);
