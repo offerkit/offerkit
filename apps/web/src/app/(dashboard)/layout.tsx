@@ -1,6 +1,4 @@
-import Image from "next/image";
 import { redirect } from "next/navigation";
-import { T } from "gt-next";
 import {
   getDashboardRole,
   requireDashboardSession,
@@ -21,6 +19,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { DashboardNav } from "@/components/dashboard/nav";
 import { UserMenu } from "@/components/dashboard/user-menu";
+import { DashboardWorkspaceBrand } from "@/components/dashboard/workspace-brand";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await requireDashboardSession();
@@ -30,23 +29,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <SidebarProvider>
       <Sidebar collapsible="icon">
         <SidebarHeader>
-          <div className="flex items-center gap-2 px-2 py-1.5">
-            <Image
-              src="/icon.png"
-              alt="OfferKit"
-              width={32}
-              height={32}
-              unoptimized
-              className="size-8 rounded-md"
-              priority
-            />
-            <div className="flex flex-col leading-none group-data-[collapsible=icon]:hidden">
-              <span className="text-sm font-semibold">Offerkit</span>
-              <span className="text-xs text-muted-foreground">
-                <T>Self-hosted</T>
-              </span>
-            </div>
-          </div>
+          <DashboardWorkspaceBrand />
         </SidebarHeader>
         <SidebarContent>
           <DashboardNav role={getDashboardRole(session)} />
