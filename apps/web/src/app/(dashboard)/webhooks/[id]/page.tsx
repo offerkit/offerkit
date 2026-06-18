@@ -2,21 +2,15 @@
 
 import Link from "next/link";
 import { use } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { ArrowLeft, RotateCw } from "lucide-react";
+import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { ovx } from "@/lib/sdk";
 
 interface PageProps {
@@ -46,6 +40,74 @@ export default function WebhookDetailPage({ params }: PageProps) {
       toast.success(gt("Re-enqueued"));
     },
   });
+  const columns: ColumnDef<DataTableRow>[] = [
+    {
+      accessorKey: "eventType",
+      header: () => <T>Event</T>,
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.eventType}</span>,
+    },
+    {
+      accessorKey: "status",
+      header: () => <T>Status</T>,
+      cell: ({ row }) => (
+        <Badge
+          variant={
+            row.original.status === "succeeded"
+              ? "default"
+              : row.original.status === "dead"
+                ? "destructive"
+                : "secondary"
+          }
+        >
+          {row.original.status}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: "attempts",
+      header: () => <div className="text-right"><T>Attempts</T></div>,
+      cell: ({ row }) => (
+        <div className="text-right text-muted-foreground">{row.original.attempts}</div>
+      ),
+    },
+    {
+      id: "response",
+      header: () => <T>Response</T>,
+      cell: ({ row }) => (
+        <span className="font-mono text-xs text-muted-foreground">
+          {row.original.responseStatus
+            ? `HTTP ${String(row.original.responseStatus)}`
+            : (row.original.error ?? "-")}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "createdAt",
+      header: () => <T>Created</T>,
+      cell: ({ row }) => (
+        <span className="text-xs text-muted-foreground">
+          {new Date(row.original.createdAt).toLocaleString()}
+        </span>
+      ),
+    },
+    {
+      id: "actions",
+      header: () => <div className="text-right" />,
+      cell: ({ row }) => (
+        <div className="text-right">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => replay.mutate(row.original.id)}
+            aria-label={gt("Replay")}
+            disabled={replay.isPending}
+          >
+            <RotateCw className="size-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   if (!webhook)
     return (
@@ -77,78 +139,11 @@ export default function WebhookDetailPage({ params }: PageProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>
-                  <T>Event</T>
-                </TableHead>
-                <TableHead>
-                  <T>Status</T>
-                </TableHead>
-                <TableHead className="text-right">
-                  <T>Attempts</T>
-                </TableHead>
-                <TableHead>
-                  <T>Response</T>
-                </TableHead>
-                <TableHead>
-                  <T>Created</T>
-                </TableHead>
-                <TableHead className="text-right" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {!deliveries || deliveries.data.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
-                    <T>No deliveries yet.</T>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                deliveries.data.map((d) => (
-                  <TableRow key={d.id}>
-                    <TableCell className="font-mono text-xs">{d.eventType}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          d.status === "succeeded"
-                            ? "default"
-                            : d.status === "dead"
-                              ? "destructive"
-                              : "secondary"
-                        }
-                      >
-                        {d.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground">
-                      {d.attempts}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {d.responseStatus
-                        ? `HTTP ${String(d.responseStatus)}`
-                        : (d.error ?? "—")}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {new Date(d.createdAt).toLocaleString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => replay.mutate(d.id)}
-                        aria-label={gt("Replay")}
-                        disabled={replay.isPending}
-                      >
-                        <RotateCw className="size-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          <DataTable
+            columns={columns}
+            data={deliveries?.data ?? []}
+            emptyMessage={<T>No deliveries yet.</T>}
+          />
         </CardContent>
       </Card>
     </div>

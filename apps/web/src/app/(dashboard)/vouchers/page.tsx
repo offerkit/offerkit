@@ -2,20 +2,14 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { Plus, Search } from "lucide-react";
+import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { ovx } from "@/lib/sdk";
 
 export default function VouchersPage() {
@@ -25,6 +19,56 @@ export default function VouchersPage() {
     queryKey: ["vouchers", { search }],
     queryFn: () => ovx().vouchers.list({ search: search || undefined, limit: 25 }),
   });
+  const columns: ColumnDef<DataTableRow>[] = [
+    {
+      accessorKey: "code",
+      header: () => <T>Code</T>,
+      cell: ({ row }) => (
+        <Link className="font-mono text-sm hover:underline" href={`/vouchers/${row.original.code}`}>
+          {row.original.code}
+        </Link>
+      ),
+    },
+    {
+      accessorKey: "type",
+      header: () => <T>Type</T>,
+      cell: ({ row }) => <span className="text-muted-foreground">{row.original.type}</span>,
+    },
+    {
+      id: "discount",
+      header: () => <T>Discount</T>,
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">
+          {row.original.discount?.type === "AMOUNT"
+            ? String((row.original.discount.amount ?? 0) / 100)
+            : row.original.discount?.type === "PERCENTAGE"
+              ? `${String((row.original.discount.percent ?? 0) / 100)}%`
+              : "-"}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "redemptionCount",
+      header: () => <div className="text-right"><T>Redemptions</T></div>,
+      cell: ({ row }) => (
+        <div className="text-right text-muted-foreground">
+          {row.original.redemptionCount}
+          {row.original.redemptionLimit ? ` / ${String(row.original.redemptionLimit)}` : ""}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "active",
+      header: () => <div className="text-right"><T>Active</T></div>,
+      cell: ({ row }) => (
+        <div className="text-right">
+          <Badge variant={row.original.active ? "default" : "secondary"}>
+            {row.original.active ? gt("yes") : gt("no")}
+          </Badge>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -53,74 +97,12 @@ export default function VouchersPage() {
         />
       </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>
-                <T>Code</T>
-              </TableHead>
-              <TableHead>
-                <T>Type</T>
-              </TableHead>
-              <TableHead>
-                <T>Discount</T>
-              </TableHead>
-              <TableHead className="text-right">
-                <T>Redemptions</T>
-              </TableHead>
-              <TableHead className="text-right">
-                <T>Active</T>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
-                  <T>Loading…</T>
-                </TableCell>
-              </TableRow>
-            ) : !data || data.data.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
-                  <T>No vouchers yet.</T>
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.data.map((v) => (
-                <TableRow key={v.id}>
-                  <TableCell>
-                    <Link
-                      className="font-mono text-sm hover:underline"
-                      href={`/vouchers/${v.code}`}
-                    >
-                      {v.code}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{v.type}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {v.discount?.type === "AMOUNT"
-                      ? `${String((v.discount.amount ?? 0) / 100)}`
-                      : v.discount?.type === "PERCENTAGE"
-                        ? `${String((v.discount.percent ?? 0) / 100)}%`
-                        : "—"}
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {v.redemptionCount}
-                    {v.redemptionLimit ? ` / ${String(v.redemptionLimit)}` : ""}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Badge variant={v.active ? "default" : "secondary"}>
-                      {v.active ? gt("yes") : gt("no")}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={data?.data ?? []}
+        isLoading={isLoading}
+        emptyMessage={<T>No vouchers yet.</T>}
+      />
     </div>
   );
 }

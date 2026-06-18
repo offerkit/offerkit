@@ -2,20 +2,14 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { Plus, Search } from "lucide-react";
+import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { ovx } from "@/lib/sdk";
 
 export default function CampaignsPage() {
@@ -25,6 +19,47 @@ export default function CampaignsPage() {
     queryKey: ["campaigns", { search }],
     queryFn: () => ovx().campaigns.list({ search: search || undefined, limit: 20 }),
   });
+  const columns: ColumnDef<DataTableRow>[] = [
+    {
+      accessorKey: "name",
+      header: () => <T>Name</T>,
+      cell: ({ row }) => (
+        <Link className="font-medium hover:underline" href={`/campaigns/${row.original.id}`}>
+          {row.original.name}
+        </Link>
+      ),
+    },
+    {
+      accessorKey: "type",
+      header: () => <T>Type</T>,
+      cell: ({ row }) => <span className="text-muted-foreground">{row.original.type}</span>,
+    },
+    {
+      accessorKey: "status",
+      header: () => <T>Status</T>,
+      cell: ({ row }) => (
+        <Badge variant={row.original.status === "active" ? "default" : "secondary"}>
+          {row.original.status}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: "voucherCount",
+      header: () => <div className="text-right"><T>Vouchers</T></div>,
+      cell: ({ row }) => (
+        <div className="text-right text-muted-foreground">{row.original.voucherCount}</div>
+      ),
+    },
+    {
+      accessorKey: "updatedAt",
+      header: () => <div className="text-right"><T>Updated</T></div>,
+      cell: ({ row }) => (
+        <div className="text-right text-muted-foreground">
+          {new Date(row.original.updatedAt).toLocaleDateString()}
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -53,66 +88,12 @@ export default function CampaignsPage() {
         />
       </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>
-                <T>Name</T>
-              </TableHead>
-              <TableHead>
-                <T>Type</T>
-              </TableHead>
-              <TableHead>
-                <T>Status</T>
-              </TableHead>
-              <TableHead className="text-right">
-                <T>Vouchers</T>
-              </TableHead>
-              <TableHead className="text-right">
-                <T>Updated</T>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
-                  <T>Loading…</T>
-                </TableCell>
-              </TableRow>
-            ) : !data || data.data.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
-                  <T>No campaigns yet.</T>
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.data.map((c) => (
-                <TableRow key={c.id}>
-                  <TableCell>
-                    <Link className="font-medium hover:underline" href={`/campaigns/${c.id}`}>
-                      {c.name}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{c.type}</TableCell>
-                  <TableCell>
-                    <Badge variant={c.status === "active" ? "default" : "secondary"}>
-                      {c.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {c.voucherCount}
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {new Date(c.updatedAt).toLocaleDateString()}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={data?.data ?? []}
+        isLoading={isLoading}
+        emptyMessage={<T>No campaigns yet.</T>}
+      />
     </div>
   );
 }

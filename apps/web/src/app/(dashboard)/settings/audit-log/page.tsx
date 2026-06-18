@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
+import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,14 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { ovx } from "@/lib/sdk";
 
 type Actor = "" | "user" | "api_key" | "system";
@@ -47,6 +41,50 @@ export default function AuditLogPage() {
         limit: 50,
       }),
   });
+  const columns: ColumnDef<DataTableRow>[] = [
+    {
+      accessorKey: "createdAt",
+      header: () => <T>When</T>,
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap text-xs text-muted-foreground">
+          {new Date(row.original.createdAt).toLocaleString()}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "actor",
+      header: () => <T>Actor</T>,
+      cell: ({ row }) => {
+        const actor = row.original.actor as Exclude<Actor, "">;
+        return <Badge variant={ACTOR_BADGE[actor]}>{actor}</Badge>;
+      },
+    },
+    {
+      accessorKey: "action",
+      header: () => <T>Action</T>,
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.action}</span>,
+    },
+    {
+      accessorKey: "entity",
+      header: () => <T>Entity</T>,
+    },
+    {
+      accessorKey: "entityId",
+      header: () => <T>Entity ID</T>,
+      cell: ({ row }) => (
+        <span className="font-mono text-xs text-muted-foreground">
+          {row.original.entityId ?? "-"}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "ip",
+      header: "IP",
+      cell: ({ row }) => (
+        <span className="text-xs text-muted-foreground">{row.original.ip ?? "-"}</span>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -94,64 +132,12 @@ export default function AuditLogPage() {
         />
       </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>
-                <T>When</T>
-              </TableHead>
-              <TableHead>
-                <T>Actor</T>
-              </TableHead>
-              <TableHead>
-                <T>Action</T>
-              </TableHead>
-              <TableHead>
-                <T>Entity</T>
-              </TableHead>
-              <TableHead>
-                <T>Entity ID</T>
-              </TableHead>
-              <TableHead>IP</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
-                  <T>Loading…</T>
-                </TableCell>
-              </TableRow>
-            ) : !data || data.data.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
-                  <T>No audit entries match the filters.</T>
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.data.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                    {new Date(row.createdAt).toLocaleString()}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={ACTOR_BADGE[row.actor]}>{row.actor}</Badge>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">{row.action}</TableCell>
-                  <TableCell>{row.entity}</TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {row.entityId ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {row.ip ?? "—"}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={data?.data ?? []}
+        isLoading={isLoading}
+        emptyMessage={<T>No audit entries match the filters.</T>}
+      />
 
       {data?.next ? (
         <div className="flex justify-end">

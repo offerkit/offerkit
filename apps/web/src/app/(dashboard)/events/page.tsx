@@ -1,20 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { Search } from "lucide-react";
+import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { ovx } from "@/lib/sdk";
 
 export default function EventsPage() {
@@ -26,6 +19,44 @@ export default function EventsPage() {
       ovx().events.list({ limit: 50, ...(type ? { type } : {}) }),
     refetchInterval: 5_000,
   });
+  const columns: ColumnDef<DataTableRow>[] = [
+    {
+      accessorKey: "type",
+      header: () => <T>Type</T>,
+      cell: ({ row }) => (
+        <Badge variant="secondary" className="font-mono">
+          {row.original.type}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: "entityId",
+      header: () => <T>Entity</T>,
+      cell: ({ row }) => (
+        <span className="font-mono text-xs text-muted-foreground">
+          {row.original.entityId ? `${row.original.entityId.slice(0, 8)}...` : "-"}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "payload",
+      header: () => <T>Payload</T>,
+      cell: ({ row }) => (
+        <pre className="max-w-prose overflow-auto rounded-md border bg-muted/40 p-2 text-xs">
+          {JSON.stringify(row.original.payload, null, 2)}
+        </pre>
+      ),
+    },
+    {
+      accessorKey: "createdAt",
+      header: () => <div className="text-right"><T>Created</T></div>,
+      cell: ({ row }) => (
+        <div className="text-right text-xs text-muted-foreground">
+          {new Date(row.original.createdAt).toLocaleString()}
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -48,64 +79,12 @@ export default function EventsPage() {
         />
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>
-                  <T>Type</T>
-                </TableHead>
-                <TableHead>
-                  <T>Entity</T>
-                </TableHead>
-                <TableHead>
-                  <T>Payload</T>
-                </TableHead>
-                <TableHead className="text-right">
-                  <T>Created</T>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
-                    <T>Loading…</T>
-                  </TableCell>
-                </TableRow>
-              ) : !data || data.data.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
-                    <T>No events yet.</T>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                data.data.map((e) => (
-                  <TableRow key={e.id}>
-                    <TableCell>
-                      <Badge variant="secondary" className="font-mono">
-                        {e.type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {e.entityId ? `${e.entityId.slice(0, 8)}…` : "—"}
-                    </TableCell>
-                    <TableCell>
-                      <pre className="overflow-auto rounded-md border bg-muted/40 p-2 text-xs max-w-prose">
-                        {JSON.stringify(e.payload, null, 2)}
-                      </pre>
-                    </TableCell>
-                    <TableCell className="text-right text-xs text-muted-foreground">
-                      {new Date(e.createdAt).toLocaleString()}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <DataTable
+        columns={columns}
+        data={data?.data ?? []}
+        isLoading={isLoading}
+        emptyMessage={<T>No events yet.</T>}
+      />
     </div>
   );
 }

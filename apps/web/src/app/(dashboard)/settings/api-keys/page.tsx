@@ -1,24 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { Copy, Plus, Trash2 } from "lucide-react";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
+import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { ovx } from "@/lib/sdk";
 
 export default function ApiKeysPage() {
@@ -51,6 +45,66 @@ export default function ApiKeysPage() {
       toast.success(gt("API key revoked"));
     },
   });
+  const columns: ColumnDef<DataTableRow>[] = [
+    {
+      accessorKey: "name",
+      header: () => <T>Name</T>,
+    },
+    {
+      accessorKey: "prefix",
+      header: () => <T>Prefix</T>,
+      cell: ({ row }) => (
+        <span className="font-mono text-xs text-muted-foreground">
+          offerkit_{row.original.prefix}_...
+        </span>
+      ),
+    },
+    {
+      accessorKey: "scopes",
+      header: () => <T>Scopes</T>,
+      cell: ({ row }) => (
+        <div className="flex flex-wrap gap-1">
+          {row.original.scopes.map((scope: string) => (
+            <Badge key={scope} variant="secondary">
+              {scope}
+            </Badge>
+          ))}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "lastUsedAt",
+      header: () => <T>Last used</T>,
+      cell: ({ row }) => (
+        <span className="text-xs text-muted-foreground">
+          {row.original.lastUsedAt
+            ? new Date(row.original.lastUsedAt).toLocaleString()
+            : gt("never")}
+        </span>
+      ),
+    },
+    {
+      id: "actions",
+      header: () => <div className="text-right" />,
+      cell: ({ row }) => (
+        <div className="text-right">
+          <ConfirmDialog
+            trigger={
+              <Button variant="ghost" size="icon" aria-label={gt("Revoke")}>
+                <Trash2 className="size-4" />
+              </Button>
+            }
+            title={gt("Revoke this key?")}
+            description={gt("Revoked keys cannot be re-enabled. Issue a new one if you need to.")}
+            confirmLabel={gt("Revoke")}
+            destructive
+            pending={revoke.isPending}
+            onConfirm={() => revoke.mutate(row.original.id)}
+          />
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -131,80 +185,12 @@ export default function ApiKeysPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>
-                  <T>Name</T>
-                </TableHead>
-                <TableHead>
-                  <T>Prefix</T>
-                </TableHead>
-                <TableHead>
-                  <T>Scopes</T>
-                </TableHead>
-                <TableHead>
-                  <T>Last used</T>
-                </TableHead>
-                <TableHead className="text-right" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
-                    <T>Loading…</T>
-                  </TableCell>
-                </TableRow>
-              ) : !data || data.data.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
-                    <T>No keys yet.</T>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                data.data.map((k) => (
-                  <TableRow key={k.id}>
-                    <TableCell>{k.name}</TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      offerkit_{k.prefix}_…
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        {k.scopes.map((s) => (
-                          <Badge key={s} variant="secondary">
-                            {s}
-                          </Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-xs">
-                      {k.lastUsedAt
-                        ? new Date(k.lastUsedAt).toLocaleString()
-                        : gt("never")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <ConfirmDialog
-                        trigger={
-                          <Button variant="ghost" size="icon" aria-label={gt("Revoke")}>
-                            <Trash2 className="size-4" />
-                          </Button>
-                        }
-                        title={gt("Revoke this key?")}
-                        description={gt(
-                          "Revoked keys cannot be re-enabled. Issue a new one if you need to.",
-                        )}
-                        confirmLabel={gt("Revoke")}
-                        destructive
-                        pending={revoke.isPending}
-                        onConfirm={() => revoke.mutate(k.id)}
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          <DataTable
+            columns={columns}
+            data={data?.data ?? []}
+            isLoading={isLoading}
+            emptyMessage={<T>No keys yet.</T>}
+          />
         </CardContent>
       </Card>
     </div>

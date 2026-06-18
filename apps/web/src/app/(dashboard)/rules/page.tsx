@@ -2,20 +2,14 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { Plus, Search } from "lucide-react";
+import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { ovx } from "@/lib/sdk";
 
 export default function RulesPage() {
@@ -25,6 +19,38 @@ export default function RulesPage() {
     queryKey: ["validationRules", { search }],
     queryFn: () => ovx().validationRules.list({ search: search || undefined, limit: 25 }),
   });
+  const columns: ColumnDef<DataTableRow>[] = [
+    {
+      accessorKey: "name",
+      header: () => <T>Name</T>,
+      cell: ({ row }) => (
+        <Link className="font-medium hover:underline" href={`/rules/${row.original.id}`}>
+          {row.original.name}
+        </Link>
+      ),
+    },
+    {
+      accessorKey: "appliesTo",
+      header: () => <T>Applies to</T>,
+      cell: ({ row }) => <Badge variant="secondary">{row.original.appliesTo}</Badge>,
+    },
+    {
+      accessorKey: "description",
+      header: () => <T>Description</T>,
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">{row.original.description ?? "-"}</span>
+      ),
+    },
+    {
+      accessorKey: "updatedAt",
+      header: () => <div className="text-right"><T>Updated</T></div>,
+      cell: ({ row }) => (
+        <div className="text-right text-muted-foreground">
+          {new Date(row.original.updatedAt).toLocaleDateString()}
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -53,58 +79,12 @@ export default function RulesPage() {
         />
       </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>
-                <T>Name</T>
-              </TableHead>
-              <TableHead>
-                <T>Applies to</T>
-              </TableHead>
-              <TableHead>
-                <T>Description</T>
-              </TableHead>
-              <TableHead className="text-right">
-                <T>Updated</T>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
-                  <T>Loading…</T>
-                </TableCell>
-              </TableRow>
-            ) : !data || data.data.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
-                  <T>No rules yet.</T>
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.data.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell>
-                    <Link className="font-medium hover:underline" href={`/rules/${r.id}`}>
-                      {r.name}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{r.appliesTo}</Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{r.description ?? "—"}</TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {new Date(r.updatedAt).toLocaleDateString()}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={data?.data ?? []}
+        isLoading={isLoading}
+        emptyMessage={<T>No rules yet.</T>}
+      />
     </div>
   );
 }

@@ -3,24 +3,18 @@
 import Link from "next/link";
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
+import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import {
   CampaignForm,
   type CampaignFormState,
@@ -146,6 +140,43 @@ export default function CampaignDetailPage({ params }: PageProps) {
   const bulkValueInvalid = isGiftVoucherCampaign
     ? bulkGiftBalance < 1
     : bulkDiscountAmount < 1;
+  const voucherColumns: ColumnDef<DataTableRow>[] = [
+    {
+      accessorKey: "code",
+      header: () => <T>Code</T>,
+      cell: ({ row }) => (
+        <Link className="font-mono text-sm hover:underline" href={`/vouchers/${row.original.code}`}>
+          {row.original.code}
+        </Link>
+      ),
+    },
+    {
+      accessorKey: "type",
+      header: () => <T>Type</T>,
+      cell: ({ row }) => <span className="text-muted-foreground">{row.original.type}</span>,
+    },
+    {
+      accessorKey: "redemptionCount",
+      header: () => <div className="text-right"><T>Redemptions</T></div>,
+      cell: ({ row }) => (
+        <div className="text-right text-muted-foreground">
+          {row.original.redemptionCount}
+          {row.original.redemptionLimit ? ` / ${String(row.original.redemptionLimit)}` : ""}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "active",
+      header: () => <div className="text-right"><T>Active</T></div>,
+      cell: ({ row }) => (
+        <div className="text-right">
+          <Badge variant={row.original.active ? "default" : "secondary"}>
+            {row.original.active ? gt("yes") : gt("no")}
+          </Badge>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -282,58 +313,11 @@ export default function CampaignDetailPage({ params }: PageProps) {
               </Button>
             </div>
 
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>
-                      <T>Code</T>
-                    </TableHead>
-                    <TableHead>
-                      <T>Type</T>
-                    </TableHead>
-                    <TableHead className="text-right">
-                      <T>Redemptions</T>
-                    </TableHead>
-                    <TableHead className="text-right">
-                      <T>Active</T>
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {!vouchers || vouchers.data.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
-                        <T>No vouchers in this campaign.</T>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    vouchers.data.map((v) => (
-                      <TableRow key={v.id}>
-                        <TableCell>
-                          <Link
-                            className="font-mono text-sm hover:underline"
-                            href={`/vouchers/${v.code}`}
-                          >
-                            {v.code}
-                          </Link>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">{v.type}</TableCell>
-                        <TableCell className="text-right text-muted-foreground">
-                          {v.redemptionCount}
-                          {v.redemptionLimit ? ` / ${String(v.redemptionLimit)}` : ""}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant={v.active ? "default" : "secondary"}>
-                            {v.active ? gt("yes") : gt("no")}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+            <DataTable
+              columns={voucherColumns}
+              data={vouchers?.data ?? []}
+              emptyMessage={<T>No vouchers in this campaign.</T>}
+            />
           </CardContent>
         </Card>
       ) : null}

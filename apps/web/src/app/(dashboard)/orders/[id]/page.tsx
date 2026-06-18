@@ -2,21 +2,15 @@
 
 import Link from "next/link";
 import { use } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
+import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { ovx } from "@/lib/sdk";
 
 function formatCents(amount: number, currency: string): string {
@@ -74,6 +68,72 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   }
 
   const canTransition = data.status === "CREATED" || data.status === "PAID";
+  const itemColumns: ColumnDef<DataTableRow>[] = [
+    { accessorKey: "name", header: () => <T>Name</T> },
+    {
+      accessorKey: "sku",
+      header: "SKU",
+      cell: ({ row }) => (
+        <span className="font-mono text-xs text-muted-foreground">{row.original.sku ?? "-"}</span>
+      ),
+    },
+    {
+      accessorKey: "quantity",
+      header: () => <div className="text-right"><T>Qty</T></div>,
+      cell: ({ row }) => <div className="text-right">{row.original.quantity}</div>,
+    },
+    {
+      accessorKey: "unitPrice",
+      header: () => <div className="text-right"><T>Unit price</T></div>,
+      cell: ({ row }) => (
+        <div className="text-right font-mono">
+          {formatCents(row.original.unitPrice, data.currency)}
+        </div>
+      ),
+    },
+  ];
+  const redemptionColumns: ColumnDef<DataTableRow>[] = [
+    {
+      accessorKey: "voucherCode",
+      header: () => <T>Voucher</T>,
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.voucherCode}</span>,
+    },
+    {
+      accessorKey: "result",
+      header: () => <T>Result</T>,
+      cell: ({ row }) => (
+        <Badge
+          variant={
+            row.original.result === "SUCCESS"
+              ? "default"
+              : row.original.result === "ROLLBACK"
+                ? "secondary"
+                : "destructive"
+          }
+        >
+          {row.original.result}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: "amount",
+      header: () => <div className="text-right"><T>Amount</T></div>,
+      cell: ({ row }) => (
+        <div className="text-right font-mono">
+          {row.original.amount != null ? formatCents(row.original.amount, data.currency) : "-"}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "createdAt",
+      header: () => <div className="text-right"><T>When</T></div>,
+      cell: ({ row }) => (
+        <div className="text-right text-xs text-muted-foreground">
+          {new Date(row.original.createdAt).toLocaleString()}
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -165,44 +225,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>
-                  <T>Name</T>
-                </TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead className="text-right">
-                  <T>Qty</T>
-                </TableHead>
-                <TableHead className="text-right">
-                  <T>Unit price</T>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.items.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
-                    <T>No items.</T>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                data.items.map((item, i) => (
-                  <TableRow key={`${item.sku ?? item.productId ?? item.name}-${i}`}>
-                    <TableCell>{item.name}</TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {item.sku ?? "—"}
-                    </TableCell>
-                    <TableCell className="text-right">{item.quantity}</TableCell>
-                    <TableCell className="text-right font-mono">
-                      {formatCents(item.unitPrice, data.currency)}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          <DataTable columns={itemColumns} data={data.items} emptyMessage={<T>No items.</T>} />
         </CardContent>
       </Card>
 
@@ -213,58 +236,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>
-                  <T>Voucher</T>
-                </TableHead>
-                <TableHead>
-                  <T>Result</T>
-                </TableHead>
-                <TableHead className="text-right">
-                  <T>Amount</T>
-                </TableHead>
-                <TableHead className="text-right">
-                  <T>When</T>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {!redemptions || redemptions.data.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
-                    <T>No redemptions attached to this order.</T>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                redemptions.data.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-mono text-xs">{r.voucherCode}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          r.result === "SUCCESS"
-                            ? "default"
-                            : r.result === "ROLLBACK"
-                              ? "secondary"
-                              : "destructive"
-                        }
-                      >
-                        {r.result}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {r.amount != null ? formatCents(r.amount, data.currency) : "—"}
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground text-xs">
-                      {new Date(r.createdAt).toLocaleString()}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          <DataTable
+            columns={redemptionColumns}
+            data={redemptions?.data ?? []}
+            emptyMessage={<T>No redemptions attached to this order.</T>}
+          />
         </CardContent>
       </Card>
     </div>

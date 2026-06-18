@@ -3,24 +3,18 @@
 import Link from "next/link";
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
+import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { ovx } from "@/lib/sdk";
 
 interface PageProps {
@@ -201,6 +195,64 @@ export default function ReferralProgramDetail({ params }: PageProps) {
       router.push("/referrals");
     },
   });
+  const codeColumns: ColumnDef<DataTableRow>[] = [
+    {
+      accessorKey: "code",
+      header: () => <T>Code</T>,
+      cell: ({ row }) => <span className="font-mono text-sm">{row.original.code}</span>,
+    },
+    {
+      accessorKey: "referrerCustomerId",
+      header: () => <T>Referrer</T>,
+      cell: ({ row }) => (
+        <span className="font-mono text-xs text-muted-foreground">
+          {row.original.referrerCustomerId.slice(0, 8)}...
+        </span>
+      ),
+    },
+    {
+      accessorKey: "createdAt",
+      header: () => <div className="text-right"><T>Created</T></div>,
+      cell: ({ row }) => (
+        <div className="text-right text-muted-foreground">
+          {new Date(row.original.createdAt).toLocaleDateString()}
+        </div>
+      ),
+    },
+  ];
+  const conversionColumns: ColumnDef<DataTableRow>[] = [
+    {
+      accessorKey: "code",
+      header: () => <T>Code</T>,
+      cell: ({ row }) => (
+        <div>
+          <div className="font-mono text-sm">{row.original.code}</div>
+          <div className="font-mono text-xs text-muted-foreground">
+            {row.original.refereeCustomerId.slice(0, 8)}...
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "referrerOutcome",
+      header: () => <T>Referrer reward</T>,
+      cell: ({ row }) => <OutcomeSummary label={gt("Referrer")} outcome={row.original.referrerOutcome} />,
+    },
+    {
+      id: "refereeOutcome",
+      header: () => <T>Referee reward</T>,
+      cell: ({ row }) => <OutcomeSummary label={gt("Referee")} outcome={row.original.refereeOutcome} />,
+    },
+    {
+      accessorKey: "convertedAt",
+      header: () => <div className="text-right"><T>Converted</T></div>,
+      cell: ({ row }) => (
+        <div className="text-right text-muted-foreground">
+          {new Date(row.original.convertedAt).toLocaleDateString()}
+        </div>
+      ),
+    },
+  ];
 
   if (isLoading)
     return (
@@ -373,44 +425,11 @@ export default function ReferralProgramDetail({ params }: PageProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>
-                    <T>Code</T>
-                  </TableHead>
-                  <TableHead>
-                    <T>Referrer</T>
-                  </TableHead>
-                  <TableHead className="text-right">
-                    <T>Created</T>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {!list || list.data.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
-                      <T>No codes yet.</T>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  list.data.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell className="font-mono text-sm">{r.code}</TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
-                        {r.referrerCustomerId.slice(0, 8)}…
-                      </TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        {new Date(r.createdAt).toLocaleDateString()}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+          <DataTable
+            columns={codeColumns}
+            data={list?.data ?? []}
+            emptyMessage={<T>No codes yet.</T>}
+          />
         </CardContent>
       </Card>
 
@@ -421,55 +440,11 @@ export default function ReferralProgramDetail({ params }: PageProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>
-                    <T>Code</T>
-                  </TableHead>
-                  <TableHead>
-                    <T>Referrer reward</T>
-                  </TableHead>
-                  <TableHead>
-                    <T>Referee reward</T>
-                  </TableHead>
-                  <TableHead className="text-right">
-                    <T>Converted</T>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {!conversionsQuery.data || conversionsQuery.data.data.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
-                      <T>No conversions yet.</T>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  conversionsQuery.data.data.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell>
-                        <div className="font-mono text-sm">{r.code}</div>
-                        <div className="font-mono text-xs text-muted-foreground">
-                          {r.refereeCustomerId.slice(0, 8)}…
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <OutcomeSummary label={gt("Referrer")} outcome={r.referrerOutcome} />
-                      </TableCell>
-                      <TableCell>
-                        <OutcomeSummary label={gt("Referee")} outcome={r.refereeOutcome} />
-                      </TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        {new Date(r.convertedAt).toLocaleDateString()}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+          <DataTable
+            columns={conversionColumns}
+            data={conversionsQuery.data?.data ?? []}
+            emptyMessage={<T>No conversions yet.</T>}
+          />
         </CardContent>
       </Card>
     </div>
