@@ -13,6 +13,8 @@ name: Release
 #      and point npm's `latest` channel at the released versions.
 #   4. Only if publish succeeded: commit the version bumps + consumed
 #      changesets as github-actions[bot] and push to main.
+#   5. Create one GitHub release per published public package, using
+#      the generated package changelog as the release notes body.
 #
 # Failure semantics: if build or publish fails, no commit hits main.
 # The pending changesets stay on main intact, and the next run will
@@ -38,7 +40,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write  # for pushing the post-publish version-bump commit
+  contents: write  # for pushing the post-publish version-bump commit and releases
   id-token: write  # npm trusted-publishing OIDC token request
 
 jobs:
@@ -81,6 +83,107 @@ jobs:
         if: steps.version.outputs.changed == 'true'
         run: pnpm turbo run build --filter=@offerkit/sdk --filter=@offerkit/cli --filter=@offerkit/mcp
 
+      - name: Prepare package release notes
+        if: steps.version.outputs.changed == 'true'
+        id: package_releases
+        shell: bash
+        run: |
+          node <<'NODE'
+          const { execFileSync } = require("node:child_process");
+          const fs = require("node:fs");
+          const path = require("node:path");
+
+          const packages = [
+            { dir: "packages/sdk", install: (name, version) => `pnpm add ${name}@${version}` },
+            { dir: "packages/cli", install: (_name, version) => `pnpm dlx @offerkit/cli@${version} --help` },
+            { dir: "packages/mcp", install: (name, version) => `pnpm add ${name}@${version}` },
+          ];
+
+          const notesRoot = path.join(process.env.RUNNER_TEMP || process.cwd(), "offerkit-release-notes");
+          const notesDir = path.join(notesRoot, "packages");
+          fs.mkdirSync(notesDir, { recursive: true });
+
+          const readJson = (file) => JSON.parse(fs.readFileSync(file, "utf8"));
+          const readOldJson = (file) =>
+            JSON.parse(execFileSync("git", ["show", `HEAD:${file}`], { encoding: "utf8" }));
+          const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+          function changelogSection(changelogPath, version) {
+            const changelog = fs.readFileSync(changelogPath, "utf8");
+            const heading = new RegExp(`^## ${escapeRegExp(version)}\\s*$`, "m");
+            const match = heading.exec(changelog);
+            if (!match) return "_No changelog entry found for this version._";
+
+            const sectionStart = match.index + match[0].length;
+            const rest = changelog.slice(sectionStart);
+            const nextHeading = rest.search(/^##\s+/m);
+            return (nextHeading === -1 ? rest : rest.slice(0, nextHeading)).trim();
+          }
+
+          const changedPackages = packages
+            .map((pkg) => {
+              const packageJsonPath = path.join(pkg.dir, "package.json");
+              const current = readJson(packageJsonPath);
+              const previous = readOldJson(packageJsonPath);
+              if (current.version === previous.version) return null;
+              return { ...pkg, name: current.name, version: current.version };
+            })
+            .filter(Boolean);
+
+          const publishedTable = [
+            "| Package | Version |",
+            "| --- | --- |",
+            ...changedPackages.map((pkg) => `| \`${pkg.name}\` | \`${pkg.version}\` |`),
+          ].join("\n");
+
+          const releases = changedPackages.map((pkg) => {
+            const safeFile = `${pkg.name.replace(/^@/, "").replace(/[\/@]/g, "-")}-${pkg.version}.md`;
+            const bodyPath = path.join(notesDir, safeFile);
+            const npmName = encodeURIComponent(pkg.name).replace("%2F", "/");
+            const changelog = changelogSection(path.join(pkg.dir, "CHANGELOG.md"), pkg.version);
+            const installCommand = pkg.install(pkg.name, pkg.version);
+            const tag = `${pkg.name}@${pkg.version}`;
+            const title = `${pkg.name}@${pkg.version}`;
+
+            fs.writeFileSync(
+              bodyPath,
+              [
+                `# ${title}`,
+                "",
+                `Published to npm: \`${pkg.name}@${pkg.version}\``,
+                "",
+                "## Install",
+                "",
+                "```sh",
+                installCommand,
+                "```",
+                "",
+                "## Changes",
+                "",
+                changelog,
+                "",
+                "## Published Packages In This Run",
+                "",
+                publishedTable,
+                "",
+                "## Links",
+                "",
+                `- npm: https://www.npmjs.com/package/${npmName}/v/${pkg.version}`,
+                `- Changelog: \`${pkg.dir}/CHANGELOG.md\``,
+                "",
+              ].join("\n"),
+            );
+
+            return { tag, title, bodyPath };
+          });
+
+          const manifestPath = path.join(notesRoot, "package-releases.tsv");
+          fs.writeFileSync(manifestPath, releases.map((release) => `${release.tag}\t${release.title}\t${release.bodyPath}`).join("\n"));
+
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `has_releases=${releases.length > 0}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `manifest=${manifestPath}\n`);
+          NODE
+
       - name: Publish to npm
         # No NPM_TOKEN — npm picks up the OIDC token from
         # ACTIONS_ID_TOKEN_REQUEST_TOKEN (granted via id-token: write
@@ -91,9 +194,38 @@ jobs:
 
       - name: Commit + push version bumps
         if: steps.version.outputs.changed == 'true'
+        id: release_commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "chore: release"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           git push origin HEAD:main
+
+      - name: Create GitHub package releases
+        if: steps.package_releases.outputs.has_releases == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TARGET: ${{ steps.release_commit.outputs.sha }}
+          RELEASE_MANIFEST: ${{ steps.package_releases.outputs.manifest }}
+        shell: bash
+        run: |
+          while IFS=$'\t' read -r tag title body_path; do
+            if [[ -z "${tag}" ]]; then
+              continue
+            fi
+
+            if gh release view "${tag}" >/dev/null 2>&1; then
+              gh release edit "${tag}" \
+                --title "${title}" \
+                --notes-file "${body_path}" \
+                --latest=false
+            else
+              gh release create "${tag}" \
+                --target "${RELEASE_TARGET}" \
+                --title "${title}" \
+                --notes-file "${body_path}" \
+                --latest=false
+            fi
+          done < "${RELEASE_MANIFEST}"

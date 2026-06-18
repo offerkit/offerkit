@@ -67,6 +67,9 @@ jobs:
             echo "${image}:latest"
             echo "EOF"
             echo "revision=$(git rev-parse HEAD)"
+            echo "tag=${tag}"
+            echo "version=${version}"
+            echo "image=${image}"
           } >> "${GITHUB_OUTPUT}"
 
       - name: Set up QEMU
@@ -83,6 +86,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and publish release image
+        id: build
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -97,3 +101,89 @@ jobs:
             org.opencontainers.image.description=Self-hostable promotion engine runtime
             org.opencontainers.image.source=https://github.com/offerkit/offerkit
             org.opencontainers.image.revision=${{ steps.release.outputs.revision }}
+
+      - name: Create GitHub image release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMAGE: ${{ steps.release.outputs.image }}
+          VERSION: ${{ steps.release.outputs.version }}
+          TAG: ${{ steps.release.outputs.tag }}
+          REVISION: ${{ steps.release.outputs.revision }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        shell: bash
+        run: |
+          mkdir -p .release-notes
+
+          previous_tag="$(git describe --tags --match 'v[0-9]*.[0-9]*.[0-9]*' --abbrev=0 "${TAG}^" 2>/dev/null || true)"
+          if [[ -n "${previous_tag}" ]]; then
+            range="${previous_tag}..HEAD"
+            compare_url="https://github.com/offerkit/offerkit/compare/${previous_tag}...${TAG}"
+          else
+            range="HEAD"
+            compare_url=""
+          fi
+
+          changelog="$(git log --no-merges --pretty=format:'- %s (%h)' "${range}")"
+          if [[ -z "${changelog}" ]]; then
+            changelog="- No source changes found since the previous stable image release."
+          fi
+
+          {
+            echo "# OfferKit Image ${TAG}"
+            echo
+            echo "Published container image: \`${IMAGE}:${VERSION}\`"
+            echo
+            echo "## Pull"
+            echo
+            echo '```sh'
+            echo "docker pull ${IMAGE}:${VERSION}"
+            echo '```'
+            echo
+            echo "Also available as:"
+            echo
+            echo '```sh'
+            echo "docker pull ${IMAGE}:${TAG}"
+            echo "docker pull ${IMAGE}:latest"
+            echo '```'
+            echo
+            echo "## Platforms"
+            echo
+            echo "- \`linux/amd64\`"
+            echo "- \`linux/arm64\`"
+            echo
+            echo "## Deployment Notes"
+            echo
+            echo "Use the explicit version tag in production:"
+            echo
+            echo '```yaml'
+            echo "image: ${IMAGE}:${VERSION}"
+            echo '```'
+            echo
+            echo "## Changelog"
+            echo
+            echo "${changelog}"
+            echo
+            echo "## Image Details"
+            echo
+            echo "- Source tag: \`${TAG}\`"
+            echo "- Source revision: \`${REVISION}\`"
+            if [[ -n "${DIGEST}" ]]; then
+              echo "- Manifest digest: \`${DIGEST}\`"
+            fi
+            if [[ -n "${compare_url}" ]]; then
+              echo "- Compare: ${compare_url}"
+            fi
+          } > .release-notes/image.md
+
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            gh release edit "${TAG}" \
+              --title "OfferKit Image ${TAG}" \
+              --notes-file .release-notes/image.md \
+              --latest=true
+          else
+            gh release create "${TAG}" \
+              --target "${REVISION}" \
+              --title "OfferKit Image ${TAG}" \
+              --notes-file .release-notes/image.md \
+              --latest=true
+          fi
