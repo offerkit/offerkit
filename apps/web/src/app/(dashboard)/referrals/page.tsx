@@ -1,18 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { T } from "gt-next/client";
 import { Plus } from "lucide-react";
+import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { ovx } from "@/lib/sdk";
 
 function rewardLabel(kind: "discount" | "gift_card" | "loyalty_points" | "custom"): string {
@@ -38,7 +32,45 @@ export default function ReferralsPage() {
     queryKey: ["campaigns", "for-referrals"],
     queryFn: () => ovx().campaigns.list({ limit: 100 }),
   });
-  const byId = new Map((campaigns?.data ?? []).map((c) => [c.id, c]));
+  const byId = new Map((campaigns?.data ?? []).map((campaign: DataTableRow) => [campaign.id, campaign]));
+  const columns: ColumnDef<DataTableRow>[] = [
+    {
+      id: "program",
+      header: () => <T>Program</T>,
+      cell: ({ row }) => (
+        <Link className="font-medium hover:underline" href={`/referrals/${row.original.id}`}>
+          {byId.get(row.original.campaignId)?.name ?? row.original.id}
+        </Link>
+      ),
+    },
+    {
+      id: "referrerReward",
+      header: () => <T>Referrer reward</T>,
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">
+          {rewardLabel(row.original.referrerReward.kind)}
+        </span>
+      ),
+    },
+    {
+      id: "refereeReward",
+      header: () => <T>Referee reward</T>,
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">
+          {rewardLabel(row.original.refereeReward.kind)}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "createdAt",
+      header: () => <div className="text-right"><T>Created</T></div>,
+      cell: ({ row }) => (
+        <div className="text-right text-muted-foreground">
+          {new Date(row.original.createdAt).toLocaleDateString()}
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -57,60 +89,12 @@ export default function ReferralsPage() {
         </Button>
       </header>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>
-                <T>Program</T>
-              </TableHead>
-              <TableHead>
-                <T>Referrer reward</T>
-              </TableHead>
-              <TableHead>
-                <T>Referee reward</T>
-              </TableHead>
-              <TableHead className="text-right">
-                <T>Created</T>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
-                  <T>Loading…</T>
-                </TableCell>
-              </TableRow>
-            ) : !data || data.data.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
-                  <T>No referral programs yet.</T>
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.data.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell>
-                    <Link className="font-medium hover:underline" href={`/referrals/${p.id}`}>
-                      {byId.get(p.campaignId)?.name ?? p.id}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {rewardLabel(p.referrerReward.kind)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {rewardLabel(p.refereeReward.kind)}
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {new Date(p.createdAt).toLocaleDateString()}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={data?.data ?? []}
+        isLoading={isLoading}
+        emptyMessage={<T>No referral programs yet.</T>}
+      />
     </div>
   );
 }

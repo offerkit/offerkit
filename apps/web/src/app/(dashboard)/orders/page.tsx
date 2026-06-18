@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { Search } from "lucide-react";
+import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,14 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { ovx } from "@/lib/sdk";
 
 type Status = "" | "CREATED" | "PAID" | "CANCELED" | "FULFILLED";
@@ -58,6 +52,54 @@ export default function OrdersPage() {
         limit: 20,
       }),
   });
+  const columns: ColumnDef<DataTableRow>[] = [
+    {
+      accessorKey: "externalId",
+      header: () => <T>External ID</T>,
+      cell: ({ row }) => (
+        <Link className="font-medium hover:underline" href={`/orders/${row.original.id}`}>
+          {row.original.externalId ?? row.original.id.slice(0, 8)}
+        </Link>
+      ),
+    },
+    {
+      accessorKey: "status",
+      header: () => <T>Status</T>,
+      cell: ({ row }) => {
+        const status = row.original.status as Exclude<Status, "">;
+        return <Badge variant={STATUS_BADGE[status]}>{status}</Badge>;
+      },
+    },
+    {
+      accessorKey: "amount",
+      header: () => <div className="text-right"><T>Amount</T></div>,
+      cell: ({ row }) => (
+        <div className="text-right font-mono">
+          {formatCents(row.original.amount, row.original.currency)}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "discountAmount",
+      header: () => <div className="text-right"><T>Discount</T></div>,
+      cell: ({ row }) => (
+        <div className="text-right font-mono text-muted-foreground">
+          {row.original.discountAmount > 0
+            ? formatCents(row.original.discountAmount, row.original.currency)
+            : "-"}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "createdAt",
+      header: () => <div className="text-right"><T>Created</T></div>,
+      cell: ({ row }) => (
+        <div className="text-right text-muted-foreground">
+          {new Date(row.original.createdAt).toLocaleDateString()}
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -110,66 +152,12 @@ export default function OrdersPage() {
         </Select>
       </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>
-                <T>External ID</T>
-              </TableHead>
-              <TableHead>
-                <T>Status</T>
-              </TableHead>
-              <TableHead className="text-right">
-                <T>Amount</T>
-              </TableHead>
-              <TableHead className="text-right">
-                <T>Discount</T>
-              </TableHead>
-              <TableHead className="text-right">
-                <T>Created</T>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
-                  <T>Loading…</T>
-                </TableCell>
-              </TableRow>
-            ) : !data || data.data.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
-                  <T>No orders yet.</T>
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.data.map((o) => (
-                <TableRow key={o.id}>
-                  <TableCell>
-                    <Link className="font-medium hover:underline" href={`/orders/${o.id}`}>
-                      {o.externalId ?? o.id.slice(0, 8)}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={STATUS_BADGE[o.status]}>{o.status}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatCents(o.amount, o.currency)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono text-muted-foreground">
-                    {o.discountAmount > 0 ? formatCents(o.discountAmount, o.currency) : "—"}
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {new Date(o.createdAt).toLocaleDateString()}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={data?.data ?? []}
+        isLoading={isLoading}
+        emptyMessage={<T>No orders yet.</T>}
+      />
 
       {data?.next ? (
         <div className="flex justify-end">

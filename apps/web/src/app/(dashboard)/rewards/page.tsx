@@ -2,19 +2,13 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { Plus, Search } from "lucide-react";
+import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { ovx } from "@/lib/sdk";
 
 export default function RewardTypesPage() {
@@ -24,6 +18,37 @@ export default function RewardTypesPage() {
     queryKey: ["rewardTypes", { search }],
     queryFn: () => ovx().rewardTypes.list({ search: search || undefined, limit: 25 }),
   });
+  const columns: ColumnDef<DataTableRow>[] = [
+    {
+      accessorKey: "key",
+      header: () => <T>Key</T>,
+      cell: ({ row }) => (
+        <Link className="font-mono text-sm hover:underline" href={`/rewards/${row.original.id}`}>
+          {row.original.key}
+        </Link>
+      ),
+    },
+    {
+      accessorKey: "name",
+      header: () => <T>Name</T>,
+    },
+    {
+      accessorKey: "description",
+      header: () => <T>Description</T>,
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">{row.original.description ?? "-"}</span>
+      ),
+    },
+    {
+      accessorKey: "updatedAt",
+      header: () => <div className="text-right"><T>Updated</T></div>,
+      cell: ({ row }) => (
+        <div className="text-right text-muted-foreground">
+          {new Date(row.original.updatedAt).toLocaleDateString()}
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -55,56 +80,12 @@ export default function RewardTypesPage() {
         />
       </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>
-                <T>Key</T>
-              </TableHead>
-              <TableHead>
-                <T>Name</T>
-              </TableHead>
-              <TableHead>
-                <T>Description</T>
-              </TableHead>
-              <TableHead className="text-right">
-                <T>Updated</T>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
-                  <T>Loading…</T>
-                </TableCell>
-              </TableRow>
-            ) : !data || data.data.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
-                  <T>No reward types yet.</T>
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.data.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell>
-                    <Link className="font-mono text-sm hover:underline" href={`/rewards/${r.id}`}>
-                      {r.key}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{r.name}</TableCell>
-                  <TableCell className="text-muted-foreground">{r.description ?? "—"}</TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {new Date(r.updatedAt).toLocaleDateString()}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={data?.data ?? []}
+        isLoading={isLoading}
+        emptyMessage={<T>No reward types yet.</T>}
+      />
     </div>
   );
 }

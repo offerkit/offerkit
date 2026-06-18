@@ -2,19 +2,13 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { Plus, Search } from "lucide-react";
+import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { ovx } from "@/lib/sdk";
 
 export default function SegmentsPage() {
@@ -24,6 +18,33 @@ export default function SegmentsPage() {
     queryKey: ["segments", { search }],
     queryFn: () => ovx().segments.list({ search: search || undefined, limit: 20 }),
   });
+  const columns: ColumnDef<DataTableRow>[] = [
+    {
+      accessorKey: "name",
+      header: () => <T>Name</T>,
+      cell: ({ row }) => (
+        <Link className="font-medium hover:underline" href={`/segments/${row.original.id}`}>
+          {row.original.name}
+        </Link>
+      ),
+    },
+    {
+      accessorKey: "description",
+      header: () => <T>Description</T>,
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">{row.original.description ?? "-"}</span>
+      ),
+    },
+    {
+      accessorKey: "updatedAt",
+      header: () => <div className="text-right"><T>Updated</T></div>,
+      cell: ({ row }) => (
+        <div className="text-right text-muted-foreground">
+          {new Date(row.original.updatedAt).toLocaleDateString()}
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -52,52 +73,12 @@ export default function SegmentsPage() {
         />
       </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>
-                <T>Name</T>
-              </TableHead>
-              <TableHead>
-                <T>Description</T>
-              </TableHead>
-              <TableHead className="text-right">
-                <T>Updated</T>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
-                  <T>Loading…</T>
-                </TableCell>
-              </TableRow>
-            ) : !data || data.data.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
-                  <T>No segments yet.</T>
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.data.map((s) => (
-                <TableRow key={s.id}>
-                  <TableCell>
-                    <Link className="font-medium hover:underline" href={`/segments/${s.id}`}>
-                      {s.name}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{s.description ?? "—"}</TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {new Date(s.updatedAt).toLocaleDateString()}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={data?.data ?? []}
+        isLoading={isLoading}
+        emptyMessage={<T>No segments yet.</T>}
+      />
     </div>
   );
 }

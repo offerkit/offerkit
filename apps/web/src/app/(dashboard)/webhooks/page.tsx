@@ -2,24 +2,18 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { Copy, Plus, Trash2 } from "lucide-react";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
+import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { ovx } from "@/lib/sdk";
 
 export default function WebhooksPage() {
@@ -64,6 +58,67 @@ export default function WebhooksPage() {
       await queryClient.invalidateQueries({ queryKey: ["webhooks"] });
     },
   });
+  const columns: ColumnDef<DataTableRow>[] = [
+    {
+      accessorKey: "name",
+      header: () => <T>Name</T>,
+      cell: ({ row }) => (
+        <Link className="font-medium hover:underline" href={`/webhooks/${row.original.id}`}>
+          {row.original.name}
+        </Link>
+      ),
+    },
+    {
+      accessorKey: "url",
+      header: () => <T>URL</T>,
+      cell: ({ row }) => (
+        <span className="font-mono text-xs text-muted-foreground">{row.original.url}</span>
+      ),
+    },
+    {
+      accessorKey: "events",
+      header: () => <T>Events</T>,
+      cell: ({ row }) => (
+        <div className="flex flex-wrap gap-1">
+          {row.original.events.map((event: string) => (
+            <Badge key={event} variant="secondary">
+              {event}
+            </Badge>
+          ))}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "active",
+      header: () => <T>Active</T>,
+      cell: ({ row }) => (
+        <Badge variant={row.original.active ? "default" : "secondary"}>
+          {row.original.active ? gt("yes") : gt("no")}
+        </Badge>
+      ),
+    },
+    {
+      id: "actions",
+      header: () => <div className="text-right" />,
+      cell: ({ row }) => (
+        <div className="text-right">
+          <ConfirmDialog
+            trigger={
+              <Button variant="ghost" size="icon">
+                <Trash2 className="size-4" />
+              </Button>
+            }
+            title={gt("Delete this webhook?")}
+            description={gt("Soft-delete. Pending deliveries will be marked dead.")}
+            confirmLabel={gt("Delete")}
+            destructive
+            pending={remove.isPending}
+            onConfirm={() => remove.mutate(row.original.id)}
+          />
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -158,84 +213,12 @@ export default function WebhooksPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>
-                  <T>Name</T>
-                </TableHead>
-                <TableHead>
-                  <T>URL</T>
-                </TableHead>
-                <TableHead>
-                  <T>Events</T>
-                </TableHead>
-                <TableHead>
-                  <T>Active</T>
-                </TableHead>
-                <TableHead className="text-right" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
-                    <T>Loading…</T>
-                  </TableCell>
-                </TableRow>
-              ) : !data || data.data.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
-                    <T>No webhooks yet.</T>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                data.data.map((w) => (
-                  <TableRow key={w.id}>
-                    <TableCell>
-                      <Link className="font-medium hover:underline" href={`/webhooks/${w.id}`}>
-                        {w.name}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {w.url}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1 flex-wrap">
-                        {w.events.map((e) => (
-                          <Badge key={e} variant="secondary">
-                            {e}
-                          </Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={w.active ? "default" : "secondary"}>
-                        {w.active ? gt("yes") : gt("no")}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <ConfirmDialog
-                        trigger={
-                          <Button variant="ghost" size="icon">
-                            <Trash2 className="size-4" />
-                          </Button>
-                        }
-                        title={gt("Delete this webhook?")}
-                        description={gt(
-                          "Soft-delete. Pending deliveries will be marked dead.",
-                        )}
-                        confirmLabel={gt("Delete")}
-                        destructive
-                        pending={remove.isPending}
-                        onConfirm={() => remove.mutate(w.id)}
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          <DataTable
+            columns={columns}
+            data={data?.data ?? []}
+            isLoading={isLoading}
+            emptyMessage={<T>No webhooks yet.</T>}
+          />
         </CardContent>
       </Card>
     </div>

@@ -1,18 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { T } from "gt-next/client";
 import { Plus } from "lucide-react";
+import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { ovx } from "@/lib/sdk";
 
 export default function LoyaltyPage() {
@@ -21,15 +15,44 @@ export default function LoyaltyPage() {
     queryFn: () => ovx().loyalty.programs.list({ limit: 25 }),
   });
 
-  const campaignIds = data?.data.map((p) => p.campaignId) ?? [];
+  const campaignIds = data?.data.map((program: DataTableRow) => program.campaignId) ?? [];
   const { data: campaigns } = useQuery({
     queryKey: ["campaigns", "byIds", campaignIds],
     queryFn: async () => {
       const list = await ovx().campaigns.list({ limit: 100 });
-      return new Map(list.data.map((c) => [c.id, c]));
+      return new Map(list.data.map((campaign: DataTableRow) => [campaign.id, campaign]));
     },
     enabled: campaignIds.length > 0,
   });
+  const columns: ColumnDef<DataTableRow>[] = [
+    {
+      id: "program",
+      header: () => <T>Program</T>,
+      cell: ({ row }) => (
+        <Link className="font-medium hover:underline" href={`/loyalty/${row.original.id}`}>
+          {campaigns?.get(row.original.campaignId)?.name ?? row.original.id}
+        </Link>
+      ),
+    },
+    {
+      accessorKey: "pointsExpiryDays",
+      header: () => <T>Expires</T>,
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">
+          {row.original.pointsExpiryDays ? `${String(row.original.pointsExpiryDays)} days` : "-"}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "createdAt",
+      header: () => <div className="text-right"><T>Created</T></div>,
+      cell: ({ row }) => (
+        <div className="text-right text-muted-foreground">
+          {new Date(row.original.createdAt).toLocaleDateString()}
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -48,57 +71,12 @@ export default function LoyaltyPage() {
         </Button>
       </header>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>
-                <T>Program</T>
-              </TableHead>
-              <TableHead>
-                <T>Expires</T>
-              </TableHead>
-              <TableHead className="text-right">
-                <T>Created</T>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
-                  <T>Loading…</T>
-                </TableCell>
-              </TableRow>
-            ) : !data || data.data.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
-                  <T>No loyalty programs yet.</T>
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.data.map((p) => {
-                const c = campaigns?.get(p.campaignId);
-                return (
-                  <TableRow key={p.id}>
-                    <TableCell>
-                      <Link className="font-medium hover:underline" href={`/loyalty/${p.id}`}>
-                        {c?.name ?? p.id}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {p.pointsExpiryDays ? `${String(p.pointsExpiryDays)} days` : "—"}
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground">
-                      {new Date(p.createdAt).toLocaleDateString()}
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={data?.data ?? []}
+        isLoading={isLoading}
+        emptyMessage={<T>No loyalty programs yet.</T>}
+      />
     </div>
   );
 }

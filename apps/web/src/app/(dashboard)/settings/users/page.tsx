@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { Copy, Plus, RotateCcw, ShieldCheck, ShieldOff } from "lucide-react";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
+import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,15 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { ovx } from "@/lib/sdk";
 
 type Role = "admin" | "member";
@@ -85,6 +79,103 @@ export default function UsersPage() {
     mutationFn: (id: string) => ovx().users.enable({ params: { id } }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
   });
+  const columns: ColumnDef<DataTableRow>[] = [
+    {
+      accessorKey: "email",
+      header: () => <T>Email</T>,
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.email}</span>,
+    },
+    {
+      accessorKey: "name",
+      header: () => <T>Name</T>,
+      cell: ({ row }) => row.original.name ?? "-",
+    },
+    {
+      accessorKey: "role",
+      header: () => <T>Role</T>,
+      cell: ({ row }) => (
+        <Select
+          items={roleItems}
+          value={row.original.role}
+          onValueChange={(value) =>
+            setRoleMut.mutate({ id: row.original.id, role: value as Role })
+          }
+        >
+          <SelectTrigger className="h-8 w-32">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="member">{gt("Member")}</SelectItem>
+            <SelectItem value="admin">{gt("Admin")}</SelectItem>
+          </SelectContent>
+        </Select>
+      ),
+    },
+    {
+      id: "status",
+      header: () => <T>Status</T>,
+      cell: ({ row }) =>
+        row.original.disabledAt ? (
+          <Badge variant="destructive">
+            <T>Disabled</T>
+          </Badge>
+        ) : row.original.mustChangePassword ? (
+          <Badge variant="secondary">
+            <T>Must change password</T>
+          </Badge>
+        ) : (
+          <Badge variant="outline">
+            <T>Active</T>
+          </Badge>
+        ),
+    },
+    {
+      id: "actions",
+      header: () => <div className="text-right" />,
+      cell: ({ row }) => (
+        <div className="flex justify-end gap-1">
+          <ConfirmDialog
+            trigger={
+              <Button variant="ghost" size="icon" aria-label={gt("Reset password")}>
+                <RotateCcw className="size-4" />
+              </Button>
+            }
+            title={gt("Reset password?")}
+            description={gt("A new temporary password will be generated and shown once.")}
+            confirmLabel={gt("Reset")}
+            pending={reset.isPending}
+            onConfirm={() => reset.mutate(row.original.id)}
+          />
+          {row.original.disabledAt ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={gt("Enable")}
+              onClick={() => enable.mutate(row.original.id)}
+            >
+              <ShieldCheck className="size-4" />
+            </Button>
+          ) : (
+            <ConfirmDialog
+              trigger={
+                <Button variant="ghost" size="icon" aria-label={gt("Disable")}>
+                  <ShieldOff className="size-4" />
+                </Button>
+              }
+              title={gt("Disable user?")}
+              description={gt(
+                "Active sessions will be revoked and the user will not be able to sign in.",
+              )}
+              confirmLabel={gt("Disable")}
+              destructive
+              pending={disable.isPending}
+              onConfirm={() => disable.mutate(row.original.id)}
+            />
+          )}
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -193,129 +284,12 @@ export default function UsersPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>
-                  <T>Email</T>
-                </TableHead>
-                <TableHead>
-                  <T>Name</T>
-                </TableHead>
-                <TableHead>
-                  <T>Role</T>
-                </TableHead>
-                <TableHead>
-                  <T>Status</T>
-                </TableHead>
-                <TableHead className="text-right" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
-                    <T>Loading…</T>
-                  </TableCell>
-                </TableRow>
-              ) : !data || data.data.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
-                    <T>No users yet.</T>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                data.data.map((u) => (
-                  <TableRow key={u.id}>
-                    <TableCell className="font-mono text-xs">{u.email}</TableCell>
-                    <TableCell>{u.name ?? "—"}</TableCell>
-                    <TableCell>
-                      <Select
-                        items={roleItems}
-                        value={u.role}
-                        onValueChange={(v) =>
-                          setRoleMut.mutate({ id: u.id, role: v as Role })
-                        }
-                      >
-                        <SelectTrigger className="h-8 w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="member">{gt("Member")}</SelectItem>
-                          <SelectItem value="admin">{gt("Admin")}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      {u.disabledAt ? (
-                        <Badge variant="destructive">
-                          <T>Disabled</T>
-                        </Badge>
-                      ) : u.mustChangePassword ? (
-                        <Badge variant="secondary">
-                          <T>Must change password</T>
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline">
-                          <T>Active</T>
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right space-x-1">
-                      <ConfirmDialog
-                        trigger={
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label={gt("Reset password")}
-                          >
-                            <RotateCcw className="size-4" />
-                          </Button>
-                        }
-                        title={gt("Reset password?")}
-                        description={gt(
-                          "A new temporary password will be generated and shown once.",
-                        )}
-                        confirmLabel={gt("Reset")}
-                        pending={reset.isPending}
-                        onConfirm={() => reset.mutate(u.id)}
-                      />
-                      {u.disabledAt ? (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label={gt("Enable")}
-                          onClick={() => enable.mutate(u.id)}
-                        >
-                          <ShieldCheck className="size-4" />
-                        </Button>
-                      ) : (
-                        <ConfirmDialog
-                          trigger={
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              aria-label={gt("Disable")}
-                            >
-                              <ShieldOff className="size-4" />
-                            </Button>
-                          }
-                          title={gt("Disable user?")}
-                          description={gt(
-                            "Active sessions will be revoked and the user will not be able to sign in.",
-                          )}
-                          confirmLabel={gt("Disable")}
-                          destructive
-                          pending={disable.isPending}
-                          onConfirm={() => disable.mutate(u.id)}
-                        />
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          <DataTable
+            columns={columns}
+            data={data?.data ?? []}
+            isLoading={isLoading}
+            emptyMessage={<T>No users yet.</T>}
+          />
         </CardContent>
       </Card>
 

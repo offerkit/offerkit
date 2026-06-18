@@ -2,19 +2,13 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { Plus, Search } from "lucide-react";
+import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { ovx } from "@/lib/sdk";
 
 export default function CustomersPage() {
@@ -26,6 +20,36 @@ export default function CustomersPage() {
     queryKey: ["customers", { search, cursor }],
     queryFn: () => ovx().customers.list({ search: search || undefined, cursor, limit: 20 }),
   });
+  const columns: ColumnDef<DataTableRow>[] = [
+    {
+      accessorKey: "email",
+      header: () => <T>Email</T>,
+      cell: ({ row }) => (
+        <Link className="font-medium hover:underline" href={`/customers/${row.original.id}`}>
+          {row.original.email ?? <T>(no email)</T>}
+        </Link>
+      ),
+    },
+    {
+      accessorKey: "name",
+      header: () => <T>Name</T>,
+      cell: ({ row }) => row.original.name ?? "-",
+    },
+    {
+      accessorKey: "phone",
+      header: () => <T>Phone</T>,
+      cell: ({ row }) => row.original.phone ?? "-",
+    },
+    {
+      accessorKey: "createdAt",
+      header: () => <div className="text-right"><T>Created</T></div>,
+      cell: ({ row }) => (
+        <div className="text-right text-muted-foreground">
+          {new Date(row.original.createdAt).toLocaleDateString()}
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -57,56 +81,13 @@ export default function CustomersPage() {
         />
       </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>
-                <T>Email</T>
-              </TableHead>
-              <TableHead>
-                <T>Name</T>
-              </TableHead>
-              <TableHead>
-                <T>Phone</T>
-              </TableHead>
-              <TableHead className="text-right">
-                <T>Created</T>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
-                  <T>Loading…</T>
-                </TableCell>
-              </TableRow>
-            ) : !data || data.data.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
-                  {search ? <T>No customers match your search.</T> : <T>No customers yet.</T>}
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.data.map((c) => (
-                <TableRow key={c.id} className="cursor-pointer">
-                  <TableCell>
-                    <Link className="font-medium hover:underline" href={`/customers/${c.id}`}>
-                      {c.email ?? <T>(no email)</T>}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{c.name ?? "—"}</TableCell>
-                  <TableCell>{c.phone ?? "—"}</TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {new Date(c.createdAt).toLocaleDateString()}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={data?.data ?? []}
+        isLoading={isLoading}
+        emptyMessage={search ? <T>No customers match your search.</T> : <T>No customers yet.</T>}
+        getRowClassName={() => "cursor-pointer"}
+      />
 
       {data?.next ? (
         <div className="flex justify-end">

@@ -3,10 +3,13 @@
 import Link from "next/link";
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
+import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,16 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { ovx } from "@/lib/sdk";
 
 interface PageProps {
@@ -176,6 +170,41 @@ function TiersTab({ programId }: { programId: string }) {
       await queryClient.invalidateQueries({ queryKey: ["loyaltyTiers", programId] });
     },
   });
+  const columns: ColumnDef<DataTableRow>[] = [
+    { accessorKey: "name", header: () => <T>Name</T> },
+    {
+      accessorKey: "threshold",
+      header: () => <div className="text-right"><T>Threshold</T></div>,
+      cell: ({ row }) => (
+        <div className="text-right text-muted-foreground">{row.original.threshold}</div>
+      ),
+    },
+    {
+      accessorKey: "earnMultiplier",
+      header: () => <div className="text-right"><T>Multiplier</T></div>,
+      cell: ({ row }) => (
+        <div className="text-right text-muted-foreground">
+          {(row.original.earnMultiplier / 10000).toFixed(2)}x
+        </div>
+      ),
+    },
+    {
+      id: "actions",
+      header: () => <div className="text-right" />,
+      cell: ({ row }) => (
+        <div className="text-right">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => remove.mutate(row.original.id)}
+            aria-label={gt("Delete tier")}
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <Card>
@@ -232,53 +261,11 @@ function TiersTab({ programId }: { programId: string }) {
             </Button>
           </div>
         </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>
-                <T>Name</T>
-              </TableHead>
-              <TableHead className="text-right">
-                <T>Threshold</T>
-              </TableHead>
-              <TableHead className="text-right">
-                <T>Multiplier</T>
-              </TableHead>
-              <TableHead className="text-right" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {!data || data.data.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
-                  <T>No tiers yet.</T>
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.data.map((t) => (
-                <TableRow key={t.id}>
-                  <TableCell>{t.name}</TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {t.threshold}
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {(t.earnMultiplier / 10000).toFixed(2)}x
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => remove.mutate(t.id)}
-                      aria-label={gt("Delete tier")}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+        <DataTable
+          columns={columns}
+          data={data?.data ?? []}
+          emptyMessage={<T>No tiers yet.</T>}
+        />
       </CardContent>
     </Card>
   );
@@ -321,6 +308,41 @@ function EarningRulesTab({ programId }: { programId: string }) {
       await queryClient.invalidateQueries({ queryKey: ["loyaltyEarningRules", programId] });
     },
   });
+  const columns: ColumnDef<DataTableRow>[] = [
+    { accessorKey: "name", header: () => <T>Name</T> },
+    {
+      accessorKey: "event",
+      header: () => <T>Event</T>,
+      cell: ({ row }) => (
+        <span className="font-mono text-xs text-muted-foreground">{row.original.event}</span>
+      ),
+    },
+    {
+      accessorKey: "formula",
+      header: () => <T>Formula</T>,
+      cell: ({ row }) => (
+        <span className="font-mono text-xs text-muted-foreground">
+          {JSON.stringify(row.original.formula)}
+        </span>
+      ),
+    },
+    {
+      id: "actions",
+      header: () => <div className="text-right" />,
+      cell: ({ row }) => (
+        <div className="text-right">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => remove.mutate(row.original.id)}
+            aria-label={gt("Delete rule")}
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <Card>
@@ -398,53 +420,11 @@ function EarningRulesTab({ programId }: { programId: string }) {
             </Button>
           </div>
         </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>
-                <T>Name</T>
-              </TableHead>
-              <TableHead>
-                <T>Event</T>
-              </TableHead>
-              <TableHead>
-                <T>Formula</T>
-              </TableHead>
-              <TableHead className="text-right" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {!data || data.data.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
-                  <T>No rules yet.</T>
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.data.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell>{r.name}</TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {r.event}
-                  </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {JSON.stringify(r.formula)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => remove.mutate(r.id)}
-                      aria-label={gt("Delete rule")}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+        <DataTable
+          columns={columns}
+          data={data?.data ?? []}
+          emptyMessage={<T>No rules yet.</T>}
+        />
       </CardContent>
     </Card>
   );
@@ -491,6 +471,39 @@ function RewardsTab({ programId }: { programId: string }) {
       await queryClient.invalidateQueries({ queryKey: ["loyaltyRewards", programId] });
     },
   });
+  const columns: ColumnDef<DataTableRow>[] = [
+    { accessorKey: "name", header: () => <T>Name</T> },
+    {
+      accessorKey: "cost",
+      header: () => <div className="text-right"><T>Cost</T></div>,
+      cell: ({ row }) => <div className="text-right text-muted-foreground">{row.original.cost}</div>,
+    },
+    {
+      accessorKey: "payload",
+      header: () => <T>Payload</T>,
+      cell: ({ row }) => (
+        <span className="font-mono text-xs text-muted-foreground">
+          {JSON.stringify(row.original.payload)}
+        </span>
+      ),
+    },
+    {
+      id: "actions",
+      header: () => <div className="text-right" />,
+      cell: ({ row }) => (
+        <div className="text-right">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => remove.mutate(row.original.id)}
+            aria-label={gt("Delete reward")}
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <Card>
@@ -565,51 +578,11 @@ function RewardsTab({ programId }: { programId: string }) {
             </Button>
           </div>
         </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>
-                <T>Name</T>
-              </TableHead>
-              <TableHead className="text-right">
-                <T>Cost</T>
-              </TableHead>
-              <TableHead>
-                <T>Payload</T>
-              </TableHead>
-              <TableHead className="text-right" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {!data || data.data.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
-                  <T>No rewards yet.</T>
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.data.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell>{r.name}</TableCell>
-                  <TableCell className="text-right text-muted-foreground">{r.cost}</TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {JSON.stringify(r.payload)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => remove.mutate(r.id)}
-                      aria-label={gt("Delete reward")}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+        <DataTable
+          columns={columns}
+          data={data?.data ?? []}
+          emptyMessage={<T>No rewards yet.</T>}
+        />
       </CardContent>
     </Card>
   );
@@ -635,6 +608,38 @@ function MembersTab({ programId }: { programId: string }) {
     onError: (err: unknown) =>
       toast.error(err instanceof Error ? err.message : gt("Enroll failed")),
   });
+  const columns: ColumnDef<DataTableRow>[] = [
+    {
+      accessorKey: "customerId",
+      header: () => <T>Customer</T>,
+      cell: ({ row }) => (
+        <Link className="font-mono text-xs hover:underline" href={`/loyalty/members/${row.original.id}`}>
+          {row.original.customerId}
+        </Link>
+      ),
+    },
+    {
+      accessorKey: "balance",
+      header: () => <div className="text-right"><T>Balance</T></div>,
+      cell: ({ row }) => (
+        <div className="text-right">
+          <Badge>{row.original.balance}</Badge>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "lifetimePoints",
+      header: () => <div className="text-right"><T>Lifetime</T></div>,
+      cell: ({ row }) => (
+        <div className="text-right text-muted-foreground">{row.original.lifetimePoints}</div>
+      ),
+    },
+    {
+      accessorKey: "currentTierId",
+      header: () => <T>Tier</T>,
+      cell: () => <span className="text-muted-foreground">-</span>,
+    },
+  ];
 
   return (
     <Card>
@@ -666,55 +671,11 @@ function MembersTab({ programId }: { programId: string }) {
             <T>Enroll</T>
           </Button>
         </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>
-                <T>Customer</T>
-              </TableHead>
-              <TableHead className="text-right">
-                <T>Balance</T>
-              </TableHead>
-              <TableHead className="text-right">
-                <T>Lifetime</T>
-              </TableHead>
-              <TableHead>
-                <T>Tier</T>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {!data || data.data.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
-                  <T>No members yet.</T>
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.data.map((m) => (
-                <TableRow key={m.id}>
-                  <TableCell>
-                    <Link
-                      className="font-mono text-xs hover:underline"
-                      href={`/loyalty/members/${m.id}`}
-                    >
-                      {m.customerId}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Badge>{m.balance}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {m.lifetimePoints}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {m.currentTierId ? "—" : "—"}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+        <DataTable
+          columns={columns}
+          data={data?.data ?? []}
+          emptyMessage={<T>No members yet.</T>}
+        />
       </CardContent>
     </Card>
   );

@@ -1,17 +1,11 @@
 "use client";
 
+import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { T } from "gt-next/client";
+import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { ovx } from "@/lib/sdk";
 
 export default function InsightsPage() {
@@ -20,6 +14,29 @@ export default function InsightsPage() {
     queryFn: () => ovx().insights.summary({}),
     refetchInterval: 30_000,
   });
+  const topCampaignColumns: ColumnDef<DataTableRow>[] = [
+    {
+      accessorKey: "campaignName",
+      header: () => <T>Campaign</T>,
+    },
+    {
+      accessorKey: "redemptions",
+      header: () => <div className="text-right"><T>Redemptions</T></div>,
+      cell: ({ row }) => <div className="text-right font-mono">{row.original.redemptions}</div>,
+    },
+  ];
+  const failureColumns: ColumnDef<DataTableRow>[] = [
+    {
+      accessorKey: "reason",
+      header: () => <T>Reason</T>,
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.reason}</span>,
+    },
+    {
+      accessorKey: "total",
+      header: () => <div className="text-right"><T>Failures</T></div>,
+      cell: ({ row }) => <div className="text-right font-mono">{row.original.total}</div>,
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -63,34 +80,11 @@ export default function InsightsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>
-                        <T>Campaign</T>
-                      </TableHead>
-                      <TableHead className="text-right">
-                        <T>Redemptions</T>
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {data.topCampaigns.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={2} className="text-center text-sm text-muted-foreground">
-                          <T>No data yet.</T>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      data.topCampaigns.map((c) => (
-                        <TableRow key={c.campaignId}>
-                          <TableCell>{c.campaignName}</TableCell>
-                          <TableCell className="text-right font-mono">{c.redemptions}</TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                <DataTable
+                  columns={topCampaignColumns}
+                  data={data.topCampaigns}
+                  emptyMessage={<T>No data yet.</T>}
+                />
               </CardContent>
             </Card>
 
@@ -101,34 +95,11 @@ export default function InsightsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>
-                        <T>Reason</T>
-                      </TableHead>
-                      <TableHead className="text-right">
-                        <T>Failures</T>
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {data.failures.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={2} className="text-center text-sm text-muted-foreground">
-                          <T>No failures recorded.</T>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      data.failures.map((f) => (
-                        <TableRow key={f.reason}>
-                          <TableCell className="font-mono text-xs">{f.reason}</TableCell>
-                          <TableCell className="text-right font-mono">{f.total}</TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                <DataTable
+                  columns={failureColumns}
+                  data={data.failures}
+                  emptyMessage={<T>No failures recorded.</T>}
+                />
               </CardContent>
             </Card>
           </div>
@@ -146,7 +117,7 @@ export default function InsightsPage() {
                     <T>No deliveries yet.</T>
                   </p>
                 ) : (
-                  data.webhooks.map((w) => (
+                  data.webhooks.map((w: DataTableRow) => (
                     <Badge
                       key={w.status}
                       variant={
