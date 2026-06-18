@@ -32,6 +32,7 @@ export interface RedemptionExplanation {
 export interface RedeemInput {
   voucherCode: string;
   customerId?: string;
+  customerExternalId?: string;
   /** uuid of an `order` row created in this system. */
   orderId?: string;
   /** Integrator's free-form order reference (Shopify id, internal sale id, etc). */
@@ -61,6 +62,7 @@ export type RedeemResult = RedeemSuccess | RedeemFailure;
 export interface ValidateInput {
   voucherCode: string;
   customerId?: string;
+  customerExternalId?: string;
   order?: DiscountOrder;
 }
 
@@ -73,7 +75,8 @@ export interface ValidateResult {
 }
 
 export interface QualifyInput {
-  customerId: string;
+  customerId?: string;
+  customerExternalId?: string;
   order: DiscountOrder;
   filters?: {
     campaignIds?: string[];
@@ -104,6 +107,7 @@ export interface VoucherQualificationResult {
 export interface StackRedeemInput {
   voucherCodes: string[];
   customerId?: string;
+  customerExternalId?: string;
   orderId?: string;
   externalOrderId?: string;
   order: DiscountOrder;

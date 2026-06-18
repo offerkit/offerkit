@@ -1,7 +1,7 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { schema, type Db } from "@offerkit/db";
 import { withSpan } from "../observability/index.ts";
-import { validateVoucher } from "./shared.ts";
+import { resolveCustomerRef, validateVoucher } from "./shared.ts";
 import type {
   QualifyInput,
   RedemptionCustomerRow,
@@ -17,20 +17,33 @@ export function qualify(db: Db, input: QualifyInput): Promise<VoucherQualificati
     "voucher.qualify",
     () => qualifyImpl(db, input),
     {
-      "customer.id": input.customerId,
+      ...(input.customerId ? { "customer.id": input.customerId } : {}),
+      ...(input.customerExternalId ? { "customer.external_id": input.customerExternalId } : {}),
       "voucher.include_skipped": input.filters?.includeSkipped ?? false,
     },
   );
 }
 
 async function qualifyImpl(db: Db, input: QualifyInput): Promise<VoucherQualificationResult> {
+  const resolvedCustomer = await resolveCustomerRef(
+    db,
+    {
+      customerId: input.customerId,
+      customerExternalId: input.customerExternalId,
+    },
+    { createIfMissing: true },
+  );
+  if (resolvedCustomer.mismatch || !resolvedCustomer.customerId) {
+    return { eligible: [], skipped: [] };
+  }
+
   const campaignIds = input.filters?.campaignIds ?? [];
   if (campaignIds.length === 0 && input.filters?.campaignIds) {
     return { eligible: [], skipped: [] };
   }
 
   const filters = [
-    eq(schema.voucher.customerId, input.customerId),
+    eq(schema.voucher.customerId, resolvedCustomer.customerId),
     isNull(schema.voucher.deletedAt),
   ];
   if (campaignIds.length > 0) {
@@ -44,9 +57,11 @@ async function qualifyImpl(db: Db, input: QualifyInput): Promise<VoucherQualific
 
   const eligible: VoucherQualificationResult["eligible"] = [];
   const skipped: VoucherQualificationSkipped[] = [];
-  const customer = (await db.query.customer.findFirst({
-    where: and(eq(schema.customer.id, input.customerId), isNull(schema.customer.deletedAt)),
-  })) as RedemptionCustomerRow | undefined;
+  const customer =
+    resolvedCustomer.customer ??
+    ((await db.query.customer.findFirst({
+      where: and(eq(schema.customer.id, resolvedCustomer.customerId), isNull(schema.customer.deletedAt)),
+    })) as RedemptionCustomerRow | undefined);
 
   for (const voucher of vouchers) {
     const campaign = voucher.campaignId
@@ -63,7 +78,7 @@ async function qualifyImpl(db: Db, input: QualifyInput): Promise<VoucherQualific
       db,
       validationRule,
       customer,
-      customerId: input.customerId,
+      customerId: resolvedCustomer.customerId,
     });
     if (result.valid) {
       eligible.push({

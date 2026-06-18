@@ -407,6 +407,7 @@ const validateProc = os.vouchers.validate
     const result = await validate(db(), {
       voucherCode: input.params.code,
       customerId: input.body?.customerId,
+      customerExternalId: input.body?.customerExternalId,
       order: input.body?.order,
     });
     return {
@@ -428,6 +429,7 @@ const redeemProc = os.vouchers.redeem
     const result = await redeem(db(), {
       voucherCode: input.params.code,
       customerId: input.body?.customerId,
+      customerExternalId: input.body?.customerExternalId,
       order: input.body?.order,
       orderId: input.body?.orderId,
       externalOrderId: input.body?.externalOrderId,
@@ -484,6 +486,7 @@ const stackRedeemProc = os.vouchers.stackRedeem
     const result = await stackRedeem(db(), {
       voucherCodes: input.codes,
       customerId: input.customerId,
+      customerExternalId: input.customerExternalId,
       orderId: input.orderId,
       externalOrderId: input.externalOrderId,
       order: input.order,

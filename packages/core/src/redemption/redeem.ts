@@ -13,6 +13,7 @@ import {
   messageFor,
   previewDiscount,
   previewGiftCard,
+  resolveCustomerRef,
 } from "./shared.ts";
 import type {
   RedeemInput,
@@ -61,12 +62,30 @@ function redeemImpl(db: Db, input: RedeemInput): Promise<RedeemResult> {
       if (replay) return replay;
     }
 
+    const resolvedCustomer = await resolveCustomerRef(
+      tx,
+      {
+        customerId: input.customerId,
+        customerExternalId: input.customerExternalId,
+      },
+      { createIfMissing: true },
+    );
+    if (resolvedCustomer.mismatch) {
+      return {
+        ok: false,
+        code: "customer_mismatch",
+        message: messageFor("customer_mismatch"),
+        explanations: [failureExplanation("customer_mismatch", voucher)],
+      };
+    }
+    const resolvedCustomerId = resolvedCustomer.customerId;
+
     const now = new Date();
     const failure = checkActivation(voucher, now);
     if (failure) {
       await tx.insert(schema.redemption).values({
         voucherId: voucher.id,
-        customerId: input.customerId ?? null,
+        customerId: resolvedCustomerId ?? null,
         orderId: input.orderId ?? null,
         externalOrderId: input.externalOrderId ?? null,
         result: "FAILURE",
@@ -89,7 +108,7 @@ function redeemImpl(db: Db, input: RedeemInput): Promise<RedeemResult> {
     if (campaignFailure) {
       await tx.insert(schema.redemption).values({
         voucherId: voucher.id,
-        customerId: input.customerId ?? null,
+        customerId: resolvedCustomerId ?? null,
         orderId: input.orderId ?? null,
         externalOrderId: input.externalOrderId ?? null,
         result: "FAILURE",
@@ -103,11 +122,11 @@ function redeemImpl(db: Db, input: RedeemInput): Promise<RedeemResult> {
         explanations: [failureExplanation(campaignFailure, voucher)],
       };
     }
-    const customerFailure = checkCustomerBinding(voucher, campaign, input.customerId);
+    const customerFailure = checkCustomerBinding(voucher, campaign, resolvedCustomerId);
     if (customerFailure) {
       await tx.insert(schema.redemption).values({
         voucherId: voucher.id,
-        customerId: input.customerId ?? null,
+        customerId: resolvedCustomerId ?? null,
         orderId: input.orderId ?? null,
         externalOrderId: input.externalOrderId ?? null,
         result: "FAILURE",
@@ -125,12 +144,12 @@ function redeemImpl(db: Db, input: RedeemInput): Promise<RedeemResult> {
       tx,
       voucher,
       campaign,
-      input.customerId,
+      resolvedCustomerId,
     );
     if (customerLimitFailure) {
       await tx.insert(schema.redemption).values({
         voucherId: voucher.id,
-        customerId: input.customerId ?? null,
+        customerId: resolvedCustomerId ?? null,
         orderId: input.orderId ?? null,
         externalOrderId: input.externalOrderId ?? null,
         result: "FAILURE",
@@ -152,12 +171,14 @@ function redeemImpl(db: Db, input: RedeemInput): Promise<RedeemResult> {
           where: eq(schema.validationRule.id, campaign.validationRuleId),
         })) as RedemptionValidationRuleRow | undefined)
       : undefined;
-    const customerId = input.customerId ?? voucher.customerId ?? undefined;
-    const customer = customerId
-      ? ((await tx.query.customer.findFirst({
-          where: and(eq(schema.customer.id, customerId), isNull(schema.customer.deletedAt)),
-        })) as RedemptionCustomerRow | undefined)
-      : undefined;
+    const customerId = resolvedCustomerId ?? voucher.customerId ?? undefined;
+    const customer =
+      resolvedCustomer.customer ??
+      (customerId
+        ? ((await tx.query.customer.findFirst({
+            where: and(eq(schema.customer.id, customerId), isNull(schema.customer.deletedAt)),
+          })) as RedemptionCustomerRow | undefined)
+        : undefined);
     const ruleFailure = checkCampaignValidationRule(
       voucher,
       campaign,
@@ -169,7 +190,7 @@ function redeemImpl(db: Db, input: RedeemInput): Promise<RedeemResult> {
     if (ruleFailure) {
       await tx.insert(schema.redemption).values({
         voucherId: voucher.id,
-        customerId: input.customerId ?? null,
+        customerId: resolvedCustomerId ?? null,
         orderId: input.orderId ?? null,
         externalOrderId: input.externalOrderId ?? null,
         result: "FAILURE",
@@ -184,11 +205,12 @@ function redeemImpl(db: Db, input: RedeemInput): Promise<RedeemResult> {
       };
     }
 
+    const resolvedInput = { ...input, customerId: resolvedCustomerId };
     if (voucher.type === "GIFT_CARD") {
-      return redeemGiftCard(tx, voucher, input, now);
+      return redeemGiftCard(tx, voucher, resolvedInput, now);
     }
 
-    return redeemDiscount(tx, voucher, input, now);
+    return redeemDiscount(tx, voucher, resolvedInput, now);
   });
 }
 
