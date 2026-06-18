@@ -20,7 +20,7 @@ const os = implement(contract).$context<RequestContext>();
 
 async function codeExists(code: string): Promise<boolean> {
   const row = await db().query.voucher.findFirst({
-    where: eq(schema.voucher.code, code),
+    where: and(eq(schema.voucher.code, code), isNull(schema.voucher.deletedAt)),
     columns: { id: true },
   });
   return row !== undefined;
