@@ -17,6 +17,7 @@ export const orderInput = z.object({
 export const validateInput = z.object({
   code: z.string().min(1),
   customerId: z.string().uuid().optional(),
+  customerExternalId: z.string().min(1).max(256).optional(),
   order: orderInput.optional(),
 });
 
@@ -76,7 +77,8 @@ export const validateOutput = z.object({
 });
 
 export const qualifyInput = z.object({
-  customerId: z.string().uuid(),
+  customerId: z.string().uuid().optional(),
+  customerExternalId: z.string().min(1).max(256).optional(),
   order: orderInput,
   filters: z
     .object({
@@ -129,6 +131,7 @@ export const redeemOutput = z.object({
 export const stackRedeemInput = z.object({
   codes: z.array(z.string().min(1)).min(1).max(20),
   customerId: z.string().uuid().optional(),
+  customerExternalId: z.string().min(1).max(256).optional(),
   orderId: z.string().uuid().optional(),
   externalOrderId: z.string().min(1).max(120).optional(),
   order: orderInput,

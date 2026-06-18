@@ -408,8 +408,16 @@ vouchers
   .description("Validate a voucher against an order")
   .option("--amount <cents>", "Order amount in cents")
   .option("--currency <iso>", "Currency", "USD")
+  .option("--customer-id <id>", "Internal OfferKit customer id")
+  .option("--customer-external-id <id>", "Integrator customer id")
   .option("--data <json>", "Validation body JSON, @file.json, or - from stdin")
-  .action(async (code: string, opts: { amount: string; currency: string; data?: string }) => {
+  .action(async (code: string, opts: {
+    amount: string;
+    currency: string;
+    customerId?: string;
+    customerExternalId?: string;
+    data?: string;
+  }) => {
     const c = await client();
     if (!opts.data && opts.amount === undefined) {
       fail("Either --amount or --data is required");
@@ -417,6 +425,8 @@ vouchers
     const body = opts.data
       ? await parseJsonObject(opts.data).catch(fail)
       : {
+          ...(opts.customerId ? { customerId: opts.customerId } : {}),
+          ...(opts.customerExternalId ? { customerExternalId: opts.customerExternalId } : {}),
           order: { amount: Number(opts.amount), currency: opts.currency, items: [] },
         };
     printJSON(
@@ -434,12 +444,21 @@ vouchers
   .description("Redeem a voucher against an order")
   .option("--amount <cents>", "Order amount in cents")
   .option("--currency <iso>", "Currency", "USD")
+  .option("--customer-id <id>", "Internal OfferKit customer id")
+  .option("--customer-external-id <id>", "Integrator customer id")
   .option("--idempotency-key <key>", "Replay an existing redemption")
   .option("--data <json>", "Redemption body JSON, @file.json, or - from stdin")
   .action(
     async (
       code: string,
-      opts: { amount: string; currency: string; idempotencyKey?: string; data?: string },
+      opts: {
+        amount: string;
+        currency: string;
+        customerId?: string;
+        customerExternalId?: string;
+        idempotencyKey?: string;
+        data?: string;
+      },
     ) => {
       const c = await client();
       if (!opts.data && opts.amount === undefined) {
@@ -448,6 +467,8 @@ vouchers
       const body = opts.data
         ? await parseJsonObject(opts.data).catch(fail)
         : {
+            ...(opts.customerId ? { customerId: opts.customerId } : {}),
+            ...(opts.customerExternalId ? { customerExternalId: opts.customerExternalId } : {}),
             order: { amount: Number(opts.amount), currency: opts.currency, items: [] },
             ...(opts.idempotencyKey ? { idempotencyKey: opts.idempotencyKey } : {}),
           };

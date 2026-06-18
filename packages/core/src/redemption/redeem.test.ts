@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { schema, type Db } from "@offerkit/db";
-import { qualify, redeem, rollback, validate } from "./index.ts";
+import { qualify, redeem, rollback, stackRedeem, validate } from "./index.ts";
 import { getTestDb } from "./_test-db.ts";
 
 // Live-DB redemption suite. Skips without TEST_DATABASE_URL so the
@@ -309,6 +309,54 @@ describe.skipIf(!enabled)("redeem (live DB)", () => {
     await db.delete(schema.customer).where(eq(schema.customer.id, customerB.id));
   });
 
+  it("limits public vouchers to one redemption per external customer id", async () => {
+    if (!db) throw new Error("db not initialized");
+    const externalId = `ext-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+
+    const v = await makeVoucher(db, {
+      redemptionLimit: null,
+      perUserRedemptionLimit: 1,
+    });
+
+    const first = await redeem(db, {
+      voucherCode: v.code,
+      customerExternalId: externalId,
+      order: { amount: 5_000, currency: "USD" },
+    });
+    expect(first.ok).toBe(true);
+
+    const [customer] = await db
+      .select({ id: schema.customer.id })
+      .from(schema.customer)
+      .where(eq(schema.customer.externalId, externalId));
+    expect(customer?.id).toBeDefined();
+
+    const validation = await validate(db, {
+      voucherCode: v.code,
+      customerExternalId: externalId,
+      order: { amount: 5_000, currency: "USD" },
+    });
+    expect(validation.valid).toBe(false);
+    expect(validation.code).toBe("per_user_redemption_limit_reached");
+
+    const second = await redeem(db, {
+      voucherCode: v.code,
+      customerExternalId: externalId,
+      order: { amount: 5_000, currency: "USD" },
+    });
+    expect(second.ok).toBe(false);
+    if (!second.ok) expect(second.code).toBe("per_user_redemption_limit_reached");
+
+    const rows = await db
+      .select({ customerId: schema.redemption.customerId })
+      .from(schema.redemption)
+      .where(eq(schema.redemption.voucherId, v.id));
+    expect(rows.some((row) => row.customerId === customer?.id)).toBe(true);
+
+    await cleanup(db, v.id);
+    if (customer) await db.delete(schema.customer).where(eq(schema.customer.id, customer.id));
+  });
+
   it("limits campaign voucher redemptions to one per customer", async () => {
     if (!db) throw new Error("db not initialized");
     const [customerA] = await db.insert(schema.customer).values({}).returning({ id: schema.customer.id });
@@ -357,9 +405,115 @@ describe.skipIf(!enabled)("redeem (live DB)", () => {
     await db.delete(schema.customer).where(eq(schema.customer.id, customerB.id));
   });
 
+  it("limits campaign voucher redemptions to one per external customer id", async () => {
+    if (!db) throw new Error("db not initialized");
+    const externalId = `camp-ext-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+    const [campaign] = await db
+      .insert(schema.campaign)
+      .values({
+        name: "Per-user external campaign cap",
+        type: "DISCOUNT",
+        status: "active",
+        currency: "USD",
+        perUserRedemptionLimit: 1,
+      })
+      .returning({ id: schema.campaign.id });
+    if (!campaign) throw new Error("campaign fixture insert failed");
+
+    const voucherA = await makeVoucher(db, { campaignId: campaign.id });
+    const voucherB = await makeVoucher(db, { campaignId: campaign.id });
+
+    const first = await redeem(db, {
+      voucherCode: voucherA.code,
+      customerExternalId: externalId,
+      order: { amount: 5_000, currency: "USD" },
+    });
+    expect(first.ok).toBe(true);
+
+    const second = await redeem(db, {
+      voucherCode: voucherB.code,
+      customerExternalId: externalId,
+      order: { amount: 5_000, currency: "USD" },
+    });
+    expect(second.ok).toBe(false);
+    if (!second.ok) expect(second.code).toBe("per_user_redemption_limit_reached");
+
+    const [customer] = await db
+      .select({ id: schema.customer.id })
+      .from(schema.customer)
+      .where(eq(schema.customer.externalId, externalId));
+
+    await cleanup(db, voucherA.id);
+    await cleanup(db, voucherB.id);
+    await db.delete(schema.campaign).where(eq(schema.campaign.id, campaign.id));
+    if (customer) await db.delete(schema.customer).where(eq(schema.customer.id, customer.id));
+  });
+
+  it("rejects mismatched internal and external customer ids", async () => {
+    if (!db) throw new Error("db not initialized");
+    const [customerA] = await db
+      .insert(schema.customer)
+      .values({ externalId: `mismatch-a-${Date.now()}` })
+      .returning({ id: schema.customer.id });
+    const [customerB] = await db
+      .insert(schema.customer)
+      .values({ externalId: `mismatch-b-${Date.now()}` })
+      .returning({ id: schema.customer.id, externalId: schema.customer.externalId });
+    if (!customerA || !customerB?.externalId) throw new Error("customer insert failed");
+
+    const v = await makeVoucher(db, { perUserRedemptionLimit: 1 });
+    const result = await redeem(db, {
+      voucherCode: v.code,
+      customerId: customerA.id,
+      customerExternalId: customerB.externalId,
+      order: { amount: 5_000, currency: "USD" },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("customer_mismatch");
+
+    await cleanup(db, v.id);
+    await db.delete(schema.customer).where(eq(schema.customer.id, customerA.id));
+    await db.delete(schema.customer).where(eq(schema.customer.id, customerB.id));
+  });
+
+  it("stores stack redemptions under the customer resolved from external id", async () => {
+    if (!db) throw new Error("db not initialized");
+    const externalId = `stack-ext-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+    const voucherA = await makeVoucher(db);
+    const voucherB = await makeVoucher(db);
+
+    const result = await stackRedeem(db, {
+      voucherCodes: [voucherA.code, voucherB.code],
+      customerExternalId: externalId,
+      order: { amount: 5_000, currency: "USD" },
+    });
+    expect(result.ok).toBe(true);
+
+    const [customer] = await db
+      .select({ id: schema.customer.id })
+      .from(schema.customer)
+      .where(eq(schema.customer.externalId, externalId));
+    expect(customer?.id).toBeDefined();
+
+    const rows = await db
+      .select({ customerId: schema.redemption.customerId })
+      .from(schema.redemption)
+      .where(eq(schema.redemption.batchId, result.ok ? result.batchId : ""));
+    expect(rows).toHaveLength(2);
+    expect(rows.every((row) => row.customerId === customer?.id)).toBe(true);
+
+    await cleanup(db, voucherA.id);
+    await cleanup(db, voucherB.id);
+    if (customer) await db.delete(schema.customer).where(eq(schema.customer.id, customer.id));
+  });
+
   it("qualifies customer-held vouchers without writing redemption rows", async () => {
     if (!db) throw new Error("db not initialized");
-    const [customer] = await db.insert(schema.customer).values({}).returning({ id: schema.customer.id });
+    const customerExternalId = `qualify-ext-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+    const [customer] = await db
+      .insert(schema.customer)
+      .values({ externalId: customerExternalId })
+      .returning({ id: schema.customer.id });
     const [otherCustomer] = await db.insert(schema.customer).values({}).returning({ id: schema.customer.id });
     const [campaign] = await db
       .insert(schema.campaign)
@@ -398,6 +552,13 @@ describe.skipIf(!enabled)("redeem (live DB)", () => {
     expect(result.skipped).toMatchObject([
       { code: disabled.code, reason: "voucher_disabled", message: "Voucher is disabled" },
     ]);
+
+    const externalResult = await qualify(db, {
+      customerExternalId,
+      order: { amount: 5_000, currency: "USD" },
+      filters: { campaignIds: [campaign.id], includeSkipped: false },
+    });
+    expect(externalResult.eligible.map((v) => v.code)).toEqual([valid.code]);
 
     const redemptionRows = await db
       .select({ id: schema.redemption.id })

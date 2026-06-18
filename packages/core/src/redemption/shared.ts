@@ -88,6 +88,57 @@ export async function checkPerUserRedemptionLimit(
   return null;
 }
 
+export async function resolveCustomerRef(
+  db: Db | Tx,
+  input: { customerId?: string; customerExternalId?: string },
+  options: { createIfMissing: boolean },
+): Promise<{
+  customerId: string | undefined;
+  customer: RedemptionCustomerRow | undefined;
+  mismatch: boolean;
+}> {
+  const externalId = input.customerExternalId?.trim();
+  const internal = input.customerId
+    ? ((await db.query.customer.findFirst({
+        where: and(eq(schema.customer.id, input.customerId), sql`${schema.customer.deletedAt} IS NULL`),
+      })) as RedemptionCustomerRow | undefined)
+    : undefined;
+  const external = externalId
+    ? ((await db.query.customer.findFirst({
+        where: and(eq(schema.customer.externalId, externalId), sql`${schema.customer.deletedAt} IS NULL`),
+      })) as RedemptionCustomerRow | undefined)
+    : undefined;
+
+  if (input.customerId && externalId && internal && external && internal.id !== external.id) {
+    return { customerId: undefined, customer: undefined, mismatch: true };
+  }
+  if (input.customerId && externalId && internal && !external) {
+    return { customerId: undefined, customer: undefined, mismatch: true };
+  }
+  if (input.customerId && externalId && !internal && external) {
+    return { customerId: undefined, customer: undefined, mismatch: true };
+  }
+  if (internal) return { customerId: internal.id, customer: internal, mismatch: false };
+  if (external) return { customerId: external.id, customer: external, mismatch: false };
+
+  if (externalId && options.createIfMissing) {
+    const [createdRow] = await db
+      .insert(schema.customer)
+      .values({ externalId, metadata: {} })
+      .onConflictDoNothing()
+      .returning();
+    const created = createdRow as RedemptionCustomerRow | undefined;
+    const row =
+      created ??
+      ((await db.query.customer.findFirst({
+        where: and(eq(schema.customer.externalId, externalId), sql`${schema.customer.deletedAt} IS NULL`),
+      })) as RedemptionCustomerRow | undefined);
+    return { customerId: row?.id, customer: row, mismatch: false };
+  }
+
+  return { customerId: input.customerId, customer: undefined, mismatch: false };
+}
+
 async function countNetSuccessfulRedemptions(
   db: Db | Tx,
   customerId: string,

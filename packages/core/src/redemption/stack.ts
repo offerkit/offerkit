@@ -12,6 +12,7 @@ import {
   checkCustomerBinding,
   checkPerUserRedemptionLimit,
   messageFor,
+  resolveCustomerRef,
 } from "./shared.ts";
 import type {
   RedemptionCustomerRow,
@@ -41,6 +42,7 @@ export function stackRedeem(
     {
       "voucher.code_count": input.voucherCodes.length,
       ...(input.customerId ? { "customer.id": input.customerId } : {}),
+      ...(input.customerExternalId ? { "customer.external_id": input.customerExternalId } : {}),
     },
   );
 }
@@ -69,6 +71,24 @@ async function stackRedeemImpl(
   const codes = [...new Set(input.voucherCodes)].sort();
 
   return db.transaction(async (tx) => {
+    const resolvedCustomer = await resolveCustomerRef(
+      tx,
+      {
+        customerId: input.customerId,
+        customerExternalId: input.customerExternalId,
+      },
+      { createIfMissing: true },
+    );
+    if (resolvedCustomer.mismatch) {
+      return {
+        ok: false,
+        code: "customer_mismatch",
+        message: messageFor("customer_mismatch"),
+        explanations: [failureExplanation("customer_mismatch")],
+      };
+    }
+    const resolvedCustomerId = resolvedCustomer.customerId;
+
     if (input.idempotencyKey) {
       const replay = await replayBatch(tx, input);
       if (replay) return replay;
@@ -99,11 +119,13 @@ async function stackRedeemImpl(
     }
 
     const now = new Date();
-    const customer = input.customerId
-      ? ((await tx.query.customer.findFirst({
-          where: and(eq(schema.customer.id, input.customerId), isNull(schema.customer.deletedAt)),
-        })) as RedemptionCustomerRow | undefined)
-      : undefined;
+    const customer =
+      resolvedCustomer.customer ??
+      (resolvedCustomerId
+        ? ((await tx.query.customer.findFirst({
+            where: and(eq(schema.customer.id, resolvedCustomerId), isNull(schema.customer.deletedAt)),
+          })) as RedemptionCustomerRow | undefined)
+        : undefined);
     for (const v of lockedRows) {
       const failure = checkActivation(v, now);
       if (failure) {
@@ -128,7 +150,7 @@ async function stackRedeemImpl(
           explanations: [failureExplanation(campaignFailure, v)],
         };
       }
-      const customerFailure = checkCustomerBinding(v, campaign, input.customerId);
+      const customerFailure = checkCustomerBinding(v, campaign, resolvedCustomerId);
       if (customerFailure) {
         return {
           ok: false,
@@ -141,7 +163,7 @@ async function stackRedeemImpl(
         tx,
         v,
         campaign,
-        input.customerId,
+        resolvedCustomerId,
       );
       if (customerLimitFailure) {
         return {
@@ -235,7 +257,7 @@ async function stackRedeemImpl(
         .insert(schema.redemption)
         .values({
           voucherId: voucher.id,
-          customerId: input.customerId ?? null,
+          customerId: resolvedCustomerId ?? null,
           orderId: input.orderId ?? null,
           externalOrderId: input.externalOrderId ?? null,
           result: "SUCCESS",
@@ -261,7 +283,7 @@ async function stackRedeemImpl(
       entityId: batchId,
       payload: {
         batchId,
-        customerId: input.customerId ?? null,
+        customerId: resolvedCustomerId ?? null,
         orderId: input.orderId ?? null,
         externalOrderId: input.externalOrderId ?? null,
         amount: totalAmount,
