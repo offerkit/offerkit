@@ -62,11 +62,11 @@ describe("generic api command helpers", () => {
 
   it("calls nested SDK procedures by dotted path", async () => {
     const create = vi.fn(async (input: unknown) => ({ ok: true, input }));
-    const client = {
+    const client = Object.assign(() => undefined, {
       vouchers: {
-        create,
+        create: Object.assign(create, {}),
       },
-    };
+    });
 
     await expect(
       callBySdkPath(client as never, "vouchers.create", { code: "WAPP25" }),
