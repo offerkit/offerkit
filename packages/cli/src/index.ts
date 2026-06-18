@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { readFile, writeFile, chmod, mkdir } from "node:fs/promises";
@@ -10,6 +11,10 @@ interface Config {
   baseUrl: string;
   apiKey?: string;
 }
+
+const require = createRequire(import.meta.url);
+const packageJson = require("../package.json") as { version?: unknown };
+const packageVersion = typeof packageJson.version === "string" ? packageJson.version : "0.0.0";
 
 function rcPath(): string {
   return join(homedir(), ".offerkitrc");
@@ -171,7 +176,7 @@ function fail(err: unknown): never {
 }
 
 const program = new Command();
-program.name("offerkit").description("OfferKit CLI").version("0.0.0");
+program.name("offerkit").description("OfferKit CLI").version(packageVersion);
 
 program
   .command("login")

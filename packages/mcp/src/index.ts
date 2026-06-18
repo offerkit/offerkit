@@ -1,11 +1,16 @@
 #!/usr/bin/env node
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { createRequire } from "node:module";
 import { isContractProcedure, type AnyContractRouter } from "@orpc/contract";
 import { z, type ZodRawShape } from "zod";
 import { contract, type McpExposure, type ProcedureMeta } from "@offerkit/contract";
 import { createClient, type Client } from "@offerkit/sdk";
 import { callBySdkPath } from "./sdk-path.ts";
+
+const require = createRequire(import.meta.url);
+const packageJson = require("../package.json") as { version?: unknown };
+const packageVersion = typeof packageJson.version === "string" ? packageJson.version : "0.0.0";
 
 const baseUrl = process.env["OFFERKIT_API_URL"] ?? "http://localhost:3000";
 const apiKey = process.env["OFFERKIT_API_KEY"];
@@ -25,7 +30,7 @@ function jsonContent(value: unknown) {
 }
 
 const server = new McpServer(
-  { name: "offerkit", version: "0.0.0" },
+  { name: "offerkit", version: packageVersion },
   {
     instructions:
       "Tools for managing promotions through Offerkit. Each tool's risk level " +
