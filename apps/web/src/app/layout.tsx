@@ -7,6 +7,15 @@ import { Toaster } from "@/components/ui/sonner";
 import { QueryProvider } from "@/components/query-provider";
 import "./globals.css";
 
+const title = "OfferKit";
+const description = "Self-hostable open-source promotion engine";
+const ogImage = {
+  url: "/og-image.png",
+  width: 1200,
+  height: 630,
+  alt: "OfferKit promotion engine dashboard illustration",
+};
+
 const inter = Inter({
   variable: "--font-sans",
   subsets: ["latin"],
@@ -20,8 +29,9 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "offerkit",
-  description: "Self-hostable open-source promotion engine",
+  metadataBase: new URL(process.env["OFFERKIT_PUBLIC_URL"] ?? "http://localhost:3000"),
+  title,
+  description,
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
@@ -29,6 +39,18 @@ export const metadata: Metadata = {
       { url: "/icon.png", sizes: "512x512", type: "image/png" },
     ],
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  openGraph: {
+    title,
+    description,
+    type: "website",
+    images: [ogImage],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    images: [ogImage],
   },
 };
 
