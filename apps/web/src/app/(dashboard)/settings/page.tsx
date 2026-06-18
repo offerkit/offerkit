@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { workspaceInitial } from "@/components/dashboard/workspace-brand";
 import {
   Select,
   SelectContent,
@@ -97,13 +99,20 @@ function WorkspaceForm({ initial }: { initial: WorkspaceData }) {
           <div className="grid gap-2 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="ws-name">
-                <T>Name</T>
+                <T>Workspace name</T>
               </Label>
-              <Input
-                id="ws-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
+              <div className="flex items-center gap-2">
+                <Avatar className="size-9 rounded-[0.75rem] bg-primary text-primary-foreground">
+                  <AvatarFallback className="rounded-[0.75rem] bg-primary text-xs font-semibold text-primary-foreground">
+                    {workspaceInitial(name)}
+                  </AvatarFallback>
+                </Avatar>
+                <Input
+                  id="ws-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="ws-currency">
