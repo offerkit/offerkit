@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { T, useGT } from "gt-next/client";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ export interface VoucherFormState {
   campaignId: string;
   type: VoucherType;
   discountKind: DiscountKind;
-  // Cents for AMOUNT, basis points (0-10000) for PERCENTAGE.
+  // Cents for AMOUNT, hundredths of a percent for PERCENTAGE.
   discountValue: number;
   maxDiscountAmount: number | "";
   giftBalance: number | "";
@@ -38,6 +39,138 @@ export interface VoucherFormState {
 }
 
 const TYPES: VoucherType[] = ["DISCOUNT", "GIFT_CARD"];
+
+function parseDecimalToMinorUnit(value: string, scale: number): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.round(parsed * scale);
+}
+
+function formatDecimal(value: number, scale: number, decimals: number): string {
+  return (value / scale).toFixed(decimals);
+}
+
+function formatOptionalDecimal(
+  value: number | "",
+  scale: number,
+  decimals: number,
+): string {
+  if (value === "") return "";
+  return formatDecimal(value, scale, decimals);
+}
+
+function DecimalInput({
+  id,
+  value,
+  onChange,
+  scale,
+  decimals,
+  min,
+  max,
+  placeholder,
+  suffix,
+}: {
+  id: string;
+  value: number;
+  onChange: (value: number) => void;
+  scale: number;
+  decimals: number;
+  min?: number;
+  max?: number;
+  placeholder?: string;
+  suffix?: string;
+}) {
+  const committed = useRef(value);
+  const [displayValue, setDisplayValue] = useState(() =>
+    formatDecimal(value, scale, decimals),
+  );
+
+  useEffect(() => {
+    if (value !== committed.current) {
+      committed.current = value;
+      setDisplayValue(formatDecimal(value, scale, decimals));
+    }
+  }, [decimals, scale, value]);
+
+  return (
+    <div className="relative">
+      <Input
+        id={id}
+        type="number"
+        inputMode="decimal"
+        min={min}
+        max={max}
+        step={decimals > 0 ? 1 / 10 ** decimals : 1}
+        value={displayValue}
+        onChange={(e) => {
+          const next = e.target.value;
+          setDisplayValue(next);
+          const parsed = parseDecimalToMinorUnit(next, scale);
+          committed.current = parsed;
+          onChange(parsed);
+        }}
+        onBlur={() => setDisplayValue(formatDecimal(value, scale, decimals))}
+        placeholder={placeholder}
+        className={suffix ? "pr-8" : undefined}
+      />
+      {suffix ? (
+        <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-sm text-muted-foreground">
+          {suffix}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function OptionalDecimalInput({
+  id,
+  value,
+  onChange,
+  scale,
+  decimals,
+  min,
+  placeholder,
+}: {
+  id: string;
+  value: number | "";
+  onChange: (value: number | "") => void;
+  scale: number;
+  decimals: number;
+  min?: number;
+  placeholder?: string;
+}) {
+  const committed = useRef(value);
+  const [displayValue, setDisplayValue] = useState(() =>
+    formatOptionalDecimal(value, scale, decimals),
+  );
+
+  useEffect(() => {
+    if (value !== committed.current) {
+      committed.current = value;
+      setDisplayValue(formatOptionalDecimal(value, scale, decimals));
+    }
+  }, [decimals, scale, value]);
+
+  return (
+    <Input
+      id={id}
+      type="number"
+      inputMode="decimal"
+      min={min}
+      step={decimals > 0 ? 1 / 10 ** decimals : 1}
+      value={displayValue}
+      onChange={(e) => {
+        const next = e.target.value;
+        setDisplayValue(next);
+        const parsed = next === "" ? "" : parseDecimalToMinorUnit(next, scale);
+        committed.current = parsed;
+        onChange(parsed);
+      }}
+      onBlur={() => setDisplayValue(formatOptionalDecimal(value, scale, decimals))}
+      placeholder={placeholder}
+    />
+  );
+}
 
 export function VoucherForm({
   initial,
@@ -259,8 +392,8 @@ export function VoucherForm({
                 </Label>
                 <Select
                   items={[
-                    { label: gt("Amount (cents)"), value: "AMOUNT" },
-                    { label: gt("Percentage (basis points)"), value: "PERCENTAGE" },
+                    { label: gt("Fixed amount"), value: "AMOUNT" },
+                    { label: gt("Percentage"), value: "PERCENTAGE" },
                   ]}
                   value={field.state.value}
                   onValueChange={(v) => field.handleChange(v as DiscountKind)}
@@ -269,8 +402,8 @@ export function VoucherForm({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="AMOUNT">{gt("Amount (cents)")}</SelectItem>
-                    <SelectItem value="PERCENTAGE">{gt("Percentage (basis points)")}</SelectItem>
+                    <SelectItem value="AMOUNT">{gt("Fixed amount")}</SelectItem>
+                    <SelectItem value="PERCENTAGE">{gt("Percentage")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -280,26 +413,42 @@ export function VoucherForm({
             {(field) => (
               <div className="space-y-2">
                 <Label htmlFor={field.name}>
-                  <T>Value</T>
+                  <form.Subscribe selector={(s) => s.values.discountKind}>
+                    {(kind) =>
+                      kind === "PERCENTAGE" ? <T>Discount percentage</T> : <T>Discount amount</T>
+                    }
+                  </form.Subscribe>
                 </Label>
-                <Input
-                  id={field.name}
-                  type="number"
-                  min={1}
-                  max={field.form.state.values.discountKind === "PERCENTAGE" ? 10000 : undefined}
-                  value={field.state.value}
-                  onChange={(e) => field.handleChange(Number(e.target.value))}
-                />
                 <form.Subscribe selector={(s) => s.values.discountKind}>
                   {(kind) =>
                     kind === "PERCENTAGE" ? (
-                      <p className="text-xs text-muted-foreground">
-                        <T>10000 = 100%. e.g. 2000 = 20% off.</T>
-                      </p>
+                      <>
+                        <DecimalInput
+                          id={field.name}
+                          value={field.state.value}
+                          onChange={(value) => field.handleChange(value)}
+                          scale={100}
+                          decimals={2}
+                          min={0.01}
+                          max={100}
+                          suffix="%"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          <T>Enter 20 for 20% off.</T>
+                        </p>
+                      </>
                     ) : (
-                      <p className="text-xs text-muted-foreground">
-                        <T>Cents off. e.g. 1000 = $10 off.</T>
-                      </p>
+                      <>
+                        <DecimalInput
+                          id={field.name}
+                          value={field.state.value}
+                          onChange={(value) => field.handleChange(value)}
+                          scale={100}
+                          decimals={2}
+                          min={0.01}
+                          placeholder="10.00"
+                        />
+                      </>
                     )
                   }
                 </form.Subscribe>
@@ -310,16 +459,15 @@ export function VoucherForm({
             {(field) => (
               <div className="space-y-2">
                 <Label htmlFor={field.name}>
-                  <T>Max discount (cents)</T>
+                  <T>Maximum discount amount</T>
                 </Label>
-                <Input
+                <OptionalDecimalInput
                   id={field.name}
-                  type="number"
-                  min={0}
                   value={field.state.value}
-                  onChange={(e) =>
-                    field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
-                  }
+                  onChange={(value) => field.handleChange(value)}
+                  scale={100}
+                  decimals={2}
+                  min={0}
                   placeholder={gt("Optional cap")}
                 />
               </div>
