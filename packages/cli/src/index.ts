@@ -12,6 +12,17 @@ interface Config {
   apiKey?: string;
 }
 
+type ConfigSource = "default" | "file" | "env";
+
+export interface LoadedConfig {
+  config: Config;
+  path: string;
+  sources: {
+    baseUrl: ConfigSource;
+    apiKey: Exclude<ConfigSource, "default"> | "none";
+  };
+}
+
 const require = createRequire(import.meta.url);
 const packageJson = require("../package.json") as { version?: unknown };
 const packageVersion = typeof packageJson.version === "string" ? packageJson.version : "0.0.0";
@@ -20,18 +31,36 @@ function rcPath(): string {
   return join(homedir(), ".offerkitrc");
 }
 
-export async function loadConfig(): Promise<Config> {
+export async function loadConfigDetails(): Promise<LoadedConfig> {
   let cfg: Config = { baseUrl: "http://localhost:3000" };
+  const sources: LoadedConfig["sources"] = { baseUrl: "default", apiKey: "none" };
   try {
     const raw = await readFile(rcPath(), "utf8");
     const fromFile = JSON.parse(raw) as Config;
-    cfg = { ...cfg, ...fromFile };
+    if (fromFile.baseUrl) {
+      cfg.baseUrl = fromFile.baseUrl;
+      sources.baseUrl = "file";
+    }
+    if (fromFile.apiKey) {
+      cfg.apiKey = fromFile.apiKey;
+      sources.apiKey = "file";
+    }
   } catch {
     // Missing or unreadable config files fall back to explicit env or localhost.
   }
-  if (process.env["OFFERKIT_API_URL"]) cfg.baseUrl = process.env["OFFERKIT_API_URL"];
-  if (process.env["OFFERKIT_API_KEY"]) cfg.apiKey = process.env["OFFERKIT_API_KEY"];
-  return cfg;
+  if (process.env["OFFERKIT_API_URL"]) {
+    cfg.baseUrl = process.env["OFFERKIT_API_URL"];
+    sources.baseUrl = "env";
+  }
+  if (process.env["OFFERKIT_API_KEY"]) {
+    cfg.apiKey = process.env["OFFERKIT_API_KEY"];
+    sources.apiKey = "env";
+  }
+  return { config: cfg, path: rcPath(), sources };
+}
+
+export async function loadConfig(): Promise<Config> {
+  return (await loadConfigDetails()).config;
 }
 
 export async function saveConfig(cfg: Config): Promise<void> {
@@ -53,6 +82,10 @@ async function client(): Promise<Client> {
 
 function printJSON(value: unknown): void {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
+}
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
 }
 
 async function readStdin(): Promise<string> {
@@ -186,6 +219,79 @@ program
   .action(async (opts: { url: string; apiKey: string }) => {
     await saveConfig({ baseUrl: opts.url, apiKey: opts.apiKey });
     process.stdout.write(`Saved to ${rcPath()}\n`);
+  });
+
+program
+  .command("config")
+  .description("Show active CLI config without making an API call")
+  .action(async () => {
+    const loaded = await loadConfigDetails();
+    printJSON({
+      configPath: loaded.path,
+      baseUrl: loaded.config.baseUrl,
+      baseUrlSource: loaded.sources.baseUrl,
+      apiKeyConfigured: Boolean(loaded.config.apiKey),
+      apiKeySource: loaded.sources.apiKey,
+    });
+  });
+
+program
+  .command("whoami")
+  .description("Show the authenticated OfferKit workspace")
+  .action(async () => {
+    const cfg = await loadConfig();
+    const c = await client();
+    printJSON({
+      baseUrl: cfg.baseUrl,
+      workspace: await c.workspace.get().catch(fail),
+    });
+  });
+
+program
+  .command("doctor")
+  .description("Check CLI config and deployment connectivity")
+  .action(async () => {
+    const loaded = await loadConfigDetails();
+    const c = createClient({
+      baseUrl: loaded.config.baseUrl,
+      ...(loaded.config.apiKey ? { apiKey: loaded.config.apiKey } : {}),
+    });
+    const checks: Array<{ name: string; status: "ok" | "warn" | "error"; message: string }> = [
+      {
+        name: "config",
+        status: "ok",
+        message: `Using ${loaded.config.baseUrl} from ${loaded.sources.baseUrl}`,
+      },
+      {
+        name: "apiKey",
+        status: loaded.config.apiKey ? "ok" : "warn",
+        message: loaded.config.apiKey
+          ? `API key configured from ${loaded.sources.apiKey}`
+          : "No API key configured; authenticated commands will fail",
+      },
+    ];
+
+    for (const [name, check] of [
+      ["health", () => c.health()],
+      ["ready", () => c.ready()],
+    ] as const) {
+      try {
+        await check();
+        checks.push({ name, status: "ok", message: "Reachable" });
+      } catch (err) {
+        checks.push({ name, status: "error", message: errorMessage(err) });
+      }
+    }
+
+    if (checks.some((check) => check.status === "error")) {
+      process.exitCode = 1;
+    }
+    printJSON({
+      configPath: loaded.path,
+      baseUrl: loaded.config.baseUrl,
+      apiKeyConfigured: Boolean(loaded.config.apiKey),
+      checks,
+    });
   });
 
 program
