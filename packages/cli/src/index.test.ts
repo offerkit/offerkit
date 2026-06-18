@@ -2,7 +2,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { callBySdkPath, loadConfig, parseJsonInput, saveConfig } from "./index";
+import { callBySdkPath, loadConfig, loadConfigDetails, parseJsonInput, saveConfig } from "./index";
 
 let home: string;
 
@@ -42,6 +42,26 @@ describe("CLI config", () => {
     await expect(loadConfig()).resolves.toEqual({
       baseUrl: "https://env.example.com",
       apiKey: "offerkit_env_secret",
+    });
+  });
+
+  it("reports config sources without exposing the key", async () => {
+    await saveConfig({
+      baseUrl: "https://offerkit.example.com",
+      apiKey: "offerkit_test_secret",
+    });
+    vi.stubEnv("OFFERKIT_API_URL", "https://env.example.com");
+
+    await expect(loadConfigDetails()).resolves.toEqual({
+      config: {
+        baseUrl: "https://env.example.com",
+        apiKey: "offerkit_test_secret",
+      },
+      path: join(home, ".offerkitrc"),
+      sources: {
+        baseUrl: "env",
+        apiKey: "file",
+      },
     });
   });
 });

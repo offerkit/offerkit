@@ -35,6 +35,19 @@ export OFFERKIT_API_KEY=offerkit_...
 
 Environment variables override values from `~/.offerkitrc`.
 
+Inspect the active local configuration without making an API call:
+
+```bash
+offerkit config
+```
+
+Check the configured deployment and authenticated workspace:
+
+```bash
+offerkit doctor
+offerkit whoami
+```
+
 ## Commands
 
 Most write-heavy commands accept `--data` with inline JSON, `@file.json`, or `-`
