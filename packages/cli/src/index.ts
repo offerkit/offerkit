@@ -101,6 +101,10 @@ function assignDefined(target: JsonRecord, values: JsonRecord): JsonRecord {
   return target;
 }
 
+function isIndexable(value: unknown): value is Record<string, unknown> {
+  return value !== null && (typeof value === "object" || typeof value === "function");
+}
+
 function intOption(value: string): number {
   const parsed = Number(value);
   if (!Number.isInteger(parsed)) throw new Error(`Expected integer, got ${value}`);
@@ -146,10 +150,10 @@ export async function callBySdkPath(
 
   let node: unknown = c;
   for (const part of parts) {
-    if (!node || typeof node !== "object") {
+    if (!isIndexable(node)) {
       throw new Error(`API procedure ${path} is not reachable`);
     }
-    node = (node as Record<string, unknown>)[part];
+    node = node[part];
   }
 
   if (typeof node !== "function") {
