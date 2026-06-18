@@ -14,6 +14,7 @@ export function failureExplanation(
     | "endDate"
     | "redemptionCount"
     | "redemptionLimit"
+    | "perUserRedemptionLimit"
     | "giftBalance"
     | "type"
   >,
@@ -30,6 +31,12 @@ export function failureExplanation(
     if (code === "redemption_limit_reached") {
       safeDetails.redemptionCount = voucher.redemptionCount;
       safeDetails.redemptionLimit = voucher.redemptionLimit;
+    }
+    if (
+      code === "per_user_redemption_limit_reached" &&
+      !("perUserRedemptionLimit" in safeDetails)
+    ) {
+      safeDetails.perUserRedemptionLimit = voucher.perUserRedemptionLimit;
     }
     if (code === "gift_balance_zero") safeDetails.giftBalance = voucher.giftBalance ?? 0;
     if (code === "campaign_inactive") safeDetails.campaignId = voucher.campaignId ?? null;

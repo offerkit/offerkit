@@ -59,6 +59,7 @@ const create = os.campaigns.create
         endDate: input.endDate ? new Date(input.endDate) : null,
         codeConfig: input.codeConfig ?? {},
         validationRuleId: input.validationRuleId ?? null,
+        perUserRedemptionLimit: input.perUserRedemptionLimit ?? null,
         autoApply: input.autoApply ?? false,
         metadata: input.metadata ?? {},
       })
@@ -89,6 +90,9 @@ const update = os.campaigns.update
     if (inputPatch.codeConfig !== undefined) patch.codeConfig = inputPatch.codeConfig;
     if (inputPatch.validationRuleId !== undefined)
       patch.validationRuleId = inputPatch.validationRuleId ?? null;
+    if (inputPatch.perUserRedemptionLimit !== undefined) {
+      patch.perUserRedemptionLimit = inputPatch.perUserRedemptionLimit ?? null;
+    }
     if (inputPatch.autoApply !== undefined) patch.autoApply = inputPatch.autoApply;
     if (inputPatch.metadata !== undefined) patch.metadata = inputPatch.metadata;
 

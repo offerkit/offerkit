@@ -38,6 +38,7 @@ export const campaign = pgTable(
     validationRuleId: uuid("validation_rule_id").references(() => validationRule.id, {
       onDelete: "set null",
     }),
+    perUserRedemptionLimit: integer("per_user_redemption_limit"),
     autoApply: boolean("auto_apply").notNull().default(false),
     voucherCount: integer("voucher_count").notNull().default(0),
     metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),

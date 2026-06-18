@@ -76,6 +76,8 @@ export default function CampaignDetailPage({ params }: PageProps) {
             timezone: state.timezone || undefined,
             startDate: toIsoOrUndefined(state.startDate),
             endDate: toIsoOrUndefined(state.endDate),
+            perUserRedemptionLimit:
+              state.perUserRedemptionLimit === "" ? undefined : state.perUserRedemptionLimit,
             autoApply: state.autoApply,
             codeConfig: {
               length: state.codeLength,
@@ -196,6 +198,7 @@ export default function CampaignDetailPage({ params }: PageProps) {
           timezone: data.timezone,
           startDate: fromIso(data.startDate),
           endDate: fromIso(data.endDate),
+          perUserRedemptionLimit: data.perUserRedemptionLimit ?? "",
           autoApply: data.autoApply,
           codeLength: cfg.length ?? 8,
           codePrefix: cfg.prefix ?? "",

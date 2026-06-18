@@ -50,6 +50,9 @@ export default function NewVoucherPage() {
               exclusive: state.exclusive,
             }),
         redemptionLimit: state.redemptionLimit === "" ? undefined : state.redemptionLimit,
+        perUserRedemptionLimit:
+          state.perUserRedemptionLimit === "" ? undefined : state.perUserRedemptionLimit,
+        customerId: state.customerId || undefined,
         startDate: toIsoOrUndefined(state.startDate),
         endDate: toIsoOrUndefined(state.endDate),
       }),
@@ -85,6 +88,8 @@ export default function NewVoucherPage() {
           maxDiscountAmount: "",
           giftBalance: campaign?.type === "GIFT_VOUCHERS" ? 10000 : "",
           redemptionLimit: "",
+          perUserRedemptionLimit: "",
+          customerId: "",
           priority: 0,
           exclusive: false,
           active: true,

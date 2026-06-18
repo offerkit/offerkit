@@ -9,6 +9,8 @@ import {
   checkActivation,
   checkCampaignActivation,
   checkCampaignValidationRule,
+  checkCustomerBinding,
+  checkPerUserRedemptionLimit,
   messageFor,
 } from "./shared.ts";
 import type {
@@ -124,6 +126,31 @@ async function stackRedeemImpl(
           code: campaignFailure,
           message: messageFor(campaignFailure),
           explanations: [failureExplanation(campaignFailure, v)],
+        };
+      }
+      const customerFailure = checkCustomerBinding(v, campaign, input.customerId);
+      if (customerFailure) {
+        return {
+          ok: false,
+          code: customerFailure,
+          message: messageFor(customerFailure),
+          explanations: [failureExplanation(customerFailure, v)],
+        };
+      }
+      const customerLimitFailure = await checkPerUserRedemptionLimit(
+        tx,
+        v,
+        campaign,
+        input.customerId,
+      );
+      if (customerLimitFailure) {
+        return {
+          ok: false,
+          code: customerLimitFailure.code,
+          message: messageFor(customerLimitFailure.code),
+          explanations: [
+            failureExplanation(customerLimitFailure.code, v, customerLimitFailure.details),
+          ],
         };
       }
       const validationRule = campaign?.validationRuleId

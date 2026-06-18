@@ -28,6 +28,8 @@ export interface VoucherFormState {
   maxDiscountAmount: number | "";
   giftBalance: number | "";
   redemptionLimit: number | "";
+  perUserRedemptionLimit: number | "";
+  customerId: string;
   priority: number;
   exclusive: boolean;
   active: boolean;
@@ -144,6 +146,40 @@ export function VoucherForm({
                     field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
                   }
                   placeholder={gt("Unlimited")}
+                />
+              </div>
+            )}
+          </form.Field>
+          <form.Field name="perUserRedemptionLimit">
+            {(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>
+                  <T>Per-user limit</T>
+                </Label>
+                <Input
+                  id={field.name}
+                  type="number"
+                  min={1}
+                  value={field.state.value}
+                  onChange={(e) =>
+                    field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
+                  }
+                  placeholder={gt("No user cap")}
+                />
+              </div>
+            )}
+          </form.Field>
+          <form.Field name="customerId">
+            {(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>
+                  <T>Customer ID</T>
+                </Label>
+                <Input
+                  id={field.name}
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder={gt("Optional")}
                 />
               </div>
             )}
