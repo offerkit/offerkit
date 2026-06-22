@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatMinorCurrency } from "@/lib/money";
 import { ovx } from "@/lib/sdk";
 
 interface PageProps {
@@ -44,12 +45,8 @@ type LastConversion = {
   refereeReward?: ReferralOutcome;
 };
 
-function cents(value: number | undefined): string {
-  if (value == null) return "$0.00";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(value / 100);
+function cents(value: number | undefined, currency: string): string {
+  return formatMinorCurrency(value ?? 0, currency);
 }
 
 function rewardKindLabel(kind: ReferralReward["kind"]): string {
@@ -65,19 +62,27 @@ function rewardKindLabel(kind: ReferralReward["kind"]): string {
   }
 }
 
-function rewardDescription(reward: ReferralReward): string {
+function rewardDescription(reward: ReferralReward, currency: string): string {
   if (reward.kind === "discount") {
     if (reward.discount?.type === "PERCENTAGE") {
       return `${(reward.discount.percent ?? 0) / 100}% off`;
     }
-    return `${cents(reward.discount?.amount)} off`;
+    return `${cents(reward.discount?.amount, currency)} off`;
   }
-  if (reward.kind === "gift_card") return `${cents(reward.creditCents)} credit`;
+  if (reward.kind === "gift_card") return `${cents(reward.creditCents, currency)} credit`;
   if (reward.kind === "loyalty_points") return `${reward.loyaltyPoints ?? 0} points`;
   return reward.typeKey || "Custom payload";
 }
 
-function RewardSummary({ title, reward }: { title: string; reward: ReferralReward }) {
+function RewardSummary({
+  title,
+  reward,
+  currency,
+}: {
+  title: string;
+  reward: ReferralReward;
+  currency: string;
+}) {
   return (
     <Card>
       <CardHeader>
@@ -85,7 +90,7 @@ function RewardSummary({ title, reward }: { title: string; reward: ReferralRewar
       </CardHeader>
       <CardContent className="space-y-2">
         <Badge variant="secondary">{rewardKindLabel(reward.kind)}</Badge>
-        <p className="text-sm font-medium">{rewardDescription(reward)}</p>
+        <p className="text-sm font-medium">{rewardDescription(reward, currency)}</p>
         {reward.kind === "loyalty_points" && reward.loyaltyProgramId ? (
           <p className="font-mono text-xs text-muted-foreground">{reward.loyaltyProgramId}</p>
         ) : null}
@@ -133,6 +138,13 @@ export default function ReferralProgramDetail({ params }: PageProps) {
   const { data: program, isLoading } = useQuery({
     queryKey: ["referralPrograms", id],
     queryFn: () => ovx().referrals.programs.get({ params: { id } }),
+  });
+
+  const { data: campaign, isLoading: isCampaignLoading } = useQuery({
+    queryKey: ["campaigns", program?.campaignId],
+    queryFn: () =>
+      ovx().campaigns.get({ params: { id: program?.campaignId ?? "" } }),
+    enabled: Boolean(program?.campaignId),
   });
 
   const codesQuery = useQuery({
@@ -254,7 +266,7 @@ export default function ReferralProgramDetail({ params }: PageProps) {
     },
   ];
 
-  if (isLoading)
+  if (isLoading || (program?.campaignId && isCampaignLoading))
     return (
       <p className="text-sm text-muted-foreground">
         <T>Loading…</T>
@@ -266,6 +278,14 @@ export default function ReferralProgramDetail({ params }: PageProps) {
         <T>Program not found.</T>
       </p>
     );
+  if (!campaign)
+    return (
+      <p className="text-sm text-muted-foreground">
+        <T>Campaign not found.</T>
+      </p>
+    );
+
+  const currency = campaign.currency;
 
   return (
     <div className="space-y-4">
@@ -306,8 +326,16 @@ export default function ReferralProgramDetail({ params }: PageProps) {
       </header>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <RewardSummary title={gt("Referrer reward")} reward={program.referrerReward} />
-        <RewardSummary title={gt("Referee reward")} reward={program.refereeReward} />
+        <RewardSummary
+          title={gt("Referrer reward")}
+          reward={program.referrerReward}
+          currency={currency}
+        />
+        <RewardSummary
+          title={gt("Referee reward")}
+          reward={program.refereeReward}
+          currency={currency}
+        />
       </div>
 
       <Card>

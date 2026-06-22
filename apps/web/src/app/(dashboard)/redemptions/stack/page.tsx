@@ -1,20 +1,34 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { CURRENCY_OPTIONS, optionsWithCurrent } from "@/lib/locale-options";
 import { ovx } from "@/lib/sdk";
 
 export default function StackRedeemPage() {
   const gt = useGT();
   const [codesText, setCodesText] = useState("");
   const [orderAmount, setOrderAmount] = useState(10000);
+  const [currency, setCurrency] = useState<string | undefined>(undefined);
   const [idempotencyKey, setIdempotencyKey] = useState("");
+  const { data: workspace } = useQuery({
+    queryKey: ["workspace"],
+    queryFn: () => ovx().workspace.get({}),
+  });
+  const selectedCurrency = currency ?? workspace?.defaultCurrency ?? "";
 
   const stack = useMutation({
     mutationFn: () =>
@@ -23,7 +37,7 @@ export default function StackRedeemPage() {
           .split(/[,\s]+/)
           .map((s) => s.trim())
           .filter(Boolean),
-        order: { amount: orderAmount, currency: "USD", items: [] },
+        order: { amount: orderAmount, currency: selectedCurrency, items: [] },
         idempotencyKey: idempotencyKey || undefined,
       }),
   });
@@ -64,7 +78,7 @@ export default function StackRedeemPage() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="amount">
-              <T>Order amount (cents, USD)</T>
+              <T>Order amount (minor units)</T>
             </Label>
             <Input
               id="amount"
@@ -73,6 +87,28 @@ export default function StackRedeemPage() {
               value={orderAmount}
               onChange={(e) => setOrderAmount(Number(e.target.value))}
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="currency">
+              <T>Currency</T>
+            </Label>
+            <Select
+              value={selectedCurrency}
+              onValueChange={(value) => {
+                if (value) setCurrency(value);
+              }}
+            >
+              <SelectTrigger id="currency" className="w-full">
+                <SelectValue placeholder={gt("Select currency")} />
+              </SelectTrigger>
+              <SelectContent>
+                {optionsWithCurrent(CURRENCY_OPTIONS, selectedCurrency).map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="idem">
@@ -89,7 +125,7 @@ export default function StackRedeemPage() {
             <Button
               type="button"
               onClick={() => stack.mutate()}
-              disabled={stack.isPending || codesText.trim() === ""}
+              disabled={stack.isPending || codesText.trim() === "" || !selectedCurrency}
             >
               {stack.isPending ? <T>Redeeming…</T> : <T>Stack redeem</T>}
             </Button>

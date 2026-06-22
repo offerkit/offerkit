@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { CampaignForm, type CampaignFormState } from "@/components/dashboard/campaign-form";
@@ -17,6 +17,10 @@ export default function NewCampaignPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const gt = useGT();
+  const { data: workspace, isLoading } = useQuery({
+    queryKey: ["workspace"],
+    queryFn: () => ovx().workspace.get({}),
+  });
 
   const create = useMutation({
     mutationFn: (state: CampaignFormState) =>
@@ -56,26 +60,33 @@ export default function NewCampaignPage() {
           <T>Pick a type, set a currency, and configure activation.</T>
         </p>
       </header>
-      <CampaignForm
-        mode="create"
-        initial={{
-          name: "",
-          description: "",
-          type: "DISCOUNT",
-          status: "draft",
-          currency: "USD",
-          timezone: "UTC",
-          startDate: "",
-          endDate: "",
-          perUserRedemptionLimit: "",
-          autoApply: false,
-          codeLength: 8,
-          codePrefix: "",
-        }}
-        submitLabel={gt("Create campaign")}
-        pending={create.isPending}
-        onSubmit={(state) => create.mutate(state)}
-      />
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">
+          <T>Loading…</T>
+        </p>
+      ) : (
+        <CampaignForm
+          key={workspace?.defaultCurrency}
+          mode="create"
+          initial={{
+            name: "",
+            description: "",
+            type: "DISCOUNT",
+            status: "draft",
+            currency: workspace?.defaultCurrency ?? "",
+            timezone: workspace?.defaultTimezone ?? "UTC",
+            startDate: "",
+            endDate: "",
+            perUserRedemptionLimit: "",
+            autoApply: false,
+            codeLength: 8,
+            codePrefix: "",
+          }}
+          submitLabel={gt("Create campaign")}
+          pending={create.isPending}
+          onSubmit={(state) => create.mutate(state)}
+        />
+      )}
     </div>
   );
 }

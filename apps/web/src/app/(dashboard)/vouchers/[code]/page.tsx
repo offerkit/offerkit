@@ -17,6 +17,7 @@ import {
   VoucherForm,
   type VoucherFormState,
 } from "@/components/dashboard/voucher-form";
+import { formatMinorCurrency } from "@/lib/money";
 import { ovx } from "@/lib/sdk";
 
 interface PageProps {
@@ -45,6 +46,12 @@ export default function VoucherDetailPage({ params }: PageProps) {
   const { data, isLoading } = useQuery({
     queryKey: ["vouchers", "code", code],
     queryFn: () => ovx().vouchers.get({ params: { code } }),
+  });
+
+  const { data: campaign } = useQuery({
+    queryKey: ["campaigns", data?.campaignId],
+    queryFn: () => ovx().campaigns.get({ params: { id: data?.campaignId ?? "" } }),
+    enabled: Boolean(data?.campaignId),
   });
 
   const update = useMutation({
@@ -107,7 +114,7 @@ export default function VoucherDetailPage({ params }: PageProps) {
     mutationFn: (amount: number) =>
       ovx().vouchers.validate({
         params: { code },
-        body: { order: { amount, currency: "USD", items: [] } },
+        body: { order: { amount, currency: campaign?.currency ?? "", items: [] } },
       }),
   });
 
@@ -116,7 +123,7 @@ export default function VoucherDetailPage({ params }: PageProps) {
       ovx().vouchers.redeem({
         params: { code },
         body: {
-          order: { amount: vars.amount, currency: "USD", items: [] },
+          order: { amount: vars.amount, currency: campaign?.currency ?? "", items: [] },
           idempotencyKey: vars.idempotencyKey,
         },
       }),
@@ -163,6 +170,7 @@ export default function VoucherDetailPage({ params }: PageProps) {
   };
 
   const isGift = data.type === "GIFT_CARD";
+  const campaignCurrency = campaign?.currency;
 
   return (
     <div className="space-y-4">
@@ -212,7 +220,13 @@ export default function VoucherDetailPage({ params }: PageProps) {
         onSubmit={(state) => update.mutate(state)}
       />
 
-      {isGift ? <GiftCardLedger code={code} balance={data.giftBalance ?? 0} /> : null}
+      {isGift ? (
+        <GiftCardLedger
+          code={code}
+          balance={data.giftBalance ?? 0}
+          currency={campaignCurrency}
+        />
+      ) : null}
 
       <Card>
         <CardHeader>
@@ -224,7 +238,7 @@ export default function VoucherDetailPage({ params }: PageProps) {
           <div className="flex items-end gap-2">
             <div className="space-y-2">
               <Label htmlFor="order-amount">
-                <T>Order amount (cents)</T>
+                <T>Order amount (minor units)</T>
               </Label>
               <Input
                 id="order-amount"
@@ -251,7 +265,7 @@ export default function VoucherDetailPage({ params }: PageProps) {
               type="button"
               variant="outline"
               onClick={() => validatePreview.mutate(orderAmount)}
-              disabled={validatePreview.isPending}
+              disabled={validatePreview.isPending || !campaignCurrency}
             >
               {validatePreview.isPending ? <T>Validating…</T> : <T>Validate</T>}
             </Button>
@@ -263,7 +277,7 @@ export default function VoucherDetailPage({ params }: PageProps) {
                   idempotencyKey: redeemKey || undefined,
                 })
               }
-              disabled={redeem.isPending}
+              disabled={redeem.isPending || !campaignCurrency}
             >
               {redeem.isPending ? <T>Redeeming…</T> : <T>Redeem</T>}
             </Button>
@@ -285,7 +299,15 @@ export default function VoucherDetailPage({ params }: PageProps) {
   );
 }
 
-function GiftCardLedger({ code, balance }: { code: string; balance: number }) {
+function GiftCardLedger({
+  code,
+  balance,
+  currency,
+}: {
+  code: string;
+  balance: number;
+  currency: string | undefined;
+}) {
   const { data, isLoading } = useQuery({
     queryKey: ["vouchers", "code", code, "transactions"],
     queryFn: () => ovx().vouchers.transactions({ params: { code } }),
@@ -297,7 +319,10 @@ function GiftCardLedger({ code, balance }: { code: string; balance: number }) {
         <CardTitle className="flex items-center justify-between">
           <T>Gift card ledger</T>
           <span className="text-sm font-normal text-muted-foreground">
-            <T>Current balance: {(balance / 100).toFixed(2)}</T>
+            <T>
+              Current balance:{" "}
+              {currency ? formatMinorCurrency(balance, currency) : (balance / 100).toFixed(2)}
+            </T>
           </span>
         </CardTitle>
       </CardHeader>
@@ -323,10 +348,13 @@ function GiftCardLedger({ code, balance }: { code: string; balance: number }) {
                 <div className="font-mono text-sm">
                   <span className={t.delta < 0 ? "text-red-500" : "text-emerald-500"}>
                     {t.delta > 0 ? "+" : ""}
-                    {(t.delta / 100).toFixed(2)}
+                    {currency ? formatMinorCurrency(t.delta, currency) : (t.delta / 100).toFixed(2)}
                   </span>
                   <span className="ml-3 text-muted-foreground">
-                    → {(t.balanceAfter / 100).toFixed(2)}
+                    →{" "}
+                    {currency
+                      ? formatMinorCurrency(t.balanceAfter, currency)
+                      : (t.balanceAfter / 100).toFixed(2)}
                   </span>
                 </div>
               </li>

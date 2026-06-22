@@ -43,7 +43,7 @@ const SAMPLE_RULES = [
     rule: { "!=": [{ var: "customer.phone" }, null] },
   },
   {
-    label: "Total spent over $100",
+    label: "Total spent over 10000 minor units",
     rule: { ">": [{ var: "customer.summary.totalSpent" }, 10000] },
   },
 ];

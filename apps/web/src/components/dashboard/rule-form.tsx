@@ -70,7 +70,7 @@ export function RuleForm({
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   required
-                  placeholder={gt("Order over $50")}
+                  placeholder={gt("High-value order")}
                 />
               </div>
             )}

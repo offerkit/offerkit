@@ -5,7 +5,7 @@ import { calculateDiscount, type DiscountVoucher } from "./index.ts";
 const order = (amount: number, currency = "USD") => ({ amount, currency, items: [] });
 
 describe("calculateDiscount — golden cases", () => {
-  it("applies a flat $10 off", () => {
+  it("applies a flat fixed-amount discount", () => {
     const result = calculateDiscount({
       order: order(10000),
       vouchers: [{ id: "v1", code: "TEN", type: "AMOUNT", amount: 1000 }],
@@ -53,7 +53,7 @@ describe("calculateDiscount — golden cases", () => {
         { id: "v2", code: "B", type: "PERCENTAGE", percent: 1000, priority: 1 }, // 10% on remaining
       ],
     });
-    // priority=10 first: $10 off → 9000; then 10% off → 900 off → final 8100
+    // priority=10 first: 1000 off → 9000; then 10% off → 900 off → final 8100
     expect(result.appliedDiscounts.map((a) => a.amount)).toEqual([1000, 900]);
     expect(result.finalOrder.amount).toBe(8100);
   });
@@ -74,7 +74,7 @@ describe("calculateDiscount — golden cases", () => {
     ).toBeDefined();
   });
 
-  it("skips a voucher whose effective discount is zero on a $0 running total", () => {
+  it("skips a voucher whose effective discount is zero on a zero running total", () => {
     const result = calculateDiscount({
       order: order(1000),
       vouchers: [

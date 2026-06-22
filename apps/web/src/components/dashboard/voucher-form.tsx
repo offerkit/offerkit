@@ -349,7 +349,7 @@ export function VoucherForm({
                         placeholder="10000"
                       />
                       <p className="text-xs text-muted-foreground">
-                        <T>10000 = $100.00. Each redemption deducts up to this much.</T>
+                        <T>10000 = 100.00. Each redemption deducts up to this much.</T>
                       </p>
                     </div>
                   )}
