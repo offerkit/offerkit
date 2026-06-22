@@ -41,7 +41,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@offerkit/sdk": "workspace:^",
-    "@orpc/contract": "^1.14.2",
+    "@orpc/contract": "^1.14.6",
     "zod": "^4.4.3"
   },
   "devDependencies": {
