@@ -42,7 +42,7 @@ curl -H "Authorization: Bearer $OFFERKIT_API_KEY" -H 'Content-Type: application/
   -X POST $OFFERKIT_API_URL/api/v1/campaigns \
   -d '{"name":"Spring 2026","type":"DISCOUNT","currency":"USD"}'
 
-# Create a $10-off voucher inside it (use the campaignId from above)
+# Create a 1000-cent voucher inside it (use the campaignId from above)
 curl -H "Authorization: Bearer $OFFERKIT_API_KEY" -H 'Content-Type: application/json' \
   -X POST $OFFERKIT_API_URL/api/v1/vouchers \
   -d '{"campaignId":"…","type":"DISCOUNT","discount":{"type":"AMOUNT","amount":1000}}'

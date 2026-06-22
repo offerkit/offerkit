@@ -50,9 +50,9 @@ describe.skipIf(!E2E_ENABLED)("validation rules CRUD + attach to campaign", () =
 
     const updated = await client.validationRules.update({
       params: { id: rule.id },
-      body: { patch: { description: "min order $10" } },
+      body: { patch: { description: "min order 1000 minor units" } },
     });
-    expect(updated.description).toBe("min order $10");
+    expect(updated.description).toBe("min order 1000 minor units");
 
     // Detach so the FK doesn't block the soft-delete.
     await client.campaigns.update({
