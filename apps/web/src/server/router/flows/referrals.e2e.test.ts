@@ -104,6 +104,21 @@ describe.skipIf(!E2E_ENABLED)("referrals: program → issue → convert → both
 
     expect(recreated.id).not.toBe(deleted.id);
     expect(recreated.campaignId).toBe(campaign.id);
+
+    const fetched = await client.referrals.programs.get({ params: { id: recreated.id } });
+    expect(fetched.id).toBe(recreated.id);
+    const updated = await client.referrals.programs.update({
+      params: { id: recreated.id },
+      body: {
+        patch: {
+          codeLength: 10,
+          metadata: { source: "e2e" },
+        },
+      },
+    });
+    expect(updated.codeLength).toBe(10);
+    const programs = await client.referrals.programs.list({ limit: 10 });
+    expect(programs.data.find((item) => item.id === recreated.id)).toBeDefined();
   });
 
   it("issues a stable code and supports many conversions per code", async () => {
@@ -159,6 +174,26 @@ describe.skipIf(!E2E_ENABLED)("referrals: program → issue → convert → both
     const lookup = await client.referrals.getByCode({ params: { code: issuedCode } });
     expect(lookup.referrerCustomerId).toBe(referrer.id);
     expect(lookup.id).toBe(issuedCodeId);
+
+    const secondReferrer = await client.customers.create({
+      email: `${randomId("rrf2")}@example.com`,
+    });
+    await client.referrals.issue({
+      programId: program.id,
+      referrerCustomerId: secondReferrer.id,
+      prefix: "REF",
+    });
+    const codesPage = await client.referrals.listCodes({
+      params: { programId: program.id },
+      query: { limit: 1 },
+    });
+    expect(codesPage.data).toHaveLength(1);
+    expect(codesPage.next).toBeDefined();
+    const codesPageTwo = await client.referrals.listCodes({
+      params: { programId: program.id },
+      query: { limit: 1, cursor: codesPage.next },
+    });
+    expect(codesPageTwo.data).toHaveLength(1);
 
     // First friend converts.
     const convertedA = await client.referrals.convert({
@@ -223,15 +258,22 @@ describe.skipIf(!E2E_ENABLED)("referrals: program → issue → convert → both
 
     const conversions = await client.referrals.listConversions({
       params: { codeId: issuedCodeId },
-      query: { limit: 10 },
+      query: { limit: 1 },
     });
-    expect(conversions.data.length).toBe(3);
+    expect(conversions.data).toHaveLength(1);
+    expect(conversions.next).toBeDefined();
+    const conversionsPageTwo = await client.referrals.listConversions({
+      params: { codeId: issuedCodeId },
+      query: { limit: 10, cursor: conversions.next },
+    });
+    expect(conversionsPageTwo.data.length).toBeGreaterThanOrEqual(2);
 
     const programConversions = await client.referrals.listProgramConversions({
       params: { programId: program.id },
-      query: { limit: 10 },
+      query: { limit: 1 },
     });
-    expect(programConversions.data).toHaveLength(3);
+    expect(programConversions.data).toHaveLength(1);
+    expect(programConversions.next).toBeDefined();
     expect(programConversions.data[0]?.code).toBe(issuedCode);
     expect(programConversions.data[0]?.referrerCustomerId).toBe(referrer.id);
     expect(programConversions.data[0]?.referrerOutcome.voucherCode).toBeDefined();

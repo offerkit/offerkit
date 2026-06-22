@@ -59,4 +59,55 @@ describe.skipIf(!E2E_ENABLED)("campaigns CRUD", () => {
       /not found/i,
     );
   });
+
+  it("updates optional campaign fields used by qualification and code generation", async () => {
+    if (!token) throw new Error("setup failed");
+    const client = makeClient(token);
+
+    const rule = await client.validationRules.create({
+      name: randomId("camp-rule"),
+      appliesTo: "voucher",
+      rule: { ">=": [{ var: "order.amount" }, 100] },
+    });
+    const created = await client.campaigns.create({
+      name: randomId("camp-full"),
+      type: "DISCOUNT",
+      currency: "USD",
+      timezone: "UTC",
+      startDate: new Date(Date.now() + 3_600_000).toISOString(),
+      endDate: new Date(Date.now() + 7_200_000).toISOString(),
+      codeConfig: { prefix: "FULL", length: 10 },
+      validationRuleId: rule.id,
+      perUserRedemptionLimit: 2,
+      autoApply: true,
+      metadata: { source: "create" },
+    });
+
+    const updated = await client.campaigns.update({
+      params: { id: created.id },
+      body: {
+        patch: {
+          name: `${created.name}-updated`,
+          status: "active",
+          currency: "EUR",
+          timezone: "Europe/Amsterdam",
+          startDate: new Date(Date.now() + 10_800_000).toISOString(),
+          endDate: new Date(Date.now() + 14_400_000).toISOString(),
+          codeConfig: { prefix: "UPD", length: 12 },
+          validationRuleId: rule.id,
+          perUserRedemptionLimit: 3,
+          autoApply: false,
+          metadata: { source: "update" },
+        },
+      },
+    });
+
+    expect(updated.name).toBe(`${created.name}-updated`);
+    expect(updated.status).toBe("active");
+    expect(updated.currency).toBe("EUR");
+    expect(updated.timezone).toBe("Europe/Amsterdam");
+    expect(updated.codeConfig).toEqual({ prefix: "UPD", length: 12 });
+    expect(updated.perUserRedemptionLimit).toBe(3);
+    expect(updated.autoApply).toBe(false);
+  });
 });

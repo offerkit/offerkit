@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { desc } from "drizzle-orm";
 import type { Db } from "@offerkit/db";
+import { schema } from "@offerkit/db";
 import {
   E2E_ENABLED,
   TEST_DB_URL,
@@ -30,7 +32,7 @@ afterAll(async () => {
 
 describe.skipIf(!E2E_ENABLED)("audit log", () => {
   it("mutations across multiple domains are logged with the right actor + entity", async () => {
-    if (!token || !keyId) throw new Error("setup failed");
+    if (!db || !token || !keyId) throw new Error("setup failed");
     const client = makeClient(token);
 
     // Drive mutations across 3 domains.
@@ -71,6 +73,33 @@ describe.skipIf(!E2E_ENABLED)("audit log", () => {
       (r) => r.entity === "campaigns" && r.action === "create",
     );
     expect(campaignAudit?.entityId).toBe(camp.id);
+
+    const filtered = await client.auditLog.list({
+      actor: "api_key",
+      entity: "campaigns",
+      action: "create",
+      entityId: camp.id,
+    });
+    expect(filtered.data[0]?.entityId).toBe(camp.id);
+
+    const latest = await db
+      .select()
+      .from(schema.auditLog)
+      .orderBy(desc(schema.auditLog.createdAt), desc(schema.auditLog.id))
+      .limit(2);
+    const last = latest?.[0];
+    if (!last) throw new Error("expected audit log row");
+    const cursor = Buffer.from(
+      JSON.stringify({ createdAt: last.createdAt.toISOString(), id: last.id }),
+    ).toString("base64url");
+    const pageTwo = await client.auditLog.list({ actor: "api_key", cursor });
+    expect(Array.isArray(pageTwo.data)).toBe(true);
+
+    const invalidCursor = await client.auditLog.list({
+      actor: "api_key",
+      cursor: "not-base64-json",
+    });
+    expect(Array.isArray(invalidCursor.data)).toBe(true);
     void cust;
   }, 15_000);
 });

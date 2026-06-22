@@ -38,6 +38,8 @@ describe.skipIf(!E2E_ENABLED)("auth + scopes + rate limit", () => {
     });
     expect(minted.token).toMatch(/^offerkit_[A-Za-z0-9]{12}_[A-Za-z0-9]{40}$/);
     cleanupPrefixes.push(minted.prefix);
+    const keys = await adminClient.apiKeys.list({});
+    expect(keys.data.find((key) => key.id === minted.id)).toBeDefined();
 
     const ephemeralClient = makeClient(minted.token);
     const list = await ephemeralClient.campaigns.list({ limit: 5 });

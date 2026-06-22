@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { eq } from "drizzle-orm";
 import type { Db } from "@offerkit/db";
+import { schema } from "@offerkit/db";
 import { verifyWebhook } from "@offerkit/sdk";
 import {
   E2E_ENABLED,
@@ -79,5 +81,71 @@ describe.skipIf(!E2E_ENABLED)("webhooks: register + signature verification", () 
 
     // Soft-delete cleanup.
     await client.webhooks.delete({ params: { id: created.id } });
+  });
+
+  it("lists events, gets events, lists deliveries, and replays a delivery", async () => {
+    if (!db || !token) throw new Error("setup failed");
+    const client = makeClient(token);
+
+    const webhook = await client.webhooks.create({
+      name: randomId("wh-events"),
+      url: "https://example.test/events",
+      events: ["customer.created"],
+      active: true,
+    });
+    const eventId = crypto.randomUUID();
+    await db.insert(schema.event).values({
+      id: eventId,
+      type: "customer.created",
+      entityId: randomId("entity"),
+      payload: { customerId: "cust_123" },
+    });
+    const [delivery] = await db
+      .insert(schema.webhookDelivery)
+      .values({
+        webhookId: webhook.id,
+        eventId,
+        status: "failed",
+        attempts: 1,
+        responseStatus: 500,
+        responseBody: "server error",
+        error: "boom",
+      })
+      .returning();
+    if (!delivery) throw new Error("delivery insert failed");
+
+    const events = await client.events.list({ type: "customer.created", limit: 5 });
+    expect(events.data.find((event) => event.id === eventId)).toBeDefined();
+    const fetchedEvent = await client.events.get({ params: { id: eventId } });
+    expect(fetchedEvent.payload).toEqual({ customerId: "cust_123" });
+
+    const deliveries = await client.webhooks.deliveries({
+      params: { id: webhook.id },
+      query: {},
+    });
+    expect(deliveries.data[0]?.id).toBe(delivery.id);
+    expect(deliveries.data[0]?.eventType).toBe("customer.created");
+
+    const replayed = await client.webhooks.replay({ params: { id: delivery.id } });
+    expect(replayed.ok).toBe(true);
+    const [updated] = await db
+      .select()
+      .from(schema.webhookDelivery)
+      .where(eq(schema.webhookDelivery.id, delivery.id));
+    expect(updated?.status).toBe("pending");
+    expect(updated?.error).toBeNull();
+
+    const updatedWebhook = await client.webhooks.update({
+      params: { id: webhook.id },
+      body: {
+        patch: {
+          name: "updated webhook",
+          url: "https://example.test/updated",
+          events: ["customer.created", "voucher.redeemed"],
+          active: false,
+        },
+      },
+    });
+    expect(updatedWebhook.active).toBe(false);
   });
 });
