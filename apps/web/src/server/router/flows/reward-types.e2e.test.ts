@@ -83,4 +83,47 @@ describe.skipIf(!E2E_ENABLED)("custom reward types CRUD + voucher payload roundt
       /not found/i,
     );
   });
+
+  it("lists reward types and creates a new active revision when payload schema changes", async () => {
+    if (!token) throw new Error("setup failed");
+    const client = makeClient(token);
+
+    const key = `BONUS_POINTS_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
+    const created = await client.rewardTypes.create({
+      key,
+      name: "Bonus Points",
+      description: "Initial schema",
+      payloadSchema: { type: "object", properties: { points: { type: "number" } } },
+    });
+
+    const list = await client.rewardTypes.list({ search: "Bonus", limit: 10 });
+    expect(list.data.find((item) => item.id === created.id)).toBeDefined();
+
+    const sameSchema = await client.rewardTypes.update({
+      params: { id: created.id },
+      body: {
+        patch: {
+          name: "Bonus Points Same Schema",
+          payloadSchema: { type: "object", properties: { points: { type: "number" } } },
+        },
+      },
+    });
+    expect(sameSchema.payloadSchema).toEqual(created.payloadSchema);
+
+    const changedSchema = await client.rewardTypes.update({
+      params: { id: created.id },
+      body: {
+        patch: {
+          payloadSchema: {
+            type: "object",
+            properties: { points: { type: "number" }, reason: { type: "string" } },
+          },
+        },
+      },
+    });
+    expect(changedSchema.payloadSchema).toEqual({
+      type: "object",
+      properties: { points: { type: "number" }, reason: { type: "string" } },
+    });
+  });
 });

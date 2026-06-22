@@ -9,7 +9,8 @@
     "start": "tsx src/index.ts",
     "build": "tsdown",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "test:coverage": "vitest run --coverage --coverage.reporter=text --coverage.reporter=html --coverage.reporter=lcov --coverage.reporter=json-summary --passWithNoTests"
   },
   "dependencies": {
     "@offerkit/core": "workspace:*",

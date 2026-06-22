@@ -55,4 +55,53 @@ describe.skipIf(!E2E_ENABLED)("customers CRUD", () => {
       /not found/i,
     );
   });
+
+  it("upserts by externalId and fetches by externalId", async () => {
+    if (!token) throw new Error("setup failed");
+    const client = makeClient(token);
+
+    const externalId = randomId("ext-cust");
+    const created = await client.customers.upsert({
+      externalId,
+      email: `${externalId}@example.com`,
+      name: "Initial",
+      phone: "+15555550123",
+      address: { country: "US" },
+      metadata: { tier: "silver" },
+    });
+    expect(created.created).toBe(true);
+    expect(created.customer.externalId).toBe(externalId);
+
+    const updated = await client.customers.upsert({
+      externalId,
+      name: "Updated",
+      metadata: { tier: "gold" },
+    });
+    expect(updated.created).toBe(false);
+    expect(updated.customer.id).toBe(created.customer.id);
+    expect(updated.customer.name).toBe("Updated");
+
+    const fetched = await client.customers.getByExternalId({
+      params: { externalId },
+    });
+    expect(fetched.id).toBe(created.customer.id);
+    expect(fetched.metadata).toEqual({ tier: "gold" });
+
+    const patched = await client.customers.update({
+      params: { id: fetched.id },
+      body: {
+        patch: {
+          email: `${externalId}.updated@example.com`,
+          phone: "+15555550999",
+          address: { country: "CA" },
+        },
+      },
+    });
+    expect(patched.email).toBe(`${externalId}.updated@example.com`);
+
+    await client.customers.delete({ params: { id: fetched.id } });
+    await expect(
+      client.customers.getByExternalId({ params: { externalId } }),
+    ).rejects.toThrow(/not found/i);
+  });
 });

@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "@offerkit/db";
+import { eq } from "drizzle-orm";
+import { schema } from "@offerkit/db";
 import {
   E2E_ENABLED,
   TEST_DB_URL,
@@ -27,20 +29,46 @@ afterAll(async () => {
 
 describe.skipIf(!E2E_ENABLED)("workspace settings", () => {
   it("get → update → get reflects the change", async () => {
-    if (!token) throw new Error("setup failed");
+    if (!db || !token) throw new Error("setup failed");
     const client = makeClient(token);
 
+    await db
+      .delete(schema.workspaceSetting)
+      .where(eq(schema.workspaceSetting.id, "workspace"));
     const before = await client.workspace.get({});
     expect(before.defaultCurrency).toMatch(/^[A-Z]{3}$/);
 
+    const previousResendKey = process.env["RESEND_API_KEY"];
+    process.env["RESEND_API_KEY"] = "test-resend-key";
+    try {
+      const resendWorkspace = await client.workspace.get({});
+      expect(resendWorkspace.emailProvider).toBe("resend");
+    } finally {
+      if (previousResendKey === undefined) {
+        delete process.env["RESEND_API_KEY"];
+      } else {
+        process.env["RESEND_API_KEY"] = previousResendKey;
+      }
+    }
+
     const newName = `Test workspace ${String(Date.now())}`;
-    const updated = await client.workspace.update({ name: newName });
+    const updated = await client.workspace.update({
+      name: newName,
+      defaultCurrency: "eur",
+      defaultTimezone: "Europe/Amsterdam",
+    });
     expect(updated.name).toBe(newName);
+    expect(updated.defaultCurrency).toBe("EUR");
+    expect(updated.defaultTimezone).toBe("Europe/Amsterdam");
 
     const after = await client.workspace.get({});
     expect(after.name).toBe(newName);
 
     // Restore prior name so other test runs don't drift.
-    await client.workspace.update({ name: before.name });
+    await client.workspace.update({
+      name: before.name,
+      defaultCurrency: before.defaultCurrency,
+      defaultTimezone: before.defaultTimezone,
+    });
   });
 });

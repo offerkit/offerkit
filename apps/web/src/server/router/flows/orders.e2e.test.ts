@@ -83,4 +83,44 @@ describe.skipIf(!E2E_ENABLED)("orders CRUD + lifecycle + redemption attachment",
     expect(list.data[0]?.voucherCode).toBe(code);
     expect(list.data[0]?.result).toBe("SUCCESS");
   });
+
+  it("updates, filters, gets, and soft-deletes orders", async () => {
+    if (!token) throw new Error("setup failed");
+    const client = makeClient(token);
+
+    const customer = await client.customers.create({
+      email: `${randomId("order-customer")}@example.com`,
+    });
+    const externalId = randomId("order-ext");
+    const order = await client.orders.create({
+      externalId,
+      customerId: customer.id,
+      items: [{ name: "service", quantity: 2, unitPrice: 1_500 }],
+      amount: 3_000,
+      discountAmount: 100,
+      currency: "USD",
+      status: "CREATED",
+      metadata: { channel: "e2e" },
+    });
+
+    const fetched = await client.orders.get({ params: { id: order.id } });
+    expect(fetched.externalId).toBe(externalId);
+
+    const updated = await client.orders.update({
+      params: { id: order.id },
+      body: { patch: { status: "PAID", discountAmount: 250, metadata: { channel: "api" } } },
+    });
+    expect(updated.status).toBe("PAID");
+    expect(updated.discountAmount).toBe(250);
+
+    const allOrders = await client.orders.list({});
+    expect(allOrders.data.find((item) => item.id === order.id)).toBeDefined();
+    const searchedOrders = await client.orders.list({ search: externalId });
+    expect(searchedOrders.data.find((item) => item.id === order.id)).toBeDefined();
+
+    await client.orders.delete({ params: { id: order.id } });
+    await expect(client.orders.get({ params: { id: order.id } })).rejects.toThrow(
+      /not found/i,
+    );
+  });
 });

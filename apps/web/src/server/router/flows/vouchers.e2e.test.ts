@@ -231,4 +231,91 @@ describe.skipIf(!E2E_ENABLED)("vouchers bulk + CRUD + transactions", () => {
     expect(credit?.delta).toBe(5_000);
     expect(credit?.balanceAfter).toBe(5_000);
   });
+
+  it("generates codes, supports percent discounts, updates gift-card balances, and qualifies customer vouchers", async () => {
+    if (!token) throw new Error("setup failed");
+    const client = makeClient(token);
+
+    const customer = await client.customers.create({
+      email: `${randomId("voucher-customer")}@example.com`,
+    });
+    const campaign = await client.campaigns.create({
+      name: randomId("camp-voucher-generated"),
+      type: "DISCOUNT",
+      currency: "USD",
+      codeConfig: { prefix: "AUTO", length: 10 },
+    });
+    await client.campaigns.update({
+      params: { id: campaign.id },
+      body: { patch: { status: "active" } },
+    });
+
+    const generated = await client.vouchers.create({
+      campaignId: campaign.id,
+      type: "DISCOUNT",
+      discount: { type: "PERCENTAGE", percent: 1_000, maxDiscountAmount: 700 },
+      redemptionLimit: 3,
+      perUserRedemptionLimit: 1,
+      priority: 5,
+      exclusive: true,
+      customerId: customer.id,
+      metadata: { source: "generated" },
+    });
+    expect(generated.code.startsWith("AUTO")).toBe(true);
+    expect(generated.discount?.type).toBe("PERCENTAGE");
+
+    const qualified = await client.vouchers.qualify({
+      customerId: customer.id,
+      order: { amount: 5_000, currency: "USD" },
+    });
+    expect(qualified.eligible.find((item) => item.code === generated.code)).toBeDefined();
+
+    const updated = await client.vouchers.update({
+      params: { code: generated.code },
+      body: {
+        patch: {
+          discount: { type: "AMOUNT", amount: 600 },
+          redemptionLimit: 4,
+          perUserRedemptionLimit: 2,
+          priority: 10,
+          exclusive: false,
+          startDate: new Date(Date.now() - 1_000).toISOString(),
+          endDate: new Date(Date.now() + 86_400_000).toISOString(),
+          metadata: { source: "updated" },
+        },
+      },
+    });
+    expect(updated.discount?.type).toBe("AMOUNT");
+    expect(updated.redemptionLimit).toBe(4);
+    expect(updated.perUserRedemptionLimit).toBe(2);
+
+    await expect(
+      client.vouchers.create({
+        campaignId: crypto.randomUUID(),
+        type: "DISCOUNT",
+        discount: { type: "AMOUNT", amount: 100 },
+      }),
+    ).rejects.toThrow(/campaign not found/i);
+
+    const giftCampaign = await client.campaigns.create({
+      name: randomId("camp-gift-bulk"),
+      type: "GIFT_VOUCHERS",
+      currency: "USD",
+    });
+    const bulkGift = await client.vouchers.bulk({
+      campaignId: giftCampaign.id,
+      count: 2,
+      giftBalance: 2_000,
+    });
+    expect(bulkGift.generated).toBe(2);
+    const [gift] = (await client.vouchers.list({ campaignId: giftCampaign.id, limit: 2 })).data;
+    if (!gift) throw new Error("expected gift card");
+    const adjustedGift = await client.vouchers.update({
+      params: { code: gift.code },
+      body: { patch: { giftBalance: 2_500 } },
+    });
+    expect(adjustedGift.giftBalance).toBe(2_500);
+    const tx = await client.vouchers.transactions({ params: { code: gift.code } });
+    expect(tx.data.find((item) => item.reason === "ADJUSTMENT")?.delta).toBe(500);
+  });
 });
