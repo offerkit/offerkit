@@ -1,5 +1,11 @@
 # @offerkit/mcp
 
+## 0.2.3
+
+### Patch Changes
+
+- a42fed1: Publish the centralized MCP exposure policy so tool visibility follows contract metadata and route defaults.
+
 ## 0.2.2
 
 ### Patch Changes
