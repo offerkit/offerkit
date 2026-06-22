@@ -1,13 +1,14 @@
 import { ORPCError, implement } from "@orpc/server";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { calculateDiscount } from "@offerkit/core/discount";
-import { evaluateRule, type Rule, type RuleContext } from "@offerkit/core/rules";
+import type { RuleContext } from "@offerkit/core/rules";
 import { schema } from "@offerkit/db";
 import { contract } from "@offerkit/contract/router";
 import type { RequestContext } from "@/server/context";
 import { db } from "@/lib/db";
 import { requireSession } from "@/server/middleware/auth";
 import { decodeCursor, paginatedSoftDeleteList, softDeleteById } from "./helpers";
+import { evaluatePromotionRule } from "./promotion-qualification";
 
 const os = implement(contract).$context<RequestContext>();
 
@@ -234,16 +235,9 @@ const qualify = os.promotions.qualify
       const ruleIdsForTier = [campaign.validationRuleId, tier.validationRuleId].filter(Boolean) as string[];
       let failed = false;
       for (const ruleId of ruleIdsForTier) {
-        const rule = ruleById.get(ruleId);
-        if (!rule) continue;
-        const result = evaluateRule(rule.rule as Rule, context);
-        if (result.trace.error) {
-          skipped.push(skip(tier, campaign, "rule_error", result.trace.error));
-          failed = true;
-          break;
-        }
-        if (!result.passed) {
-          skipped.push(skip(tier, campaign, "rule_failed", "Promotion validation rule did not match"));
+        const failure = evaluatePromotionRule(ruleById.get(ruleId), context);
+        if (failure) {
+          skipped.push(skip(tier, campaign, failure.reason, failure.message));
           failed = true;
           break;
         }
