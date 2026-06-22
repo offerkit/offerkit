@@ -3,15 +3,15 @@ import { randomUUID } from "node:crypto";
 import { getDb } from "@offerkit/db";
 import {
   createJobRegistry,
-  enqueueJob,
   ensureScheduled,
   reclaimStaleJobs,
   runWorker,
 } from "@offerkit/core/jobs";
-import { deliverWebhook } from "@offerkit/core/events";
-import { expirePoints } from "@offerkit/core/loyalty";
-import { bulkGenerateCodes, type BulkCodesPayload } from "@offerkit/core/codes";
 import { initOtel, logger } from "@offerkit/core/observability";
+import {
+  LOYALTY_EXPIRE_INTERVAL_MS,
+  registerWorkerHandlers,
+} from "./handlers.ts";
 
 initOtel({ serviceName: "offerkit-worker" });
 const log = logger.child({ component: "worker" });
@@ -23,39 +23,7 @@ const registry = createJobRegistry();
 // Daily loyalty sweep that schedules its own next run after success.
 // Boot calls ensureScheduled() so a freshly-deployed queue gets the first
 // job; from then on Redis/BullMQ is the source of truth for cadence.
-const LOYALTY_EXPIRE_INTERVAL_MS = 24 * 60 * 60_000;
-registry.register("webhook.deliver", async ({ jobId, payload }) => {
-  const deliveryId = (payload as { deliveryId?: string }).deliveryId;
-  if (!deliveryId) {
-    log.warn({ jobId }, "webhook.deliver job missing deliveryId");
-    return;
-  }
-  await deliverWebhook(db, { deliveryId });
-});
-
-registry.register("bulk_codes.generate", async ({ jobId, payload }) => {
-  const typed = payload as Partial<BulkCodesPayload>;
-  if (!typed.campaignId || typeof typed.count !== "number") {
-    log.warn({ jobId }, "bulk_codes.generate job missing campaignId/count");
-    return;
-  }
-  const result = await bulkGenerateCodes(db, {
-    campaignId: typed.campaignId,
-    count: typed.count,
-  });
-  log.info({ jobId, generated: result.generated }, "bulk codes generated");
-});
-
-registry.register("loyalty.points.expire", async ({ jobId }) => {
-  const result = await expirePoints(db);
-  log.info({ jobId, expired: result.expired }, "loyalty points expired");
-  await enqueueJob(
-    db,
-    "loyalty.points.expire",
-    {},
-    { runAt: new Date(Date.now() + LOYALTY_EXPIRE_INTERVAL_MS) },
-  );
-});
+registerWorkerHandlers(registry, db);
 
 const controller = new AbortController();
 const SHUTDOWN_GRACE_MS = Number(process.env["WORKER_SHUTDOWN_GRACE_MS"] ?? 30_000);
