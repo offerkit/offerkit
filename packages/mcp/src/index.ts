@@ -4,7 +4,13 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { createRequire } from "node:module";
 import { isContractProcedure, type AnyContractRouter } from "@orpc/contract";
 import { z, type ZodRawShape } from "zod";
-import { contract, type McpExposure, type ProcedureMeta } from "@offerkit/contract";
+import {
+  contract,
+  resolveMcpExposure,
+  type McpExposure,
+  type ProcedureDefinitionMeta,
+  type ProcedureMeta,
+} from "@offerkit/contract";
 import { createClient, type Client } from "@offerkit/sdk";
 import { callBySdkPath } from "./sdk-path.ts";
 
@@ -46,19 +52,6 @@ interface DiscoveredProc {
   summary: string | undefined;
 }
 
-function exposureFor(def: {
-  meta?: ProcedureMeta;
-  route?: { method?: string; summary?: string };
-}): McpExposure {
-  const explicit = def.meta?.mcp;
-  if (explicit?.expose) return explicit;
-
-  const method = def.route?.method?.toUpperCase();
-  if (method === "GET") return { expose: true, riskLevel: "safe" };
-  if (method === "DELETE") return { expose: true, riskLevel: "destructive" };
-  return { expose: true, riskLevel: "mutating" };
-}
-
 /** Walk the contract tree and yield every API procedure. */
 function* discover(node: AnyContractRouter, path: string[] = []): Generator<DiscoveredProc> {
   if (isContractProcedure(node)) {
@@ -69,10 +62,11 @@ function* discover(node: AnyContractRouter, path: string[] = []): Generator<Disc
         route?: { method?: string; summary?: string };
       };
     })["~orpc"];
+    const exposure = resolveMcpExposure(def satisfies ProcedureDefinitionMeta);
     yield {
       path,
       inputShape: extractShape(def.inputSchema),
-      exposure: exposureFor(def),
+      exposure,
       summary: def.route?.summary,
     };
     return;

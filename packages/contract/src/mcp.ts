@@ -1,8 +1,8 @@
 // Declarative MCP-exposure metadata. Attach via `.meta(mcpMeta({...}))`
-// on a contract procedure to make it appear as a tool in the
-// @offerkit/mcp server. Metadata is read at server boot — new
-// procedures opt in (or stay hidden) by tagging this `mcp` field
-// without touching the MCP package.
+// on a contract procedure to override how it appears in the @offerkit/mcp
+// server. Untagged procedures use the default route-method policy below,
+// keeping the exposure decision at the contract seam rather than in the
+// MCP adapter.
 
 export type McpRiskLevel = "safe" | "mutating" | "destructive";
 
@@ -20,10 +20,30 @@ export interface ProcedureMeta {
   mcp?: McpExposure;
 }
 
+export interface ProcedureRouteMeta {
+  method?: string;
+  summary?: string;
+}
+
+export interface ProcedureDefinitionMeta {
+  meta?: ProcedureMeta;
+  route?: ProcedureRouteMeta;
+}
+
 /**
  * Returns a `meta` object that attaches MCP exposure to a procedure.
  * Wrapping in a helper keeps the call sites typed and uniform.
  */
 export function mcpMeta(meta: McpExposure): ProcedureMeta {
   return { mcp: meta };
+}
+
+export function resolveMcpExposure(def: ProcedureDefinitionMeta): McpExposure {
+  const explicit = def.meta?.mcp;
+  if (explicit?.expose) return explicit;
+
+  const method = def.route?.method?.toUpperCase();
+  if (method === "GET") return { expose: true, riskLevel: "safe" };
+  if (method === "DELETE") return { expose: true, riskLevel: "destructive" };
+  return { expose: true, riskLevel: "mutating" };
 }
