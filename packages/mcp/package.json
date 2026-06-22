@@ -46,10 +46,10 @@
   "devDependencies": {
     "@offerkit/config": "workspace:*",
     "@offerkit/contract": "workspace:*",
-    "@types/node": "^20.19.40",
-    "tsdown": "^0.22.0",
-    "tsx": "^4.21.0",
+    "@types/node": "^26.0.0",
+    "tsdown": "^0.22.3",
+    "tsx": "^4.22.4",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.9"
   }
 }
