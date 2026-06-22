@@ -178,7 +178,8 @@ jobs:
           });
 
           const manifestPath = path.join(notesRoot, "package-releases.tsv");
-          fs.writeFileSync(manifestPath, releases.map((release) => `${release.tag}\t${release.title}\t${release.bodyPath}`).join("\n"));
+          const manifest = releases.map((release) => `${release.tag}\t${release.title}\t${release.bodyPath}`).join("\n");
+          fs.writeFileSync(manifestPath, manifest ? `${manifest}\n` : "");
 
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `has_releases=${releases.length > 0}\n`);
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `manifest=${manifestPath}\n`);
