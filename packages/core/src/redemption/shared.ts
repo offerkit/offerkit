@@ -95,6 +95,24 @@ export async function checkPerUserRedemptionLimit(
   return null;
 }
 
+/**
+ * Serialize per-user limit checks across otherwise unrelated vouchers.
+ * Both redemption paths acquire this limit lock after their voucher locks,
+ * so campaign-wide counts cannot race across disjoint voucher rows.
+ */
+export async function lockCustomerForPerUserLimits(
+  tx: Tx,
+  customerId: string,
+): Promise<RedemptionCustomerRow | undefined> {
+  const rows = (await tx
+    .select()
+    .from(schema.customer)
+    .where(and(eq(schema.customer.id, customerId), sql`${schema.customer.deletedAt} IS NULL`))
+    .limit(1)
+    .for("update")) as RedemptionCustomerRow[];
+  return rows[0];
+}
+
 export async function resolveCustomerRef(
   db: Db | Tx,
   input: { customerId?: string; customerExternalId?: string },

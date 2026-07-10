@@ -10,6 +10,7 @@ import {
   checkCampaignActivation,
   checkCampaignValidationRule,
   checkCustomerBinding,
+  lockCustomerForPerUserLimits,
   messageFor,
   resolveCustomerRef,
 } from "./shared.ts";
@@ -118,13 +119,6 @@ async function stackRedeemImpl(
     }
 
     const now = new Date();
-    const customer =
-      resolvedCustomer.customer ??
-      (resolvedCustomerId
-        ? ((await tx.query.customer.findFirst({
-            where: and(eq(schema.customer.id, resolvedCustomerId), isNull(schema.customer.deletedAt)),
-          })) as RedemptionCustomerRow | undefined)
-        : undefined);
     const campaignIds = [
       ...new Set(lockedRows.flatMap((voucher) => voucher.campaignId ?? [])),
     ];
@@ -146,6 +140,22 @@ async function stackRedeemImpl(
         })) as RedemptionValidationRuleRow[])
       : [];
     const validationRuleById = new Map(validationRules.map((rule) => [rule.id, rule]));
+    const hasPerUserLimit = lockedRows.some((voucher) => {
+      const campaign = voucher.campaignId ? campaignById.get(voucher.campaignId) : undefined;
+      return voucher.perUserRedemptionLimit != null || campaign?.perUserRedemptionLimit != null;
+    });
+    const lockedCustomer =
+      resolvedCustomerId && hasPerUserLimit
+        ? await lockCustomerForPerUserLimits(tx, resolvedCustomerId)
+        : undefined;
+    const customer =
+      lockedCustomer ??
+      resolvedCustomer.customer ??
+      (resolvedCustomerId
+        ? ((await tx.query.customer.findFirst({
+            where: and(eq(schema.customer.id, resolvedCustomerId), isNull(schema.customer.deletedAt)),
+          })) as RedemptionCustomerRow | undefined)
+        : undefined);
 
     for (const v of lockedRows) {
       const failure = checkActivation(v, now);

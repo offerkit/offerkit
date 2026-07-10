@@ -10,6 +10,7 @@ import {
   checkCampaignValidationRule,
   checkCustomerBinding,
   checkPerUserRedemptionLimit,
+  lockCustomerForPerUserLimits,
   messageFor,
   previewDiscount,
   previewGiftCard,
@@ -140,6 +141,11 @@ function redeemImpl(db: Db, input: RedeemInput): Promise<RedeemResult> {
         explanations: [failureExplanation(customerFailure, voucher)],
       };
     }
+    const lockedCustomer =
+      resolvedCustomerId &&
+      (voucher.perUserRedemptionLimit != null || campaign?.perUserRedemptionLimit != null)
+        ? await lockCustomerForPerUserLimits(tx, resolvedCustomerId)
+        : undefined;
     const customerLimitFailure = await checkPerUserRedemptionLimit(
       tx,
       voucher,
@@ -173,6 +179,7 @@ function redeemImpl(db: Db, input: RedeemInput): Promise<RedeemResult> {
       : undefined;
     const customerId = resolvedCustomerId ?? voucher.customerId ?? undefined;
     const customer =
+      lockedCustomer ??
       resolvedCustomer.customer ??
       (customerId
         ? ((await tx.query.customer.findFirst({
