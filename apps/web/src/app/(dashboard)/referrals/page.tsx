@@ -5,9 +5,11 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { T } from "gt-next/client";
 import { Plus } from "lucide-react";
-import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
+import { DataTable } from "@/components/dashboard/data-table";
 import { Button } from "@/components/ui/button";
-import { ovx } from "@/lib/sdk";
+import { type ApiListItem, type OfferKitClient, ovx } from "@/lib/sdk";
+
+type ReferralProgramRow = ApiListItem<OfferKitClient["referrals"]["programs"]["list"]>;
 
 function rewardLabel(kind: "discount" | "gift_card" | "loyalty_points" | "custom"): string {
   switch (kind) {
@@ -32,8 +34,8 @@ export default function ReferralsPage() {
     queryKey: ["campaigns", "for-referrals"],
     queryFn: () => ovx().campaigns.list({ limit: 100 }),
   });
-  const byId = new Map((campaigns?.data ?? []).map((campaign: DataTableRow) => [campaign.id, campaign]));
-  const columns: ColumnDef<DataTableRow>[] = [
+  const byId = new Map((campaigns?.data ?? []).map((campaign) => [campaign.id, campaign]));
+  const columns: ColumnDef<ReferralProgramRow>[] = [
     {
       id: "program",
       header: () => <T>Program</T>,

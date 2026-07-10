@@ -9,14 +9,19 @@ import { T, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
-import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
+import { DataTable } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatMinorCurrency } from "@/lib/money";
-import { ovx } from "@/lib/sdk";
+import { type ApiListItem, type OfferKitClient, ovx } from "@/lib/sdk";
+
+type ReferralCodeRow = ApiListItem<OfferKitClient["referrals"]["listCodes"]>;
+type ReferralConversionRow = ApiListItem<
+  OfferKitClient["referrals"]["listProgramConversions"]
+>;
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -207,7 +212,7 @@ export default function ReferralProgramDetail({ params }: PageProps) {
       router.push("/referrals");
     },
   });
-  const codeColumns: ColumnDef<DataTableRow>[] = [
+  const codeColumns: ColumnDef<ReferralCodeRow>[] = [
     {
       accessorKey: "code",
       header: () => <T>Code</T>,
@@ -232,7 +237,7 @@ export default function ReferralProgramDetail({ params }: PageProps) {
       ),
     },
   ];
-  const conversionColumns: ColumnDef<DataTableRow>[] = [
+  const conversionColumns: ColumnDef<ReferralConversionRow>[] = [
     {
       accessorKey: "code",
       header: () => <T>Code</T>,

@@ -20,10 +20,6 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
-// The SDK currently exposes dashboard list rows as weakly typed objects in several pages.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataTableRow = Record<string, any>;
-
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];

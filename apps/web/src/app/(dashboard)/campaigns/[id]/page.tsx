@@ -9,7 +9,7 @@ import { T, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
-import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
+import { DataTable } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +19,9 @@ import {
   CampaignForm,
   type CampaignFormState,
 } from "@/components/dashboard/campaign-form";
-import { ovx } from "@/lib/sdk";
+import { type ApiListItem, type OfferKitClient, ovx } from "@/lib/sdk";
+
+type VoucherRow = ApiListItem<OfferKitClient["vouchers"]["list"]>;
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -140,7 +142,7 @@ export default function CampaignDetailPage({ params }: PageProps) {
   const bulkValueInvalid = isGiftVoucherCampaign
     ? bulkGiftBalance < 1
     : bulkDiscountAmount < 1;
-  const voucherColumns: ColumnDef<DataTableRow>[] = [
+  const voucherColumns: ColumnDef<VoucherRow>[] = [
     {
       accessorKey: "code",
       header: () => <T>Code</T>,

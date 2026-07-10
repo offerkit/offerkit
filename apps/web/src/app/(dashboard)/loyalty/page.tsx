@@ -5,9 +5,11 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { T } from "gt-next/client";
 import { Plus } from "lucide-react";
-import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
+import { DataTable } from "@/components/dashboard/data-table";
 import { Button } from "@/components/ui/button";
-import { ovx } from "@/lib/sdk";
+import { type ApiListItem, type OfferKitClient, ovx } from "@/lib/sdk";
+
+type LoyaltyProgramRow = ApiListItem<OfferKitClient["loyalty"]["programs"]["list"]>;
 
 export default function LoyaltyPage() {
   const { data, isLoading } = useQuery({
@@ -15,16 +17,16 @@ export default function LoyaltyPage() {
     queryFn: () => ovx().loyalty.programs.list({ limit: 25 }),
   });
 
-  const campaignIds = data?.data.map((program: DataTableRow) => program.campaignId) ?? [];
+  const campaignIds = data?.data.map((program) => program.campaignId) ?? [];
   const { data: campaigns } = useQuery({
     queryKey: ["campaigns", "byIds", campaignIds],
     queryFn: async () => {
       const list = await ovx().campaigns.list({ limit: 100 });
-      return new Map(list.data.map((campaign: DataTableRow) => [campaign.id, campaign]));
+      return new Map(list.data.map((campaign) => [campaign.id, campaign]));
     },
     enabled: campaignIds.length > 0,
   });
-  const columns: ColumnDef<DataTableRow>[] = [
+  const columns: ColumnDef<LoyaltyProgramRow>[] = [
     {
       id: "program",
       header: () => <T>Program</T>,

@@ -7,11 +7,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { ArrowLeft, RotateCw } from "lucide-react";
-import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
+import { DataTable } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ovx } from "@/lib/sdk";
+import { type ApiListItem, type OfferKitClient, ovx } from "@/lib/sdk";
+
+type WebhookDeliveryRow = ApiListItem<OfferKitClient["webhooks"]["deliveries"]>;
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -40,7 +42,7 @@ export default function WebhookDetailPage({ params }: PageProps) {
       toast.success(gt("Re-enqueued"));
     },
   });
-  const columns: ColumnDef<DataTableRow>[] = [
+  const columns: ColumnDef<WebhookDeliveryRow>[] = [
     {
       accessorKey: "eventType",
       header: () => <T>Event</T>,

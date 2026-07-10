@@ -6,10 +6,12 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { Plus, Search } from "lucide-react";
-import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
+import { DataTable } from "@/components/dashboard/data-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ovx } from "@/lib/sdk";
+import { type ApiListItem, type OfferKitClient, ovx } from "@/lib/sdk";
+
+type SegmentRow = ApiListItem<OfferKitClient["segments"]["list"]>;
 
 export default function SegmentsPage() {
   const gt = useGT();
@@ -18,7 +20,7 @@ export default function SegmentsPage() {
     queryKey: ["segments", { search }],
     queryFn: () => ovx().segments.list({ search: search || undefined, limit: 20 }),
   });
-  const columns: ColumnDef<DataTableRow>[] = [
+  const columns: ColumnDef<SegmentRow>[] = [
     {
       accessorKey: "name",
       header: () => <T>Name</T>,

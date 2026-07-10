@@ -5,10 +5,12 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { Search } from "lucide-react";
-import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
+import { DataTable } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ovx } from "@/lib/sdk";
+import { type ApiListItem, type OfferKitClient, ovx } from "@/lib/sdk";
+
+type EventRow = ApiListItem<OfferKitClient["events"]["list"]>;
 
 export default function EventsPage() {
   const gt = useGT();
@@ -19,7 +21,7 @@ export default function EventsPage() {
       ovx().events.list({ limit: 50, ...(type ? { type } : {}) }),
     refetchInterval: 5_000,
   });
-  const columns: ColumnDef<DataTableRow>[] = [
+  const columns: ColumnDef<EventRow>[] = [
     {
       accessorKey: "type",
       header: () => <T>Type</T>,

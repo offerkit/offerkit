@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
-import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
+import { DataTable } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ovx } from "@/lib/sdk";
+import { type ApiListItem, type OfferKitClient, ovx } from "@/lib/sdk";
+
+type AuditLogRow = ApiListItem<OfferKitClient["auditLog"]["list"]>;
 
 type Actor = "" | "user" | "api_key" | "system";
 
@@ -41,7 +43,7 @@ export default function AuditLogPage() {
         limit: 50,
       }),
   });
-  const columns: ColumnDef<DataTableRow>[] = [
+  const columns: ColumnDef<AuditLogRow>[] = [
     {
       accessorKey: "createdAt",
       header: () => <T>When</T>,

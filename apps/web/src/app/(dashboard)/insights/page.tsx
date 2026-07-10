@@ -3,10 +3,15 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { T } from "gt-next/client";
-import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
+import { DataTable } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ovx } from "@/lib/sdk";
+import { type ApiResult, type OfferKitClient, ovx } from "@/lib/sdk";
+
+type InsightsResult = ApiResult<OfferKitClient["insights"]["summary"]>;
+type TopCampaignRow = InsightsResult["topCampaigns"][number];
+type FailureRow = InsightsResult["failures"][number];
+type DailyPoint = InsightsResult["daily"][number];
 
 export default function InsightsPage() {
   const { data, isLoading } = useQuery({
@@ -14,7 +19,7 @@ export default function InsightsPage() {
     queryFn: () => ovx().insights.summary({}),
     refetchInterval: 30_000,
   });
-  const topCampaignColumns: ColumnDef<DataTableRow>[] = [
+  const topCampaignColumns: ColumnDef<TopCampaignRow>[] = [
     {
       accessorKey: "campaignName",
       header: () => <T>Campaign</T>,
@@ -25,7 +30,7 @@ export default function InsightsPage() {
       cell: ({ row }) => <div className="text-right font-mono">{row.original.redemptions}</div>,
     },
   ];
-  const failureColumns: ColumnDef<DataTableRow>[] = [
+  const failureColumns: ColumnDef<FailureRow>[] = [
     {
       accessorKey: "reason",
       header: () => <T>Reason</T>,
@@ -117,7 +122,7 @@ export default function InsightsPage() {
                     <T>No deliveries yet.</T>
                   </p>
                 ) : (
-                  data.webhooks.map((w: DataTableRow) => (
+                  data.webhooks.map((w) => (
                     <Badge
                       key={w.status}
                       variant={
@@ -156,7 +161,7 @@ function KPI({ label, value }: { label: string; value: number }) {
   );
 }
 
-function DailyChart({ data }: { data: { day: string; total: number }[] }) {
+function DailyChart({ data }: { data: DailyPoint[] }) {
   if (data.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">

@@ -9,7 +9,7 @@ import { T, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
-import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
+import { DataTable } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +23,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ovx } from "@/lib/sdk";
+import { type ApiListItem, type OfferKitClient, ovx } from "@/lib/sdk";
+
+type LoyaltyTierRow = ApiListItem<OfferKitClient["loyalty"]["tiers"]["list"]>;
+type LoyaltyEarningRuleRow = ApiListItem<
+  OfferKitClient["loyalty"]["earningRules"]["list"]
+>;
+type LoyaltyRewardRow = ApiListItem<OfferKitClient["loyalty"]["rewards"]["list"]>;
+type LoyaltyMemberRow = ApiListItem<OfferKitClient["loyalty"]["members"]["list"]>;
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -170,7 +177,7 @@ function TiersTab({ programId }: { programId: string }) {
       await queryClient.invalidateQueries({ queryKey: ["loyaltyTiers", programId] });
     },
   });
-  const columns: ColumnDef<DataTableRow>[] = [
+  const columns: ColumnDef<LoyaltyTierRow>[] = [
     { accessorKey: "name", header: () => <T>Name</T> },
     {
       accessorKey: "threshold",
@@ -308,7 +315,7 @@ function EarningRulesTab({ programId }: { programId: string }) {
       await queryClient.invalidateQueries({ queryKey: ["loyaltyEarningRules", programId] });
     },
   });
-  const columns: ColumnDef<DataTableRow>[] = [
+  const columns: ColumnDef<LoyaltyEarningRuleRow>[] = [
     { accessorKey: "name", header: () => <T>Name</T> },
     {
       accessorKey: "event",
@@ -471,7 +478,7 @@ function RewardsTab({ programId }: { programId: string }) {
       await queryClient.invalidateQueries({ queryKey: ["loyaltyRewards", programId] });
     },
   });
-  const columns: ColumnDef<DataTableRow>[] = [
+  const columns: ColumnDef<LoyaltyRewardRow>[] = [
     { accessorKey: "name", header: () => <T>Name</T> },
     {
       accessorKey: "cost",
@@ -608,7 +615,7 @@ function MembersTab({ programId }: { programId: string }) {
     onError: (err: unknown) =>
       toast.error(err instanceof Error ? err.message : gt("Enroll failed")),
   });
-  const columns: ColumnDef<DataTableRow>[] = [
+  const columns: ColumnDef<LoyaltyMemberRow>[] = [
     {
       accessorKey: "customerId",
       header: () => <T>Customer</T>,

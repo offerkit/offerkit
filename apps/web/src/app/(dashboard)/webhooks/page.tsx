@@ -8,13 +8,15 @@ import { T, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { Copy, Plus, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
-import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
+import { DataTable } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ovx } from "@/lib/sdk";
+import { type ApiListItem, type OfferKitClient, ovx } from "@/lib/sdk";
+
+type WebhookRow = ApiListItem<OfferKitClient["webhooks"]["list"]>;
 
 export default function WebhooksPage() {
   const queryClient = useQueryClient();
@@ -58,7 +60,7 @@ export default function WebhooksPage() {
       await queryClient.invalidateQueries({ queryKey: ["webhooks"] });
     },
   });
-  const columns: ColumnDef<DataTableRow>[] = [
+  const columns: ColumnDef<WebhookRow>[] = [
     {
       accessorKey: "name",
       header: () => <T>Name</T>,
@@ -80,7 +82,7 @@ export default function WebhooksPage() {
       header: () => <T>Events</T>,
       cell: ({ row }) => (
         <div className="flex flex-wrap gap-1">
-          {row.original.events.map((event: string) => (
+          {row.original.events.map((event) => (
             <Badge key={event} variant="secondary">
               {event}
             </Badge>

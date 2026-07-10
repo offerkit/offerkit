@@ -6,11 +6,13 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { Plus, Search } from "lucide-react";
-import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
+import { DataTable } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ovx } from "@/lib/sdk";
+import { type ApiListItem, type OfferKitClient, ovx } from "@/lib/sdk";
+
+type CampaignRow = ApiListItem<OfferKitClient["campaigns"]["list"]>;
 
 export default function CampaignsPage() {
   const gt = useGT();
@@ -19,7 +21,7 @@ export default function CampaignsPage() {
     queryKey: ["campaigns", { search }],
     queryFn: () => ovx().campaigns.list({ search: search || undefined, limit: 20 }),
   });
-  const columns: ColumnDef<DataTableRow>[] = [
+  const columns: ColumnDef<CampaignRow>[] = [
     {
       accessorKey: "name",
       header: () => <T>Name</T>,

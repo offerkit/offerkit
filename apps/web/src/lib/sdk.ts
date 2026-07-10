@@ -1,5 +1,12 @@
 import { createClient } from "@offerkit/sdk";
 
+export type OfferKitClient = ReturnType<typeof createClient>;
+export type ApiResult<TProcedure extends (...args: never[]) => unknown> = Awaited<
+  ReturnType<TProcedure>
+>;
+export type ApiListItem<TProcedure extends (...args: never[]) => unknown> =
+  ApiResult<TProcedure> extends { data: (infer TItem)[] } ? TItem : never;
+
 let cached: ReturnType<typeof createClient> | undefined;
 
 export function ovx() {

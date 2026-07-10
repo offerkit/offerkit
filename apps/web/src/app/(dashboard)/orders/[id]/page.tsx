@@ -7,11 +7,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
-import { DataTable, type DataTableRow } from "@/components/dashboard/data-table";
+import { DataTable } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ovx } from "@/lib/sdk";
+import { type ApiListItem, type ApiResult, type OfferKitClient, ovx } from "@/lib/sdk";
+
+type OrderItemRow = ApiResult<OfferKitClient["orders"]["get"]>["items"][number];
+type OrderRedemptionRow = ApiListItem<OfferKitClient["orders"]["redemptions"]>;
 
 function formatCents(amount: number, currency: string): string {
   try {
@@ -68,7 +71,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   }
 
   const canTransition = data.status === "CREATED" || data.status === "PAID";
-  const itemColumns: ColumnDef<DataTableRow>[] = [
+  const itemColumns: ColumnDef<OrderItemRow>[] = [
     { accessorKey: "name", header: () => <T>Name</T> },
     {
       accessorKey: "sku",
@@ -92,7 +95,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       ),
     },
   ];
-  const redemptionColumns: ColumnDef<DataTableRow>[] = [
+  const redemptionColumns: ColumnDef<OrderRedemptionRow>[] = [
     {
       accessorKey: "voucherCode",
       header: () => <T>Voucher</T>,
