@@ -1,7 +1,7 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, sql, type SQL } from "drizzle-orm";
 import { schema, type Db } from "@offerkit/db";
 import { calculateDiscount, type DiscountOrder, type DiscountResult } from "../discount/index.ts";
-import { evaluateRule, type Rule, type RuleContext } from "../rules/index.ts";
+import { evaluateRule, type RuleContext } from "../rules/index.ts";
 import { failureExplanation } from "./explanations.ts";
 import type {
   RedemptionCustomerRow,
@@ -167,7 +167,7 @@ export async function resolveCustomerRef(
 async function countNetSuccessfulRedemptions(
   db: Db | Tx,
   customerId: string,
-  scope: ReturnType<typeof eq> | ReturnType<typeof sql>,
+  scope: SQL,
 ): Promise<number> {
   const [row] = await db
     .select({
@@ -248,7 +248,7 @@ export function checkCampaignValidationRule(
     now: now.toISOString(),
     metadata: {},
   };
-  const result = evaluateRule(validationRule.rule as Rule, context);
+  const result = evaluateRule(validationRule.rule, context);
   if (result.trace.error) {
     return {
       valid: false,

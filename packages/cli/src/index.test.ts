@@ -81,7 +81,7 @@ describe("generic api command helpers", () => {
   });
 
   it("calls nested SDK procedures by dotted path", async () => {
-    const create = vi.fn(async (input: unknown) => ({ ok: true, input }));
+    const create = vi.fn((input: unknown) => Promise.resolve({ ok: true, input }));
     const client = Object.assign(() => undefined, {
       vouchers: {
         create: Object.assign(create, {}),

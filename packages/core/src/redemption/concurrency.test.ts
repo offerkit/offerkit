@@ -27,10 +27,11 @@ afterAll(async () => {
 
 describe.skipIf(!enabled)("redeem concurrency", () => {
   it("FOR UPDATE serializes concurrent redemptions of a limited voucher", async () => {
-    if (!db) throw new Error("db not initialized");
+    const database = db;
+    if (!database) throw new Error("db not initialized");
 
     const code = `CONCUR-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
-    const [inserted] = await db
+    const [inserted] = await database
       .insert(schema.voucher)
       .values({
         code,
@@ -45,7 +46,7 @@ describe.skipIf(!enabled)("redeem concurrency", () => {
     const N = 16;
     const results = await Promise.all(
       Array.from({ length: N }, () =>
-        redeem(db!, {
+        redeem(database, {
           voucherCode: code,
           order: { amount: 5_000, currency: "USD" },
         }),
@@ -60,14 +61,14 @@ describe.skipIf(!enabled)("redeem concurrency", () => {
     expect(successes).toHaveLength(1);
     expect(limitFailures).toHaveLength(N - 1);
 
-    const fresh = await db
+    const fresh = await database
       .select({ count: schema.voucher.redemptionCount })
       .from(schema.voucher)
       .where(eq(schema.voucher.id, inserted.id));
     expect(fresh[0]?.count).toBe(1);
 
     // Cleanup so reruns of the suite don't accumulate test data.
-    await db.delete(schema.redemption).where(eq(schema.redemption.voucherId, inserted.id));
-    await db.delete(schema.voucher).where(eq(schema.voucher.id, inserted.id));
+    await database.delete(schema.redemption).where(eq(schema.redemption.voucherId, inserted.id));
+    await database.delete(schema.voucher).where(eq(schema.voucher.id, inserted.id));
   }, 30_000);
 });

@@ -9,7 +9,7 @@ import { db } from "@/lib/db";
 import { requireSession } from "@/server/middleware/auth";
 import {
   decodeCursor,
-  paginatedSoftDeleteList,
+  encodeCursor,
   softDeleteById,
 } from "./helpers";
 
@@ -169,10 +169,7 @@ const eventsList = os.events.list.use(requireSession).handler(({ input }) => {
       data: data.map(toEvent),
       next:
         hasMore && last
-          ? Buffer.from(
-              JSON.stringify({ createdAt: last.createdAt.toISOString(), id: last.id }),
-              "utf8",
-            ).toString("base64url")
+          ? encodeCursor({ createdAt: last.createdAt.toISOString(), id: last.id })
           : undefined,
     };
   })();
@@ -185,8 +182,6 @@ const eventsGet = os.events.get.use(requireSession).handler(async ({ input }) =>
   if (!row) throw new ORPCError("NOT_FOUND", { message: "Event not found" });
   return toEvent(row);
 });
-
-void paginatedSoftDeleteList;
 
 export const webhooksRouter = { list, get, create, update, delete: remove, deliveries, replay };
 export const eventsRouter = { list: eventsList, get: eventsGet };

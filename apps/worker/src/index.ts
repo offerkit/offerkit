@@ -8,10 +8,7 @@ import {
   runWorker,
 } from "@offerkit/core/jobs";
 import { initOtel, logger } from "@offerkit/core/observability";
-import {
-  LOYALTY_EXPIRE_INTERVAL_MS,
-  registerWorkerHandlers,
-} from "./handlers.ts";
+import { registerWorkerHandlers } from "./handlers.ts";
 
 initOtel({ serviceName: "offerkit-worker" });
 const log = logger.child({ component: "worker" });

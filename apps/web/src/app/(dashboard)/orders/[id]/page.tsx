@@ -11,18 +11,11 @@ import { DataTable } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatMinorCurrency } from "@/lib/money";
 import { type ApiListItem, type ApiResult, type OfferKitClient, ovx } from "@/lib/sdk";
 
 type OrderItemRow = ApiResult<OfferKitClient["orders"]["get"]>["items"][number];
 type OrderRedemptionRow = ApiListItem<OfferKitClient["orders"]["redemptions"]>;
-
-function formatCents(amount: number, currency: string): string {
-  try {
-    return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(amount / 100);
-  } catch {
-    return `${(amount / 100).toFixed(2)} ${currency}`;
-  }
-}
 
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -90,7 +83,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       header: () => <div className="text-right"><T>Unit price</T></div>,
       cell: ({ row }) => (
         <div className="text-right font-mono">
-          {formatCents(row.original.unitPrice, data.currency)}
+          {formatMinorCurrency(row.original.unitPrice, data.currency)}
         </div>
       ),
     },
@@ -123,7 +116,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       header: () => <div className="text-right"><T>Amount</T></div>,
       cell: ({ row }) => (
         <div className="text-right font-mono">
-          {row.original.amount != null ? formatCents(row.original.amount, data.currency) : "-"}
+          {row.original.amount != null
+            ? formatMinorCurrency(row.original.amount, data.currency)
+            : "-"}
         </div>
       ),
     },
@@ -192,7 +187,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               <T>Amount</T>
             </CardTitle>
           </CardHeader>
-          <CardContent className="font-mono">{formatCents(data.amount, data.currency)}</CardContent>
+          <CardContent className="font-mono">
+            {formatMinorCurrency(data.amount, data.currency)}
+          </CardContent>
         </Card>
         <Card>
           <CardHeader>
@@ -201,7 +198,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             </CardTitle>
           </CardHeader>
           <CardContent className="font-mono">
-            {data.discountAmount > 0 ? formatCents(data.discountAmount, data.currency) : "—"}
+            {data.discountAmount > 0
+              ? formatMinorCurrency(data.discountAmount, data.currency)
+              : "—"}
           </CardContent>
         </Card>
       </div>

@@ -6,7 +6,7 @@ import {
   randomBytes,
   timingSafeEqual,
 } from "node:crypto";
-import { eq, isNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { schema, type Db } from "@offerkit/db";
 import { logger } from "../observability/index.ts";
 import { enqueueJob } from "../jobs/index.ts";
@@ -233,7 +233,7 @@ export async function deliverWebhook(db: Db, input: DeliverInput): Promise<void>
   const attempt = delivery.attempts + 1;
   let responseStatus: number | null = null;
   let responseBody: string | null = null;
-  let error: string | null = null;
+  let error: string;
   try {
     const res = await fetch(wh.url, {
       method: "POST",
@@ -292,5 +292,3 @@ export async function deliverWebhook(db: Db, input: DeliverInput): Promise<void>
     log.warn({ deliveryId: delivery.id, attempts: attempt }, "webhook delivery dead-lettered");
   }
 }
-
-void isNull;

@@ -5,28 +5,9 @@ import { contract } from "@offerkit/contract/router";
 import type { RequestContext } from "@/server/context";
 import { db } from "@/lib/db";
 import { requireSession } from "@/server/middleware/auth";
+import { decodeCursor, encodeCursor } from "./helpers";
 
 const os = implement(contract).$context<RequestContext>();
-
-interface AuditCursor {
-  createdAt: string;
-  id: string;
-}
-
-function encode(c: AuditCursor): string {
-  return Buffer.from(JSON.stringify(c)).toString("base64url");
-}
-
-function decode(raw: string | undefined): AuditCursor | undefined {
-  if (!raw) return undefined;
-  try {
-    const parsed = JSON.parse(Buffer.from(raw, "base64url").toString()) as AuditCursor;
-    if (typeof parsed.createdAt === "string" && typeof parsed.id === "string") return parsed;
-  } catch {
-    // ignore
-  }
-  return undefined;
-}
 
 function toAuditOutput(row: typeof schema.auditLog.$inferSelect) {
   return {
@@ -53,7 +34,7 @@ const list = os.auditLog.list.use(requireSession).handler(async ({ context, inpu
   if (input.entity) filters.push(eq(schema.auditLog.entity, input.entity));
   if (input.action) filters.push(eq(schema.auditLog.action, input.action));
   if (input.entityId) filters.push(eq(schema.auditLog.entityId, input.entityId));
-  const cursor = decode(input.cursor);
+  const cursor = decodeCursor(input.cursor);
   if (cursor) {
     filters.push(
       sql`(${schema.auditLog.createdAt}, ${schema.auditLog.id}) < (${cursor.createdAt}, ${cursor.id})`,
@@ -71,7 +52,7 @@ const list = os.auditLog.list.use(requireSession).handler(async ({ context, inpu
   return {
     data: data.map(toAuditOutput),
     ...(hasMore && last
-      ? { next: encode({ createdAt: last.createdAt.toISOString(), id: last.id }) }
+      ? { next: encodeCursor({ createdAt: last.createdAt.toISOString(), id: last.id }) }
       : {}),
   };
 });

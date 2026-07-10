@@ -53,7 +53,7 @@ export async function bulkGenerateCodes(
     const batchSize = Math.min(BULK_BATCH_SIZE, remaining - offset);
     const codes = await generateUniqueCodes(
       batchSize,
-      (campaign.codeConfig ?? {}) as Record<string, unknown>,
+      campaign.codeConfig ?? {},
       codeExists,
     );
     await db

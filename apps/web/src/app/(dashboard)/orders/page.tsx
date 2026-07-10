@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCursorPagination } from "@/hooks/use-cursor-pagination";
+import { formatMinorCurrency } from "@/lib/money";
 import { type ApiListItem, type OfferKitClient, ovx } from "@/lib/sdk";
 
 type OrderRow = ApiListItem<OfferKitClient["orders"]["list"]>;
@@ -29,14 +30,6 @@ const STATUS_BADGE: Record<Exclude<Status, "">, "default" | "secondary" | "destr
   FULFILLED: "default",
   CANCELED: "destructive",
 };
-
-function formatCents(amount: number, currency: string): string {
-  try {
-    return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(amount / 100);
-  } catch {
-    return `${(amount / 100).toFixed(2)} ${currency}`;
-  }
-}
 
 export default function OrdersPage() {
   const gt = useGT();
@@ -78,7 +71,7 @@ export default function OrdersPage() {
       header: () => <div className="text-right"><T>Amount</T></div>,
       cell: ({ row }) => (
         <div className="text-right font-mono">
-          {formatCents(row.original.amount, row.original.currency)}
+          {formatMinorCurrency(row.original.amount, row.original.currency)}
         </div>
       ),
     },
@@ -88,7 +81,7 @@ export default function OrdersPage() {
       cell: ({ row }) => (
         <div className="text-right font-mono text-muted-foreground">
           {row.original.discountAmount > 0
-            ? formatCents(row.original.discountAmount, row.original.currency)
+            ? formatMinorCurrency(row.original.discountAmount, row.original.currency)
             : "-"}
         </div>
       ),

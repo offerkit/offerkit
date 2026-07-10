@@ -10,6 +10,7 @@
     "./client": "./src/client.ts"
   },
   "scripts": {
+    "lint": "eslint src",
     "typecheck": "tsc --noEmit",
     "generate": "drizzle-kit generate",
     "migrate": "drizzle-kit migrate",

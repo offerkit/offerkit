@@ -7,15 +7,17 @@ class FakeQueue {
 
   constructor(public name: string, public options: Record<string, unknown>) {}
 
-  async add(name: string, data: unknown, opts: Record<string, unknown>): Promise<{ id?: string | number }> {
+  add(name: string, data: unknown, opts: Record<string, unknown>): Promise<{ id?: string | number }> {
     FakeQueue.calls.push({ name, data, opts });
     const id = typeof opts.jobId === "string" || typeof opts.jobId === "number" ? opts.jobId : "generated-id";
-    if (opts.jobId) FakeQueue.jobs.set(String(opts.jobId), { id: opts.jobId });
-    return { id };
+    if (typeof opts.jobId === "string" || typeof opts.jobId === "number") {
+      FakeQueue.jobs.set(String(opts.jobId), { id: opts.jobId });
+    }
+    return Promise.resolve({ id });
   }
 
-  async getJob(id: string) {
-    return FakeQueue.jobs.get(id);
+  getJob(id: string): Promise<unknown> {
+    return Promise.resolve(FakeQueue.jobs.get(id));
   }
 
   async close() {}
@@ -54,17 +56,16 @@ describe("createRedisJobQueue", () => {
     });
 
     expect(id).toBe("generated-id");
-    expect(FakeQueue.calls).toEqual([
-      expect.objectContaining({
-        name: "webhook.deliver",
-        data: { deliveryId: "del_1" },
-        opts: expect.objectContaining({
-          delay: 5_000,
-          attempts: 7,
-          backoff: { type: "exponential", delay: 2_000 },
-        }),
-      }),
-    ]);
+    expect(FakeQueue.calls).toHaveLength(1);
+    expect(FakeQueue.calls[0]).toMatchObject({
+      name: "webhook.deliver",
+      data: { deliveryId: "del_1" },
+      opts: {
+        delay: 5_000,
+        attempts: 7,
+        backoff: { type: "exponential", delay: 2_000 },
+      },
+    });
   });
 
   it("dedupes scheduled jobs by type", async () => {
@@ -86,8 +87,9 @@ describe("createRedisJobQueue", () => {
   it("dispatches worker jobs to the registry with BullMQ attempt numbers", async () => {
     const registry = createJobRegistry();
     const handled: unknown[] = [];
-    registry.register("bulk_codes.generate", async (ctx) => {
+    registry.register("bulk_codes.generate", (ctx) => {
       handled.push(ctx);
+      return Promise.resolve();
     });
 
     const queue = createRedisJobQueue({

@@ -3,7 +3,7 @@ import { callBySdkPath } from "./sdk-path.ts";
 
 describe("callBySdkPath", () => {
   it("walks function proxy clients before invoking the resolved procedure", async () => {
-    const list = vi.fn(async (input: unknown) => ({ input, ok: true }));
+    const list = vi.fn((input: unknown) => Promise.resolve({ input, ok: true }));
     const client = Object.assign(() => undefined, {
       campaigns: { list },
     });

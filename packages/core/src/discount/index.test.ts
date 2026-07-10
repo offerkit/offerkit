@@ -117,7 +117,7 @@ describe("calculateDiscount — property-based invariants", () => {
       fc.property(orderArb, fc.array(voucherArb, { maxLength: 6 }), (o, vs) => {
         const result = calculateDiscount({
           order: { ...o, items: [] },
-          vouchers: vs as DiscountVoucher[],
+          vouchers: vs,
         });
         return result.finalOrder.amount >= 0;
       }),
@@ -129,7 +129,7 @@ describe("calculateDiscount — property-based invariants", () => {
       fc.property(orderArb, fc.array(voucherArb, { maxLength: 6 }), (o, vs) => {
         const result = calculateDiscount({
           order: { ...o, items: [] },
-          vouchers: vs as DiscountVoucher[],
+          vouchers: vs,
         });
         const sum = result.appliedDiscounts.reduce((acc, a) => acc + a.amount, 0);
         return sum === o.amount - result.finalOrder.amount;
@@ -142,11 +142,11 @@ describe("calculateDiscount — property-based invariants", () => {
       fc.property(orderArb, fc.array(voucherArb, { maxLength: 6 }), (o, vs) => {
         const a = calculateDiscount({
           order: { ...o, items: [] },
-          vouchers: vs as DiscountVoucher[],
+          vouchers: vs,
         });
         const b = calculateDiscount({
           order: { ...o, items: [] },
-          vouchers: vs as DiscountVoucher[],
+          vouchers: vs,
         });
         return JSON.stringify(a) === JSON.stringify(b);
       }),
@@ -158,7 +158,7 @@ describe("calculateDiscount — property-based invariants", () => {
       fc.property(orderArb, fc.array(voucherArb, { maxLength: 6 }), (o, vs) => {
         const a = calculateDiscount({
           order: { ...o, items: [] },
-          vouchers: vs as DiscountVoucher[],
+          vouchers: vs,
         });
         const reversed = [...vs].reverse() as DiscountVoucher[];
         const b = calculateDiscount({ order: { ...o, items: [] }, vouchers: reversed });

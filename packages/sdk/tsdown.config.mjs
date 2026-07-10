@@ -10,6 +10,5 @@ export default defineConfig({
   // Everything else (@orpc/*, zod, node:crypto) stays external.
   deps: {
     alwaysBundle: ["@offerkit/contract"],
-    onlyBundle: ["@offerkit/contract"],
   },
 });

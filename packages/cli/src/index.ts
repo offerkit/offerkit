@@ -32,7 +32,7 @@ function rcPath(): string {
 }
 
 export async function loadConfigDetails(): Promise<LoadedConfig> {
-  let cfg: Config = { baseUrl: "http://localhost:3000" };
+  const cfg: Config = { baseUrl: "http://localhost:3000" };
   const sources: LoadedConfig["sources"] = { baseUrl: "default", apiKey: "none" };
   try {
     const raw = await readFile(rcPath(), "utf8");
@@ -110,7 +110,7 @@ export async function parseJsonInput(raw: string | undefined): Promise<unknown> 
     return JSON.parse(text) as unknown;
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
-    throw new Error(`Invalid JSON input: ${detail}`);
+    throw new Error(`Invalid JSON input: ${detail}`, { cause: err });
   }
 }
 
@@ -172,12 +172,12 @@ function addListOptions(command: Command, includeSearch = true): Command {
   return command;
 }
 
-async function listInput<T extends JsonRecord = JsonRecord>(opts: {
+function listInput<T extends JsonRecord = JsonRecord>(opts: {
   limit?: string;
   cursor?: string;
   search?: string;
   [key: string]: unknown;
-}): Promise<T> {
+}): T {
   const out: JsonRecord = {};
   if (opts.limit !== undefined) out["limit"] = Number(opts.limit);
   if (opts.cursor !== undefined) out["cursor"] = opts.cursor;
@@ -354,7 +354,7 @@ function addSimpleCrudCommands<
 
   addListOptions(group.command("list").description(`List ${config.name}`), config.listSearch ?? true)
     .action(async (opts: { limit?: string; cursor?: string; search?: string }) => {
-      const input = await listInput<TListInput>(opts);
+      const input = listInput<TListInput>(opts);
       await callAndPrint((c) => config.calls.list(c, input));
     });
 
@@ -790,7 +790,7 @@ const validationRules = program
 
 addListOptions(validationRules.command("list").description("List validation rules"))
   .action(async (opts: { limit?: string; cursor?: string; search?: string }) => {
-    const input = await listInput<ProcedureInput<Client["validationRules"]["list"]>>(opts);
+    const input = listInput<ProcedureInput<Client["validationRules"]["list"]>>(opts);
     await callAndPrint((c) => c.validationRules.list(input));
   });
 
@@ -1017,7 +1017,7 @@ referrals
   .option("--limit <n>", "Page size", "20")
   .option("--cursor <cursor>", "Pagination cursor")
   .action(async (programId: string, opts: { limit?: string; cursor?: string }) => {
-    const query = await listInput<ProcedureInput<Client["referrals"]["listCodes"]>["query"]>(
+    const query = listInput<ProcedureInput<Client["referrals"]["listCodes"]>["query"]>(
       opts,
     );
     await callAndPrint((c) => c.referrals.listCodes({
@@ -1031,7 +1031,7 @@ referrals
   .option("--limit <n>", "Page size", "20")
   .option("--cursor <cursor>", "Pagination cursor")
   .action(async (codeId: string, opts: { limit?: string; cursor?: string }) => {
-    const query = await listInput<
+    const query = listInput<
       ProcedureInput<Client["referrals"]["listConversions"]>["query"]
     >(opts);
     await callAndPrint((c) => c.referrals.listConversions({
@@ -1045,7 +1045,7 @@ referrals
   .option("--limit <n>", "Page size", "20")
   .option("--cursor <cursor>", "Pagination cursor")
   .action(async (programId: string, opts: { limit?: string; cursor?: string }) => {
-    const query = await listInput<
+    const query = listInput<
       ProcedureInput<Client["referrals"]["listProgramConversions"]>["query"]
     >(opts);
     await callAndPrint((c) => c.referrals.listProgramConversions({
@@ -1157,7 +1157,7 @@ loyaltyMembers
   .option("--limit <n>", "Page size", "20")
   .option("--cursor <cursor>", "Pagination cursor")
   .action(async (programId: string, opts: { limit?: string; cursor?: string }) => {
-    const query = await listInput<ProcedureInput<Client["loyalty"]["members"]["list"]>["query"]>(
+    const query = listInput<ProcedureInput<Client["loyalty"]["members"]["list"]>["query"]>(
       opts,
     );
     await callAndPrint((c) => c.loyalty.members.list({
@@ -1244,7 +1244,7 @@ events
   .option("--limit <n>", "Page size", "20")
   .option("--cursor <cursor>", "Pagination cursor")
   .action(async (opts: { limit?: string; cursor?: string }) => {
-    const input = await listInput<ProcedureInput<Client["events"]["list"]>>(opts);
+    const input = listInput<ProcedureInput<Client["events"]["list"]>>(opts);
     await callAndPrint((c) => c.events.list(input));
   });
 events
@@ -1258,7 +1258,7 @@ const orders = program.command("orders").description("Manage orders");
 addListOptions(orders.command("list").description("List orders"), false)
   .option("--data <json>", "Order list input JSON, @file.json, or - from stdin")
   .action(async (opts: { data?: string; limit?: string; cursor?: string }) => {
-    const fallback = await listInput<ProcedureInput<Client["orders"]["list"]>>(opts);
+    const fallback = listInput<ProcedureInput<Client["orders"]["list"]>>(opts);
     const data = await parseJsonObject(opts.data, fallback).catch(fail);
     await callAndPrint((c) => c.orders.list(data));
   });
@@ -1378,7 +1378,7 @@ auditLog
   .option("--limit <n>", "Page size", "20")
   .option("--cursor <cursor>", "Pagination cursor")
   .action(async (opts: { limit?: string; cursor?: string }) => {
-    const input = await listInput<ProcedureInput<Client["auditLog"]["list"]>>(opts);
+    const input = listInput<ProcedureInput<Client["auditLog"]["list"]>>(opts);
     await callAndPrint((c) => c.auditLog.list(input));
   });
 

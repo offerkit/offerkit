@@ -79,10 +79,10 @@ describe("webhook secret delivery", () => {
     const { db, updates } = deliveryDb(minted.encryptedSecret);
     let deliveredBody = "";
     let deliveredSignature = "";
-    const fetchMock = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
-      deliveredBody = String(init?.body ?? "");
+    const fetchMock = vi.fn((_url: string | URL | Request, init?: RequestInit) => {
+      deliveredBody = typeof init?.body === "string" ? init.body : "";
       deliveredSignature = new Headers(init?.headers).get("x-offerkit-signature") ?? "";
-      return new Response("accepted", { status: 202 });
+      return Promise.resolve(new Response("accepted", { status: 202 }));
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -106,10 +106,11 @@ describe("webhook secret delivery", () => {
     });
 
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(updates).toContainEqual({
+    const deadUpdate = updates.find((update) => update["status"] === "dead");
+    expect(deadUpdate).toMatchObject({
       status: "dead",
       error: "webhook signing secret predates encrypted storage; recreate the webhook",
-      updatedAt: expect.any(Date),
     });
+    expect(deadUpdate?.["updatedAt"]).toBeInstanceOf(Date);
   });
 });

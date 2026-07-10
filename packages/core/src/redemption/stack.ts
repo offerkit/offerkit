@@ -227,19 +227,24 @@ async function stackRedeemImpl(
 
     const result = calculateDiscount({
       order: input.order,
-      vouchers: lockedRows
-        .filter((v) => v.discount)
-        .map((v) => ({
-          id: v.id,
-          code: v.code,
-          type: v.discount!.type,
-          amount: v.discount!.amount,
-          percent: v.discount!.percent,
-          maxDiscountAmount: v.discount!.maxDiscountAmount,
-          priority: v.priority,
-          exclusive: v.exclusive,
-          createdAt: v.createdAt.toISOString(),
-        })),
+      vouchers: lockedRows.flatMap((v) => {
+        const discount = v.discount;
+        return discount
+          ? [
+              {
+                id: v.id,
+                code: v.code,
+                type: discount.type,
+                amount: discount.amount,
+                percent: discount.percent,
+                maxDiscountAmount: discount.maxDiscountAmount,
+                priority: v.priority,
+                exclusive: v.exclusive,
+                createdAt: v.createdAt.toISOString(),
+              },
+            ]
+          : [];
+      }),
     });
 
     if (result.appliedDiscounts.length === 0) {

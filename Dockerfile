@@ -23,7 +23,6 @@ COPY packages/db/package.json packages/db/
 COPY packages/sdk/package.json packages/sdk/
 COPY packages/cli/package.json packages/cli/
 COPY packages/mcp/package.json packages/mcp/
-COPY packages/ui/package.json packages/ui/
 RUN --mount=type=cache,target=/pnpm/store pnpm install --frozen-lockfile --ignore-scripts
 
 FROM base AS builder

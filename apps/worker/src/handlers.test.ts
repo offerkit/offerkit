@@ -1,15 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 import { bulkGenerateCodes } from "@offerkit/core/codes";
+import type * as CoreCodes from "@offerkit/core/codes";
 import { createJobRegistry } from "@offerkit/core/jobs";
 import { registerWorkerHandlers } from "./handlers.ts";
 
 vi.mock("@offerkit/core/codes", async () => {
-  const actual = await vi.importActual<typeof import("@offerkit/core/codes")>(
-    "@offerkit/core/codes",
-  );
+  const actual = await vi.importActual<typeof CoreCodes>("@offerkit/core/codes");
   return {
     ...actual,
-    bulkGenerateCodes: vi.fn(async () => ({ generated: 1 })),
+    bulkGenerateCodes: vi.fn(() => Promise.resolve({ generated: 1 })),
   };
 });
 

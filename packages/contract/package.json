@@ -10,6 +10,7 @@
     "./router": "./src/router.ts"
   },
   "scripts": {
+    "lint": "eslint src",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

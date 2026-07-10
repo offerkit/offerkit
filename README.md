@@ -163,7 +163,6 @@ packages/db      Drizzle schema + client + migrations
 packages/sdk     @offerkit/sdk — typed TS client
 packages/cli     @offerkit/cli — `offerkit` CLI
 packages/mcp     @offerkit/mcp — MCP server (stdio + http)
-packages/ui      Shared UI primitives
 packages/config  ESLint + TS + Tailwind shared configs
 ```
 

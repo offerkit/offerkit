@@ -3,7 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { createRequire } from "node:module";
 import { isContractProcedure, type AnyContractRouter } from "@orpc/contract";
-import { z, type ZodRawShape } from "zod";
+import type { ZodRawShape } from "zod";
 import {
   contract,
   resolveMcpExposure,
@@ -123,7 +123,3 @@ await server.connect(transport);
 process.stderr.write(
   `offerkit-mcp: connected to ${baseUrl} with ${String(exposed.length)} tools (${exposed.join(", ")})\n`,
 );
-
-// Suppress unused-var warning: z is required for the registerTool generic type
-// inference even though we don't construct schemas directly here.
-void z;
