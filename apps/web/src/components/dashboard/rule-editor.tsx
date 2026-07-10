@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useJsonObjectDraft } from "./use-json-object-draft";
 
 type ConditionType =
   | "order-total"
@@ -139,40 +140,17 @@ function needsSecondValue(type: ConditionType) {
 
 export function RuleEditor({ value, onChange }: RuleEditorProps) {
   const gt = useGT();
-  const serialized = JSON.stringify(value, null, 2);
-  const [text, setText] = useState(serialized);
-  const [lastExternal, setLastExternal] = useState(serialized);
-  const [error, setError] = useState<string | null>(null);
   const [operator, setOperator] = useState<ConditionOperator>("all");
   const [conditions, setConditions] = useState<BuilderCondition[]>([DEFAULT_CONDITION]);
-
-  if (serialized !== lastExternal) {
-    setLastExternal(serialized);
-    setText(serialized);
-    setError(null);
-  }
+  const draft = useJsonObjectDraft({
+    initialValue: value,
+    onChange,
+    invalidMessage: gt("Invalid JSON"),
+    objectMessage: gt("Rule must be a JSON object"),
+  });
 
   function applyRule(rule: Record<string, unknown>) {
-    const next = JSON.stringify(rule, null, 2);
-    setText(next);
-    setLastExternal(next);
-    setError(null);
-    onChange(rule);
-  }
-
-  function applyText(next: string) {
-    setText(next);
-    try {
-      const parsed = JSON.parse(next) as unknown;
-      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-        setError(gt("Rule must be a JSON object"));
-        return;
-      }
-      setError(null);
-      onChange(parsed as Record<string, unknown>);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : gt("Invalid JSON"));
-    }
+    draft.replace(rule);
   }
 
   function updateCondition(id: string, patch: Partial<BuilderCondition>) {
@@ -334,12 +312,12 @@ export function RuleEditor({ value, onChange }: RuleEditorProps) {
           </div>
           <Textarea
             id="rule"
-            value={text}
-            onChange={(e) => applyText(e.target.value)}
+            value={draft.text}
+            onChange={(e) => draft.applyText(e.target.value)}
             className="h-64 font-mono text-xs"
             spellCheck={false}
           />
-          {error ? <p className="text-xs text-red-500">{error}</p> : null}
+          {draft.error ? <p className="text-xs text-red-500">{draft.error}</p> : null}
         </TabsContent>
       </Tabs>
 
