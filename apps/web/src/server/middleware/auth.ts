@@ -97,7 +97,7 @@ export const requireSession = os
       if (cached.kind === "replay") {
         return { output: cached.output, context: { user } };
       }
-      writeAudit({
+      await writeAudit({
         actor: user.actorKind,
         actorId: user.id,
         path,
@@ -112,7 +112,7 @@ export const requireSession = os
     const result = await next({ context: { user } });
 
     if (isMutationPath(path)) {
-      writeAudit({
+      await writeAudit({
         actor: user.actorKind,
         actorId: user.id,
         path,
