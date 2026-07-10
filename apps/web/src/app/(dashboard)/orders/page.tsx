@@ -8,7 +8,6 @@ import { T, useGT } from "gt-next/client";
 import { Search } from "lucide-react";
 import { DataTable } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -17,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useCursorPagination } from "@/hooks/use-cursor-pagination";
 import { type ApiListItem, type OfferKitClient, ovx } from "@/lib/sdk";
 
 type OrderRow = ApiListItem<OfferKitClient["orders"]["list"]>;
@@ -42,7 +42,8 @@ export default function OrdersPage() {
   const gt = useGT();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<Status>("");
-  const [cursor, setCursor] = useState<string | undefined>();
+  const pagination = useCursorPagination();
+  const { cursor } = pagination;
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ["orders", { search, status, cursor }],
@@ -123,7 +124,7 @@ export default function OrdersPage() {
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
-              setCursor(undefined);
+              pagination.reset();
             }}
           />
         </div>
@@ -138,7 +139,7 @@ export default function OrdersPage() {
           value={status}
           onValueChange={(v) => {
             setStatus(v as Status);
-            setCursor(undefined);
+            pagination.reset();
           }}
         >
           <SelectTrigger className="w-44">
@@ -159,15 +160,17 @@ export default function OrdersPage() {
         data={data?.data ?? []}
         isLoading={isLoading}
         emptyMessage={<T>No orders yet.</T>}
+        pagination={{
+          type: "cursor",
+          canPrevious: pagination.canPrevious,
+          canNext: Boolean(data?.next),
+          onPrevious: pagination.previous,
+          onNext: () => {
+            if (data?.next) pagination.next(data.next);
+          },
+          pending: isFetching,
+        }}
       />
-
-      {data?.next ? (
-        <div className="flex justify-end">
-          <Button variant="outline" disabled={isFetching} onClick={() => setCursor(data.next)}>
-            <T>Next page</T>
-          </Button>
-        </div>
-      ) : null}
     </div>
   );
 }

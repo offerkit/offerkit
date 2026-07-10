@@ -6,7 +6,6 @@ import { useQuery } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { DataTable } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -15,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useCursorPagination } from "@/hooks/use-cursor-pagination";
 import { type ApiListItem, type OfferKitClient, ovx } from "@/lib/sdk";
 
 type AuditLogRow = ApiListItem<OfferKitClient["auditLog"]["list"]>;
@@ -31,7 +31,8 @@ export default function AuditLogPage() {
   const gt = useGT();
   const [actor, setActor] = useState<Actor>("");
   const [entity, setEntity] = useState("");
-  const [cursor, setCursor] = useState<string | undefined>();
+  const pagination = useCursorPagination();
+  const { cursor } = pagination;
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ["auditLog", { actor, entity, cursor }],
@@ -110,7 +111,7 @@ export default function AuditLogPage() {
           value={actor}
           onValueChange={(v) => {
             setActor(v as Actor);
-            setCursor(undefined);
+            pagination.reset();
           }}
         >
           <SelectTrigger className="w-44">
@@ -128,7 +129,7 @@ export default function AuditLogPage() {
           value={entity}
           onChange={(e) => {
             setEntity(e.target.value);
-            setCursor(undefined);
+            pagination.reset();
           }}
           className="max-w-xs"
         />
@@ -139,15 +140,17 @@ export default function AuditLogPage() {
         data={data?.data ?? []}
         isLoading={isLoading}
         emptyMessage={<T>No audit entries match the filters.</T>}
+        pagination={{
+          type: "cursor",
+          canPrevious: pagination.canPrevious,
+          canNext: Boolean(data?.next),
+          onPrevious: pagination.previous,
+          onNext: () => {
+            if (data?.next) pagination.next(data.next);
+          },
+          pending: isFetching,
+        }}
       />
-
-      {data?.next ? (
-        <div className="flex justify-end">
-          <Button variant="outline" disabled={isFetching} onClick={() => setCursor(data.next)}>
-            <T>Next page</T>
-          </Button>
-        </div>
-      ) : null}
     </div>
   );
 }

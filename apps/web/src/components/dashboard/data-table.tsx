@@ -27,6 +27,17 @@ interface DataTableProps<TData, TValue> {
   isLoading?: boolean;
   loadingMessage?: React.ReactNode;
   pageSize?: number;
+  pagination?:
+    | { type: "client" }
+    | {
+        type: "cursor";
+        canPrevious: boolean;
+        canNext: boolean;
+        onPrevious: () => void;
+        onNext: () => void;
+        pending?: boolean;
+      }
+    | { type: "none" };
   getRowClassName?: (row: TData) => string | undefined;
 }
 
@@ -37,13 +48,15 @@ export function DataTable<TData, TValue>({
   isLoading = false,
   loadingMessage = <T>Loading...</T>,
   pageSize = 10,
+  pagination = { type: "client" },
   getRowClassName,
 }: DataTableProps<TData, TValue>) {
+  const clientPagination = pagination.type === "client";
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    getPaginationRowModel: clientPagination ? getPaginationRowModel() : undefined,
     initialState: {
       pagination: {
         pageSize,
@@ -52,6 +65,7 @@ export function DataTable<TData, TValue>({
   });
   const visibleRows = table.getRowModel().rows;
   const showPagination =
+    clientPagination &&
     !isLoading &&
     data.length > pageSize &&
     (table.getCanPreviousPage() || table.getCanNextPage());
@@ -129,6 +143,26 @@ export function DataTable<TData, TValue>({
             size="sm"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
+          >
+            <T>Next</T>
+          </Button>
+        </div>
+      ) : pagination.type === "cursor" &&
+        (pagination.canPrevious || pagination.canNext) ? (
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={pagination.onPrevious}
+            disabled={!pagination.canPrevious || pagination.pending}
+          >
+            <T>Previous</T>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={pagination.onNext}
+            disabled={!pagination.canNext || pagination.pending}
           >
             <T>Next</T>
           </Button>

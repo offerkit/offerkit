@@ -9,6 +9,7 @@ import { Plus, Search } from "lucide-react";
 import { DataTable } from "@/components/dashboard/data-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useCursorPagination } from "@/hooks/use-cursor-pagination";
 import { type ApiListItem, type OfferKitClient, ovx } from "@/lib/sdk";
 
 type CustomerRow = ApiListItem<OfferKitClient["customers"]["list"]>;
@@ -16,7 +17,8 @@ type CustomerRow = ApiListItem<OfferKitClient["customers"]["list"]>;
 export default function CustomersPage() {
   const gt = useGT();
   const [search, setSearch] = useState("");
-  const [cursor, setCursor] = useState<string | undefined>();
+  const pagination = useCursorPagination();
+  const { cursor } = pagination;
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ["customers", { search, cursor }],
@@ -78,7 +80,7 @@ export default function CustomersPage() {
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
-            setCursor(undefined);
+            pagination.reset();
           }}
         />
       </div>
@@ -89,15 +91,17 @@ export default function CustomersPage() {
         isLoading={isLoading}
         emptyMessage={search ? <T>No customers match your search.</T> : <T>No customers yet.</T>}
         getRowClassName={() => "cursor-pointer"}
+        pagination={{
+          type: "cursor",
+          canPrevious: pagination.canPrevious,
+          canNext: Boolean(data?.next),
+          onPrevious: pagination.previous,
+          onNext: () => {
+            if (data?.next) pagination.next(data.next);
+          },
+          pending: isFetching,
+        }}
       />
-
-      {data?.next ? (
-        <div className="flex justify-end">
-          <Button variant="outline" disabled={isFetching} onClick={() => setCursor(data.next)}>
-            <T>Next page</T>
-          </Button>
-        </div>
-      ) : null}
     </div>
   );
 }
