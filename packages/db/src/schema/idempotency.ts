@@ -1,4 +1,15 @@
-import { integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  integer,
+  jsonb,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
+
+export const idempotencyStatus = pgEnum("idempotency_status", ["pending", "completed"]);
 
 export const idempotencyRecord = pgTable(
   "idempotency_record",
@@ -7,7 +18,10 @@ export const idempotencyRecord = pgTable(
     scope: text("scope").notNull(),
     idempotencyKey: text("idempotency_key").notNull(),
     requestHash: text("request_hash").notNull(),
-    responseStatus: integer("response_status").notNull(),
+    status: idempotencyStatus("status").notNull().default("completed"),
+    ownerToken: text("owner_token"),
+    lockedUntil: timestamp("locked_until", { withTimezone: true }),
+    responseStatus: integer("response_status"),
     responseBody: jsonb("response_body"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
