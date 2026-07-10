@@ -1,37 +1,10 @@
 import { schema } from "@offerkit/db";
+import { contract, resolveContractOperationRisk } from "@offerkit/contract";
 import { db } from "@/lib/db";
 
-const MUTATION_ACTIONS = new Set([
-  "create",
-  "update",
-  "delete",
-  "disable",
-  "enable",
-  "redeem",
-  "rollback",
-  "stackRedeem",
-  "earn",
-  "spend",
-  "adjust",
-  "refund",
-  "send",
-  "retry",
-  "replay",
-  "restore",
-  "regenerate",
-  "generate",
-  "import",
-  "sync",
-  "rotate",
-  "approve",
-  "reject",
-  "complete",
-]);
-
 export function isMutationPath(path: readonly string[]): boolean {
-  if (path.length === 0) return false;
-  const last = path[path.length - 1];
-  return last !== undefined && MUTATION_ACTIONS.has(last);
+  const risk = resolveContractOperationRisk(contract, path);
+  return risk === "mutating" || risk === "destructive";
 }
 
 interface WriteAuditArgs {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mcpMeta, resolveMcpExposure } from "@offerkit/contract";
+import { mcpMeta, resolveMcpExposure, resolveOperationRisk } from "@offerkit/contract";
 
 describe("resolveMcpExposure", () => {
   it("uses explicit contract metadata when present", () => {
@@ -19,6 +19,16 @@ describe("resolveMcpExposure", () => {
       name: "custom_tool",
       description: "Custom tool",
     });
+  });
+
+  it("keeps MCP exposure and shared operation risk aligned", () => {
+    const def = {
+      meta: mcpMeta({ expose: true, riskLevel: "safe" }),
+      route: { method: "POST" },
+    };
+
+    expect(resolveOperationRisk(def)).toBe("safe");
+    expect(resolveMcpExposure(def).riskLevel).toBe("safe");
   });
 
   it("infers safe exposure for GET routes", () => {

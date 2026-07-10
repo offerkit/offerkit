@@ -1,25 +1,102 @@
+import { isContractProcedure, type AnyContractRouter } from "@orpc/contract";
+import {
+  contract,
+  resolveContractOperationRisk,
+  resolveOperationRisk,
+  type OperationRiskLevel,
+  type ProcedureDefinitionMeta,
+} from "@offerkit/contract";
 import { describe, expect, it } from "vitest";
 import { ipFromHeaders, isMutationPath } from "./audit";
 
+interface ContractProcedure {
+  path: readonly string[];
+  def: ProcedureDefinitionMeta;
+}
+
+function* discoverProcedures(
+  node: AnyContractRouter,
+  path: string[] = [],
+): Generator<ContractProcedure> {
+  if (isContractProcedure(node)) {
+    yield {
+      path,
+      def: (node as { "~orpc": ProcedureDefinitionMeta })["~orpc"],
+    };
+    return;
+  }
+
+  if (!node || typeof node !== "object") return;
+  for (const [key, child] of Object.entries(node as Record<string, AnyContractRouter>)) {
+    yield* discoverProcedures(child, [...path, key]);
+  }
+}
+
+function expectedRisk(def: ProcedureDefinitionMeta): OperationRiskLevel {
+  const explicit = def.meta?.operation?.riskLevel ?? def.meta?.mcp?.riskLevel;
+  if (explicit) return explicit;
+  if (def.route?.method?.toUpperCase() === "GET") return "safe";
+  if (def.route?.method?.toUpperCase() === "DELETE") return "destructive";
+  return "mutating";
+}
+
+const procedures = [...discoverProcedures(contract)];
+
 describe("isMutationPath", () => {
   it.each([
-    ["campaigns.create", ["campaigns", "create"]],
-    ["vouchers.redeem", ["vouchers", "redeem"]],
-    ["vouchers.rollback", ["vouchers", "rollback"]],
-    ["loyalty.earn", ["loyalty", "earn"]],
-    ["users.disable", ["users", "disable"]],
+    ["customers.upsert", ["customers", "upsert"]],
+    ["vouchers.bulk", ["vouchers", "bulk"]],
+    ["referrals.issue", ["referrals", "issue"]],
+    ["referrals.convert", ["referrals", "convert"]],
+    ["loyalty.members.enroll", ["loyalty", "members", "enroll"]],
+    ["apiKeys.revoke", ["apiKeys", "revoke"]],
+    ["orders.cancel", ["orders", "cancel"]],
+    ["orders.fulfill", ["orders", "fulfill"]],
+    ["users.resetPassword", ["users", "resetPassword"]],
+    ["users.setRole", ["users", "setRole"]],
   ])("%s is a mutation", (_label, path) => {
     expect(isMutationPath(path)).toBe(true);
   });
 
   it.each([
-    ["campaigns.list", ["campaigns", "list"]],
-    ["customers.get", ["customers", "get"]],
-    ["insights.summary", ["insights", "summary"]],
+    ["segments.preview", ["segments", "preview"]],
+    ["promotions.qualify", ["promotions", "qualify"]],
+    ["vouchers.validate", ["vouchers", "validate"]],
+    ["vouchers.qualify", ["vouchers", "qualify"]],
     ["health", ["health"]],
     ["empty", []],
+    ["unknown", ["not", "a", "procedure"]],
   ])("%s is not a mutation", (_label, path) => {
     expect(isMutationPath(path)).toBe(false);
+  });
+
+  it("classifies every contract procedure from its route and explicit operation metadata", () => {
+    expect(procedures.length).toBeGreaterThan(0);
+
+    for (const procedure of procedures) {
+      const expected = expectedRisk(procedure.def);
+      expect(resolveOperationRisk(procedure.def), procedure.path.join(".")).toBe(expected);
+      expect(resolveContractOperationRisk(contract, procedure.path), procedure.path.join(".")).toBe(
+        expected,
+      );
+      expect(isMutationPath(procedure.path), procedure.path.join(".")).toBe(expected !== "safe");
+    }
+  });
+
+  it("treats all GET routes as safe and all DELETE routes as destructive", () => {
+    for (const procedure of procedures) {
+      const method = procedure.def.route?.method?.toUpperCase();
+      if (method === "GET") {
+        expect(resolveContractOperationRisk(contract, procedure.path), procedure.path.join(".")).toBe(
+          "safe",
+        );
+      }
+      if (method === "DELETE") {
+        expect(resolveContractOperationRisk(contract, procedure.path), procedure.path.join(".")).toBe(
+          "destructive",
+        );
+      }
+    }
   });
 });
 
