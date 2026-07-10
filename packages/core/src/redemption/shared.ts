@@ -31,12 +31,13 @@ export function checkCustomerBinding(
   v: VoucherRow,
   campaign: RedemptionCampaignRow | null | undefined,
   customerId: string | undefined,
+  customerRefProvided = customerId !== undefined,
 ): RedemptionFailureCode | null {
-  if (v.customerId && !customerId) return "customer_required";
+  if (v.customerId && !customerRefProvided) return "customer_required";
   if (v.customerId && customerId !== v.customerId) return "customer_mismatch";
   if (
     (v.perUserRedemptionLimit != null || campaign?.perUserRedemptionLimit != null) &&
-    !customerId
+    !customerRefProvided
   ) {
     return "customer_required";
   }
@@ -48,12 +49,18 @@ export async function checkPerUserRedemptionLimit(
   v: VoucherRow,
   campaign: RedemptionCampaignRow | null | undefined,
   customerId: string | undefined,
+  customerRefProvided = customerId !== undefined,
 ): Promise<{
   code: RedemptionFailureCode;
   details?: Record<string, string | number | boolean | null>;
 } | null> {
   if (v.perUserRedemptionLimit == null && campaign?.perUserRedemptionLimit == null) return null;
-  if (!customerId) return { code: "customer_required" };
+  if (!customerId) {
+    // An external id that does not exist yet still identifies a customer for
+    // validation purposes. With no persisted customer there cannot be prior
+    // redemptions, so the per-user count is zero without creating a row.
+    return customerRefProvided ? null : { code: "customer_required" };
+  }
 
   if (v.perUserRedemptionLimit != null) {
     const count = await countNetSuccessfulRedemptions(
@@ -325,6 +332,7 @@ export async function validateVoucher(
     validationRule?: RedemptionValidationRuleRow | null;
     customer?: RedemptionCustomerRow | null;
     customerId?: string;
+    customerRefProvided?: boolean;
     now?: Date;
   } = {},
 ): Promise<ValidateResult> {
@@ -348,7 +356,12 @@ export async function validateVoucher(
     };
   }
 
-  const customerFailure = checkCustomerBinding(voucher, campaign, options.customerId);
+  const customerFailure = checkCustomerBinding(
+    voucher,
+    campaign,
+    options.customerId,
+    options.customerRefProvided,
+  );
   if (customerFailure) {
     return {
       valid: false,
@@ -358,7 +371,13 @@ export async function validateVoucher(
     };
   }
   const customerLimitFailure = options.db
-    ? await checkPerUserRedemptionLimit(options.db, voucher, campaign, options.customerId)
+    ? await checkPerUserRedemptionLimit(
+        options.db,
+        voucher,
+        campaign,
+        options.customerId,
+        options.customerRefProvided,
+      )
     : null;
   if (customerLimitFailure) {
     return {

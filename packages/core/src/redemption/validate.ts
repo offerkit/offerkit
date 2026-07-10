@@ -47,7 +47,7 @@ async function validateImpl(db: Db, input: ValidateInput): Promise<ValidateResul
       customerId: input.customerId,
       customerExternalId: input.customerExternalId,
     },
-    { createIfMissing: true },
+    { createIfMissing: false },
   );
   if (resolvedCustomer.mismatch) {
     return {
@@ -69,5 +69,6 @@ async function validateImpl(db: Db, input: ValidateInput): Promise<ValidateResul
     validationRule,
     customer,
     customerId: resolvedCustomer.customerId,
+    customerRefProvided: Boolean(input.customerId || input.customerExternalId?.trim()),
   });
 }

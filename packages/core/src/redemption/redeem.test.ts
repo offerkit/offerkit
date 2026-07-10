@@ -357,6 +357,30 @@ describe.skipIf(!enabled)("redeem (live DB)", () => {
     if (customer) await db.delete(schema.customer).where(eq(schema.customer.id, customer.id));
   });
 
+  it("validates an unseen external customer without creating a customer row", async () => {
+    if (!db) throw new Error("db not initialized");
+    const externalId = `validate-only-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+    const v = await makeVoucher(db, {
+      redemptionLimit: null,
+      perUserRedemptionLimit: 1,
+    });
+
+    const result = await validate(db, {
+      voucherCode: v.code,
+      customerExternalId: externalId,
+      order: { amount: 5_000, currency: "USD" },
+    });
+
+    expect(result.valid).toBe(true);
+    const customers = await db
+      .select({ id: schema.customer.id })
+      .from(schema.customer)
+      .where(eq(schema.customer.externalId, externalId));
+    expect(customers).toHaveLength(0);
+
+    await cleanup(db, v.id);
+  });
+
   it("limits campaign voucher redemptions to one per customer", async () => {
     if (!db) throw new Error("db not initialized");
     const [customerA] = await db.insert(schema.customer).values({}).returning({ id: schema.customer.id });
