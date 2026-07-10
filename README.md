@@ -79,13 +79,13 @@ Image channels:
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/offerkit?referralCode=IxSuAK)
 
-In one Railway project, create Postgres and Redis, then create two Docker Image services from `ghcr.io/offerkit/offerkit:latest`. `latest` is fine for evaluation; production deployments should pin a release tag such as `ghcr.io/offerkit/offerkit:v0.1.0`. The public `web` service uses the default command. The private `worker` service overrides the command to `node apps/worker/dist/index.js` and should not have a public domain. Reference Postgres's `DATABASE_URL` and Redis's `REDIS_URL` into both app services. Set `BETTER_AUTH_SECRET`, `OFFERKIT_PUBLIC_URL`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` on the `web` service.
+In one Railway project, create Postgres and Redis, then create two Docker Image services from `ghcr.io/offerkit/offerkit:latest`. `latest` is fine for evaluation; production deployments should pin a release tag such as `ghcr.io/offerkit/offerkit:v0.1.0`. The public `web` service uses the default command. The private `worker` service overrides the command to `node apps/worker/dist/index.js` and should not have a public domain. Reference Postgres's `DATABASE_URL` and Redis's `REDIS_URL` into both app services. Set `BETTER_AUTH_SECRET`, `OFFERKIT_PUBLIC_URL`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` on the `web` service. Set the same `WEBHOOK_SECRET_ENCRYPTION_KEY` (generate one with `openssl rand -base64 32`) on both services.
 
 ### Diploi
 
 [![Launch with Diploi](https://diploi.com/launch-big.svg)](https://diploi.com/launch/akshitkrnagpal/offerkit)
 
-Create one Diploi project with a public `web` component, a private `worker` component, Postgres, and Redis. Use the same published image, `ghcr.io/offerkit/offerkit:latest`, for both components. `latest` is fine for evaluation; production deployments should pin a release tag such as `ghcr.io/offerkit/offerkit:v0.1.0`. The worker command is `node apps/worker/dist/index.js`. Wire Postgres's `DATABASE_URL` and Redis's `REDIS_URL` into both components. Set `BETTER_AUTH_SECRET`, `OFFERKIT_PUBLIC_URL`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` on `web`; set `WORKER_HEALTH_PORT=9091` on `worker`.
+Create one Diploi project with a public `web` component, a private `worker` component, Postgres, and Redis. Use the same published image, `ghcr.io/offerkit/offerkit:latest`, for both components. `latest` is fine for evaluation; production deployments should pin a release tag such as `ghcr.io/offerkit/offerkit:v0.1.0`. The worker command is `node apps/worker/dist/index.js`. Wire Postgres's `DATABASE_URL` and Redis's `REDIS_URL` into both components. Set `BETTER_AUTH_SECRET`, `OFFERKIT_PUBLIC_URL`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` on `web`; set `WORKER_HEALTH_PORT=9091` on `worker`. Set the same `WEBHOOK_SECRET_ENCRYPTION_KEY` on both components.
 
 ## 📦 SDK, CLI, MCP
 

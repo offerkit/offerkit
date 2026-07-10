@@ -56,6 +56,8 @@ export function getTestDb(url: string): Promise<TestDbHandle> {
   // Better Auth needs the secret to mint hashes for password rows we
   // never use; the api-key.ts helper also reads it as the HMAC pepper.
   process.env["BETTER_AUTH_SECRET"] ??= "test-secret-1234567890123456789012";
+  process.env["WEBHOOK_SECRET_ENCRYPTION_KEY"] ??=
+    "test-webhook-encryption-key-with-at-least-32-characters";
   process.env["DATABASE_URL"] = url;
   cached = (async () => {
     const pool = new Pool({ connectionString: url });

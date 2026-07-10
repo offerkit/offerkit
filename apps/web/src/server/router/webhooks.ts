@@ -66,7 +66,7 @@ const create = os.webhooks.create.use(requireSession).handler(async ({ input }) 
     .values({
       name: input.name,
       url: input.url,
-      hashedSecret: minted.hashedSecret,
+      encryptedSecret: minted.encryptedSecret,
       secretPrefix: minted.prefix,
       events: input.events,
       active: input.active,

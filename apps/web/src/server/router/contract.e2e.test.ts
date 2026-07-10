@@ -39,6 +39,8 @@ let mintedToken: string | undefined;
 beforeAll(async () => {
   if (!enabled || !url) return;
   process.env["BETTER_AUTH_SECRET"] ??= "test-secret-1234567890123456789012";
+  process.env["WEBHOOK_SECRET_ENCRYPTION_KEY"] ??=
+    "test-webhook-encryption-key-with-at-least-32-characters";
   process.env["DATABASE_URL"] = url;
   pool = new Pool({ connectionString: url });
   const migrator = drizzle(pool);

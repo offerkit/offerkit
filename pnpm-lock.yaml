@@ -318,6 +318,9 @@ importers:
       '@offerkit/config':
         specifier: workspace:*
         version: link:../config
+      '@offerkit/sdk':
+        specifier: workspace:*
+        version: link:../sdk
       '@types/json-logic-js':
         specifier: ^2.0.8
         version: 2.0.8

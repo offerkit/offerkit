@@ -17,11 +17,12 @@ export const webhook = pgTable(
     name: text("name").notNull(),
     url: text("url").notNull(),
     /**
-     * Hashed shared secret. The plaintext is shown once at creation and
-     * stored on the integrator side; we keep only sha256(secret) so
-     * compromise of the DB doesn't reveal the signing key.
+     * Legacy one-way secret hash. Existing rows retain this value so the
+     * migration is non-destructive, but new webhooks use encryptedSecret.
      */
-    hashedSecret: text("hashed_secret").notNull(),
+    hashedSecret: text("hashed_secret"),
+    /** AES-256-GCM encrypted signing secret. */
+    encryptedSecret: text("encrypted_secret"),
     /** Plaintext prefix for UI display (`whsec_AbCdEf…`). */
     secretPrefix: text("secret_prefix").notNull(),
     /** Subscribed event types; `["*"]` = everything. */

@@ -39,6 +39,7 @@ services:
       DATABASE_URL: postgres://offerkit:dev@postgres:5432/offerkit
       REDIS_URL: redis://redis:6379
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-please-change-this-32-chars-min-secret}
+      WEBHOOK_SECRET_ENCRYPTION_KEY: ${WEBHOOK_SECRET_ENCRYPTION_KEY:-please-change-this-webhook-encryption-key}
       OFFERKIT_PUBLIC_URL: http://localhost:3000
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-changeme123}
@@ -60,6 +61,7 @@ services:
     environment:
       DATABASE_URL: postgres://offerkit:dev@postgres:5432/offerkit
       REDIS_URL: redis://redis:6379
+      WEBHOOK_SECRET_ENCRYPTION_KEY: ${WEBHOOK_SECRET_ENCRYPTION_KEY:-please-change-this-webhook-encryption-key}
       WORKER_HEALTH_PORT: 9091
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}

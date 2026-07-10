@@ -33,6 +33,7 @@
   },
   "devDependencies": {
     "@offerkit/config": "workspace:*",
+    "@offerkit/sdk": "workspace:*",
     "@types/json-logic-js": "^2.0.8",
     "@types/node": "^25.6.2",
     "@types/pg": "^8.20.0",

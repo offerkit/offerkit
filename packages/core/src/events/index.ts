@@ -1,4 +1,11 @@
-import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  createHmac,
+  randomBytes,
+  timingSafeEqual,
+} from "node:crypto";
 import { eq, isNull } from "drizzle-orm";
 import { schema, type Db } from "@offerkit/db";
 import { logger } from "../observability/index.ts";
@@ -65,12 +72,62 @@ export async function emitEvent(
 // ----- secret + signature helpers -----
 
 const SECRET_BYTES = 32;
+const ENCRYPTION_VERSION = "v1";
+const ENCRYPTION_IV_BYTES = 12;
+const ENCRYPTION_KEY_CONTEXT = "offerkit:webhook-secret:v1";
+
+function webhookEncryptionKey(): Buffer {
+  const secret = process.env["WEBHOOK_SECRET_ENCRYPTION_KEY"];
+  if (!secret || secret.length < 32) {
+    throw new Error("WEBHOOK_SECRET_ENCRYPTION_KEY must be at least 32 characters");
+  }
+  return createHash("sha256")
+    .update(ENCRYPTION_KEY_CONTEXT)
+    .update("\0")
+    .update(secret)
+    .digest();
+}
+
+function encryptWebhookSecret(plaintext: string): string {
+  const iv = randomBytes(ENCRYPTION_IV_BYTES);
+  const cipher = createCipheriv("aes-256-gcm", webhookEncryptionKey(), iv);
+  const ciphertext = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return [
+    ENCRYPTION_VERSION,
+    iv.toString("base64url"),
+    tag.toString("base64url"),
+    ciphertext.toString("base64url"),
+  ].join(":");
+}
+
+function decryptWebhookSecret(encrypted: string): string {
+  const [version, ivEncoded, tagEncoded, ciphertextEncoded] = encrypted.split(":");
+  if (
+    version !== ENCRYPTION_VERSION ||
+    !ivEncoded ||
+    !tagEncoded ||
+    !ciphertextEncoded
+  ) {
+    throw new Error("Invalid encrypted webhook secret");
+  }
+  const decipher = createDecipheriv(
+    "aes-256-gcm",
+    webhookEncryptionKey(),
+    Buffer.from(ivEncoded, "base64url"),
+  );
+  decipher.setAuthTag(Buffer.from(tagEncoded, "base64url"));
+  return Buffer.concat([
+    decipher.update(Buffer.from(ciphertextEncoded, "base64url")),
+    decipher.final(),
+  ]).toString("utf8");
+}
 
 export interface MintedSecret {
-  /** Plaintext secret. Show once, never store. */
+  /** Plaintext secret. Show once; only its authenticated ciphertext is stored. */
   plaintext: string;
   prefix: string;
-  hashedSecret: string;
+  encryptedSecret: string;
 }
 
 export function mintWebhookSecret(): MintedSecret {
@@ -79,7 +136,7 @@ export function mintWebhookSecret(): MintedSecret {
   return {
     plaintext,
     prefix: plaintext.slice(0, 14),
-    hashedSecret: createHash("sha256").update(plaintext).digest("hex"),
+    encryptedSecret: encryptWebhookSecret(plaintext),
   };
 }
 
@@ -153,18 +210,25 @@ export async function deliverWebhook(db: Db, input: DeliverInput): Promise<void>
     return;
   }
 
-  // The hashed secret is one-way — the integrator's plaintext signs the
-  // request. We never have it server-side after creation, so each delivery
-  // re-signs against `wh.hashedSecret` itself: it's the same value the
-  // integrator stored on their side at create time. (Plaintext = the
-  // sha256 hex they were shown; we keep the same hex.)
+  if (!wh.encryptedSecret) {
+    await db
+      .update(schema.webhookDelivery)
+      .set({
+        status: "dead",
+        error: "webhook signing secret predates encrypted storage; recreate the webhook",
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.webhookDelivery.id, delivery.id));
+    return;
+  }
+
   const body = JSON.stringify({
     id: ev.id,
     type: ev.type,
     payload: ev.payload,
     createdAt: ev.createdAt.toISOString(),
   });
-  const signature = signPayload(wh.hashedSecret, body);
+  const signature = signPayload(decryptWebhookSecret(wh.encryptedSecret), body);
 
   const attempt = delivery.attempts + 1;
   let responseStatus: number | null = null;
