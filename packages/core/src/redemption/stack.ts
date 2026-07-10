@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { schema, type Db } from "@offerkit/db";
 import { calculateDiscount, type DiscountResult } from "../discount/index.ts";
@@ -10,7 +10,6 @@ import {
   checkCampaignActivation,
   checkCampaignValidationRule,
   checkCustomerBinding,
-  checkPerUserRedemptionLimit,
   messageFor,
   resolveCustomerRef,
 } from "./shared.ts";
@@ -126,6 +125,28 @@ async function stackRedeemImpl(
             where: and(eq(schema.customer.id, resolvedCustomerId), isNull(schema.customer.deletedAt)),
           })) as RedemptionCustomerRow | undefined)
         : undefined);
+    const campaignIds = [
+      ...new Set(lockedRows.flatMap((voucher) => voucher.campaignId ?? [])),
+    ];
+    const campaigns = campaignIds.length
+      ? ((await tx.query.campaign.findMany({
+          where: and(
+            inArray(schema.campaign.id, campaignIds),
+            isNull(schema.campaign.deletedAt),
+          ),
+        })) as RedemptionCampaignRow[])
+      : [];
+    const campaignById = new Map(campaigns.map((campaign) => [campaign.id, campaign]));
+    const validationRuleIds = [
+      ...new Set(campaigns.flatMap((campaign) => campaign.validationRuleId ?? [])),
+    ];
+    const validationRules = validationRuleIds.length
+      ? ((await tx.query.validationRule.findMany({
+          where: inArray(schema.validationRule.id, validationRuleIds),
+        })) as RedemptionValidationRuleRow[])
+      : [];
+    const validationRuleById = new Map(validationRules.map((rule) => [rule.id, rule]));
+
     for (const v of lockedRows) {
       const failure = checkActivation(v, now);
       if (failure) {
@@ -136,11 +157,7 @@ async function stackRedeemImpl(
           explanations: [failureExplanation(failure, v)],
         };
       }
-      const campaign = v.campaignId
-        ? ((await tx.query.campaign.findFirst({
-            where: and(eq(schema.campaign.id, v.campaignId), isNull(schema.campaign.deletedAt)),
-          })) as RedemptionCampaignRow | undefined)
-        : undefined;
+      const campaign = v.campaignId ? campaignById.get(v.campaignId) : undefined;
       const campaignFailure = checkCampaignActivation(campaign, input.order.currency, now);
       if (campaignFailure) {
         return {
@@ -159,26 +176,8 @@ async function stackRedeemImpl(
           explanations: [failureExplanation(customerFailure, v)],
         };
       }
-      const customerLimitFailure = await checkPerUserRedemptionLimit(
-        tx,
-        v,
-        campaign,
-        resolvedCustomerId,
-      );
-      if (customerLimitFailure) {
-        return {
-          ok: false,
-          code: customerLimitFailure.code,
-          message: messageFor(customerLimitFailure.code),
-          explanations: [
-            failureExplanation(customerLimitFailure.code, v, customerLimitFailure.details),
-          ],
-        };
-      }
       const validationRule = campaign?.validationRuleId
-        ? ((await tx.query.validationRule.findFirst({
-            where: eq(schema.validationRule.id, campaign.validationRuleId),
-          })) as RedemptionValidationRuleRow | undefined)
+        ? validationRuleById.get(campaign.validationRuleId)
         : undefined;
       const ruleFailure = checkCampaignValidationRule(
         v,
@@ -242,10 +241,37 @@ async function stackRedeemImpl(
       };
     }
 
+    const voucherById = new Map(lockedRows.map((voucher) => [voucher.id, voucher]));
+    const appliedVouchers = result.appliedDiscounts.map((applied) => {
+      const voucher = voucherById.get(applied.voucherId);
+      if (!voucher) throw new Error("calculateDiscount returned an unknown voucherId");
+      return voucher;
+    });
+    const customerLimitFailure = await checkStackPerUserRedemptionLimits(
+      tx,
+      appliedVouchers,
+      campaignById,
+      resolvedCustomerId,
+    );
+    if (customerLimitFailure) {
+      return {
+        ok: false,
+        code: customerLimitFailure.code,
+        message: messageFor(customerLimitFailure.code),
+        explanations: [
+          failureExplanation(
+            customerLimitFailure.code,
+            customerLimitFailure.voucher,
+            customerLimitFailure.details,
+          ),
+        ],
+      };
+    }
+
     const batchId = randomUUID();
     const entries: StackEntry[] = [];
     for (const applied of result.appliedDiscounts) {
-      const voucher = lockedRows.find((v) => v.id === applied.voucherId);
+      const voucher = voucherById.get(applied.voucherId);
       if (!voucher) throw new Error("calculateDiscount returned an unknown voucherId");
 
       await tx
@@ -302,6 +328,114 @@ async function stackRedeemImpl(
       explanations: stackBreakdownExplanations(result.breakdown),
     };
   });
+}
+
+async function checkStackPerUserRedemptionLimits(
+  tx: Tx,
+  vouchers: VoucherRow[],
+  campaignById: ReadonlyMap<string, RedemptionCampaignRow>,
+  customerId: string | undefined,
+): Promise<{
+  code: "customer_required" | "per_user_redemption_limit_reached";
+  voucher: VoucherRow;
+  details?: Record<string, string | number | boolean | null>;
+} | null> {
+  const limitedVouchers = vouchers.filter((voucher) => {
+    const campaign = voucher.campaignId ? campaignById.get(voucher.campaignId) : undefined;
+    return voucher.perUserRedemptionLimit != null || campaign?.perUserRedemptionLimit != null;
+  });
+  const firstLimited = limitedVouchers[0];
+  if (!firstLimited) return null;
+  if (!customerId) return { code: "customer_required", voucher: firstLimited };
+
+  const voucherIds = limitedVouchers
+    .filter((voucher) => voucher.perUserRedemptionLimit != null)
+    .map((voucher) => voucher.id);
+  const voucherCounts = voucherIds.length
+    ? await tx
+        .select({
+          voucherId: schema.redemption.voucherId,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(schema.redemption)
+        .where(
+          and(
+            inArray(schema.redemption.voucherId, voucherIds),
+            eq(schema.redemption.customerId, customerId),
+            eq(schema.redemption.result, "SUCCESS"),
+            sql`NOT EXISTS (
+              SELECT 1 FROM "redemption" AS rollback
+              WHERE rollback."parent_redemption_id" = ${schema.redemption.id}
+                AND rollback."result" = 'ROLLBACK'
+            )`,
+          ),
+        )
+        .groupBy(schema.redemption.voucherId)
+    : [];
+  const voucherCountById = new Map(voucherCounts.map((row) => [row.voucherId, row.count]));
+
+  const campaignIds = [
+    ...new Set(
+      limitedVouchers.flatMap((voucher) => {
+        if (!voucher.campaignId) return [];
+        const campaign = campaignById.get(voucher.campaignId);
+        return campaign?.perUserRedemptionLimit != null ? [campaign.id] : [];
+      }),
+    ),
+  ];
+  const campaignCounts = campaignIds.length
+    ? await tx
+        .select({
+          campaignId: schema.voucher.campaignId,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(schema.redemption)
+        .innerJoin(schema.voucher, eq(schema.redemption.voucherId, schema.voucher.id))
+        .where(
+          and(
+            inArray(schema.voucher.campaignId, campaignIds),
+            eq(schema.redemption.customerId, customerId),
+            eq(schema.redemption.result, "SUCCESS"),
+            sql`NOT EXISTS (
+              SELECT 1 FROM "redemption" AS rollback
+              WHERE rollback."parent_redemption_id" = ${schema.redemption.id}
+                AND rollback."result" = 'ROLLBACK'
+            )`,
+          ),
+        )
+        .groupBy(schema.voucher.campaignId)
+    : [];
+  const campaignCountById = new Map(
+    campaignCounts.flatMap((row) => (row.campaignId ? [[row.campaignId, row.count]] : [])),
+  );
+  const incomingByCampaign = new Map<string, number>();
+
+  for (const voucher of limitedVouchers) {
+    if (
+      voucher.perUserRedemptionLimit != null &&
+      (voucherCountById.get(voucher.id) ?? 0) + 1 > voucher.perUserRedemptionLimit
+    ) {
+      return { code: "per_user_redemption_limit_reached", voucher };
+    }
+
+    const campaign = voucher.campaignId ? campaignById.get(voucher.campaignId) : undefined;
+    if (campaign?.perUserRedemptionLimit != null) {
+      const incoming = (incomingByCampaign.get(campaign.id) ?? 0) + 1;
+      if ((campaignCountById.get(campaign.id) ?? 0) + incoming > campaign.perUserRedemptionLimit) {
+        return {
+          code: "per_user_redemption_limit_reached",
+          voucher,
+          details: {
+            campaignId: campaign.id,
+            perUserRedemptionLimit: campaign.perUserRedemptionLimit,
+          },
+        };
+      }
+      incomingByCampaign.set(campaign.id, incoming);
+    }
+  }
+
+  return null;
 }
 
 async function replayBatch(tx: Tx, input: StackRedeemInput): Promise<StackRedeemResult | null> {
