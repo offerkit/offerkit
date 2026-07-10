@@ -120,23 +120,28 @@ function isRecord(value: unknown): value is JsonRecord {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-async function parseJsonObject(raw: string | undefined, fallback: JsonRecord = {}): Promise<JsonRecord> {
+async function parseJsonObject<T extends JsonRecord = JsonRecord>(
+  raw: string | undefined,
+  fallback: T = {} as T,
+): Promise<T> {
   const parsed = await parseJsonInput(raw);
   if (parsed === undefined) return fallback;
   if (!isRecord(parsed)) throw new Error("JSON input must be an object");
-  return parsed;
+  return parsed as T;
 }
 
-async function parseOptionalJsonObject(raw: string | undefined): Promise<JsonRecord | undefined> {
+async function parseOptionalJsonObject<T extends JsonRecord = JsonRecord>(
+  raw: string | undefined,
+): Promise<T | undefined> {
   if (raw === undefined) return undefined;
-  return parseJsonObject(raw);
+  return parseJsonObject<T>(raw);
 }
 
-function assignDefined(target: JsonRecord, values: JsonRecord): JsonRecord {
+function assignDefined<T extends JsonRecord>(target: JsonRecord, values: Partial<T>): T {
   for (const [key, value] of Object.entries(values)) {
     if (value !== undefined) target[key] = value;
   }
-  return target;
+  return target as T;
 }
 
 function isIndexable(value: unknown): value is Record<string, unknown> {
@@ -147,6 +152,13 @@ function intOption(value: string): number {
   const parsed = Number(value);
   if (!Number.isInteger(parsed)) throw new Error(`Expected integer, got ${value}`);
   return parsed;
+}
+
+function enumOption<const TValue extends string>(allowed: readonly TValue[]) {
+  return (value: string): TValue => {
+    if (allowed.includes(value as TValue)) return value as TValue;
+    throw new Error(`Expected one of ${allowed.join(", ")}, got ${value}`);
+  };
 }
 
 function addJsonDataOption(command: Command): Command {
@@ -160,22 +172,22 @@ function addListOptions(command: Command, includeSearch = true): Command {
   return command;
 }
 
-async function listInput(opts: {
+async function listInput<T extends JsonRecord = JsonRecord>(opts: {
   limit?: string;
   cursor?: string;
   search?: string;
   [key: string]: unknown;
-}): Promise<JsonRecord> {
+}): Promise<T> {
   const out: JsonRecord = {};
   if (opts.limit !== undefined) out["limit"] = Number(opts.limit);
   if (opts.cursor !== undefined) out["cursor"] = opts.cursor;
   if (opts.search !== undefined) out["search"] = opts.search;
-  return out;
+  return out as T;
 }
 
-async function callAndPrint(path: string, input?: unknown): Promise<void> {
+async function callAndPrint<T>(call: (c: Client) => Promise<T>): Promise<void> {
   const c = await client();
-  printJSON(await callBySdkPath(c, path, input).catch(fail));
+  printJSON(await call(c).catch(fail));
 }
 
 export async function callBySdkPath(
@@ -318,48 +330,61 @@ Examples:
     printJSON(await callBySdkPath(c, path, input).catch(fail));
   });
 
-function addSimpleCrudCommands(
+type ProcedureInput<T> = T extends (input: infer TInput) => Promise<unknown> ? TInput : never;
+
+function addSimpleCrudCommands<
+  TListInput extends JsonRecord,
+  TCreateInput extends JsonRecord,
+  TUpdatePatch extends JsonRecord,
+>(
   parent: Command,
   config: {
     name: string;
-    path: string;
-    idName?: string;
     listSearch?: boolean;
+    calls: {
+      list: (c: Client, input: TListInput) => Promise<unknown>;
+      get?: (c: Client, id: string) => Promise<unknown>;
+      create: (c: Client, input: TCreateInput) => Promise<unknown>;
+      update: (c: Client, id: string, patch: TUpdatePatch) => Promise<unknown>;
+      delete: (c: Client, id: string) => Promise<unknown>;
+    };
   },
 ): Command {
-  const idName = config.idName ?? "id";
   const group = parent.command(config.name).description(`Manage ${config.name}`);
 
   addListOptions(group.command("list").description(`List ${config.name}`), config.listSearch ?? true)
     .action(async (opts: { limit?: string; cursor?: string; search?: string }) => {
-      await callAndPrint(`${config.path}.list`, await listInput(opts));
+      const input = await listInput<TListInput>(opts);
+      await callAndPrint((c) => config.calls.list(c, input));
     });
 
-  group
-    .command(`get <${idName}>`)
-    .description(`Get one ${config.name}`)
-    .action(async (id: string) => {
-      await callAndPrint(`${config.path}.get`, { params: { [idName]: id } });
-    });
+  if (config.calls.get) {
+    const get = config.calls.get;
+    group
+      .command("get <id>")
+      .description(`Get one ${config.name}`)
+      .action(async (id: string) => {
+        await callAndPrint((c) => get(c, id));
+      });
+  }
 
   addJsonDataOption(group.command("create").description(`Create ${config.name}`))
     .action(async (opts: { data?: string }) => {
-      await callAndPrint(`${config.path}.create`, await parseJsonObject(opts.data).catch(fail));
+      const input = await parseJsonObject<TCreateInput>(opts.data).catch(fail);
+      await callAndPrint((c) => config.calls.create(c, input));
     });
 
-  addJsonDataOption(group.command(`update <${idName}>`).description(`Update ${config.name}`))
+  addJsonDataOption(group.command("update <id>").description(`Update ${config.name}`))
     .action(async (id: string, opts: { data?: string }) => {
-      await callAndPrint(`${config.path}.update`, {
-        params: { [idName]: id },
-        body: { patch: await parseJsonObject(opts.data).catch(fail) },
-      });
+      const patch = await parseJsonObject<TUpdatePatch>(opts.data).catch(fail);
+      await callAndPrint((c) => config.calls.update(c, id, patch));
     });
 
   group
-    .command(`delete <${idName}>`)
+    .command("delete <id>")
     .description(`Delete ${config.name}`)
     .action(async (id: string) => {
-      await callAndPrint(`${config.path}.delete`, { params: { [idName]: id } });
+      await callAndPrint((c) => config.calls.delete(c, id));
     });
 
   return group;
@@ -397,7 +422,12 @@ addJsonDataOption(
     .description("Create a voucher")
     .option("--code <code>", "Voucher code")
     .option("--campaign-id <id>", "Campaign id")
-    .option("--type <type>", "DISCOUNT | GIFT_CARD", "DISCOUNT")
+    .option(
+      "--type <type>",
+      "DISCOUNT | GIFT_CARD",
+      enumOption(["DISCOUNT", "GIFT_CARD"] as const),
+      "DISCOUNT",
+    )
     .option("--discount-amount <cents>", "Fixed discount in cents", intOption)
     .option("--discount-percent <bps>", "Percentage discount in basis points", intOption)
     .option("--max-discount-amount <cents>", "Max percentage discount cap in cents", intOption)
@@ -415,7 +445,7 @@ addJsonDataOption(
     data?: string;
     code?: string;
     campaignId?: string;
-    type: string;
+    type: ProcedureInput<Client["vouchers"]["create"]>["type"];
     discountAmount?: number;
     discountPercent?: number;
     maxDiscountAmount?: number;
@@ -434,7 +464,7 @@ addJsonDataOption(
     const discount =
       opts.discountAmount !== undefined
         ? {
-            type: "AMOUNT",
+            type: "AMOUNT" as const,
             amount: opts.discountAmount,
             ...(opts.maxDiscountAmount !== undefined
               ? { maxDiscountAmount: opts.maxDiscountAmount }
@@ -442,7 +472,7 @@ addJsonDataOption(
           }
         : opts.discountPercent !== undefined
           ? {
-              type: "PERCENTAGE",
+              type: "PERCENTAGE" as const,
               percent: opts.discountPercent,
               ...(opts.maxDiscountAmount !== undefined
                 ? { maxDiscountAmount: opts.maxDiscountAmount }
@@ -450,9 +480,8 @@ addJsonDataOption(
             }
           : undefined;
 
-    await callAndPrint(
-      "vouchers.create",
-      assignDefined(data, {
+    await callAndPrint((c) =>
+      c.vouchers.create(assignDefined(data, {
         code: opts.code,
         campaignId: opts.campaignId,
         type: opts.type,
@@ -466,24 +495,27 @@ addJsonDataOption(
         startDate: opts.startDate,
         endDate: opts.endDate,
         metadata,
-      }),
+      })),
     );
   },
 );
 
 addJsonDataOption(vouchers.command("update <code>").description("Update a voucher"))
   .action(async (code: string, opts: { data?: string }) => {
-    await callAndPrint("vouchers.update", {
+    const patch = await parseJsonObject<
+      ProcedureInput<Client["vouchers"]["update"]>["body"]["patch"]
+    >(opts.data).catch(fail);
+    await callAndPrint((c) => c.vouchers.update({
       params: { code },
-      body: { patch: await parseJsonObject(opts.data).catch(fail) },
-    });
+      body: { patch },
+    }));
   });
 
 vouchers
   .command("delete <code>")
   .description("Delete a voucher")
   .action(async (code: string) => {
-    await callAndPrint("vouchers.delete", { params: { code } });
+    await callAndPrint((c) => c.vouchers.delete({ params: { code } }));
   });
 
 addJsonDataOption(
@@ -503,9 +535,8 @@ addJsonDataOption(
     giftBalance?: number;
   }) => {
     const data = await parseJsonObject(opts.data).catch(fail);
-    await callAndPrint(
-      "vouchers.bulk",
-      assignDefined(data, {
+    await callAndPrint((c) =>
+      c.vouchers.bulk(assignDefined(data, {
         campaignId: opts.campaignId,
         count: opts.count,
         discount:
@@ -513,7 +544,7 @@ addJsonDataOption(
             ? undefined
             : { type: "AMOUNT", amount: opts.discountAmount },
         giftBalance: opts.giftBalance,
-      }),
+      })),
     );
   },
 );
@@ -600,19 +631,25 @@ vouchers
 
 addJsonDataOption(vouchers.command("qualify").description("Batch-qualify vouchers"))
   .action(async (opts: { data?: string }) => {
-    await callAndPrint("vouchers.qualify", await parseJsonObject(opts.data).catch(fail));
+    const input = await parseJsonObject<ProcedureInput<Client["vouchers"]["qualify"]>>(
+      opts.data,
+    ).catch(fail);
+    await callAndPrint((c) => c.vouchers.qualify(input));
   });
 
 addJsonDataOption(vouchers.command("stack-redeem").description("Redeem multiple vouchers atomically"))
   .action(async (opts: { data?: string }) => {
-    await callAndPrint("vouchers.stackRedeem", await parseJsonObject(opts.data).catch(fail));
+    const input = await parseJsonObject<ProcedureInput<Client["vouchers"]["stackRedeem"]>>(
+      opts.data,
+    ).catch(fail);
+    await callAndPrint((c) => c.vouchers.stackRedeem(input));
   });
 
 vouchers
   .command("transactions <code>")
   .description("List gift card transactions for a voucher")
   .action(async (code: string) => {
-    await callAndPrint("vouchers.transactions", { params: { code } });
+    await callAndPrint((c) => c.vouchers.transactions({ params: { code } }));
   });
 
 const campaigns = program.command("campaigns").description("Manage campaigns");
@@ -629,7 +666,7 @@ campaigns
   .command("get <id>")
   .description("Show one campaign")
   .action(async (id: string) => {
-    await callAndPrint("campaigns.get", { params: { id } });
+    await callAndPrint((c) => c.campaigns.get({ params: { id } }));
   });
 
 campaigns
@@ -639,6 +676,13 @@ campaigns
   .requiredOption(
     "--type <type>",
     "DISCOUNT | GIFT_VOUCHERS | LOYALTY_PROGRAM | REFERRAL_PROGRAM | PROMOTION",
+    enumOption([
+      "DISCOUNT",
+      "GIFT_VOUCHERS",
+      "LOYALTY_PROGRAM",
+      "REFERRAL_PROGRAM",
+      "PROMOTION",
+    ] as const),
   )
   .requiredOption("--currency <iso>", "ISO 4217 currency")
   .option("--description <text>", "Description")
@@ -655,7 +699,7 @@ campaigns
   .action(
     async (opts: {
       name: string;
-      type: string;
+      type: ProcedureInput<Client["campaigns"]["create"]>["type"];
       currency: string;
       description?: string;
       timezone?: string;
@@ -675,9 +719,8 @@ campaigns
         opts.codeLength === undefined && opts.codePrefix === undefined
           ? undefined
           : assignDefined({}, { length: opts.codeLength, prefix: opts.codePrefix });
-      await callAndPrint(
-        "campaigns.create",
-        assignDefined(data, {
+      await callAndPrint((c) =>
+        c.campaigns.create(assignDefined(data, {
           name: opts.name,
           type: opts.type,
           currency: opts.currency,
@@ -690,7 +733,7 @@ campaigns
           autoApply: opts.autoApply,
           codeConfig,
           metadata,
-        }),
+        })),
       );
     },
   );
@@ -699,7 +742,11 @@ addJsonDataOption(
   campaigns
     .command("update <id>")
     .description("Update a campaign")
-    .option("--status <status>", "draft | active | paused | ended")
+    .option(
+      "--status <status>",
+      "draft | active | paused | ended",
+      enumOption(["draft", "active", "paused", "ended"] as const),
+    )
     .option("--validation-rule-id <id>", "Validation rule id")
     .option("--per-user-redemption-limit <n>", "Per-user redemption limit", intOption)
     .option("--auto-apply <value>", "true | false"),
@@ -708,14 +755,14 @@ addJsonDataOption(
     id: string,
     opts: {
       data?: string;
-      status?: string;
+      status?: ProcedureInput<Client["campaigns"]["update"]>["body"]["patch"]["status"];
       validationRuleId?: string;
       perUserRedemptionLimit?: number;
       autoApply?: string;
     },
   ) => {
     const patch = await parseJsonObject(opts.data).catch(fail);
-    await callAndPrint("campaigns.update", {
+    await callAndPrint((c) => c.campaigns.update({
       params: { id },
       body: {
         patch: assignDefined(patch, {
@@ -726,14 +773,14 @@ addJsonDataOption(
             opts.autoApply === undefined ? undefined : opts.autoApply.toLowerCase() === "true",
         }),
       },
-    });
+    }));
   });
 
 campaigns
   .command("delete <id>")
   .description("Delete a campaign")
   .action(async (id: string) => {
-    await callAndPrint("campaigns.delete", { params: { id } });
+    await callAndPrint((c) => c.campaigns.delete({ params: { id } }));
   });
 
 const validationRules = program
@@ -743,14 +790,15 @@ const validationRules = program
 
 addListOptions(validationRules.command("list").description("List validation rules"))
   .action(async (opts: { limit?: string; cursor?: string; search?: string }) => {
-    await callAndPrint("validationRules.list", await listInput(opts));
+    const input = await listInput<ProcedureInput<Client["validationRules"]["list"]>>(opts);
+    await callAndPrint((c) => c.validationRules.list(input));
   });
 
 validationRules
   .command("get <id>")
   .description("Show one validation rule")
   .action(async (id: string) => {
-    await callAndPrint("validationRules.get", { params: { id } });
+    await callAndPrint((c) => c.validationRules.get({ params: { id } }));
   });
 
 addJsonDataOption(
@@ -759,43 +807,50 @@ addJsonDataOption(
     .description("Create a validation rule")
     .option("--name <name>", "Rule name")
     .option("--description <text>", "Description")
-    .option("--applies-to <kind>", "voucher | promotion | earn | reward", "voucher")
+    .option(
+      "--applies-to <kind>",
+      "voucher | promotion | earn | reward",
+      enumOption(["voucher", "promotion", "earn", "reward"] as const),
+      "voucher",
+    )
     .option("--rule <json>", "JSON Logic rule object, @file.json, or - from stdin"),
 ).action(
   async (opts: {
     data?: string;
     name?: string;
     description?: string;
-    appliesTo?: string;
+    appliesTo?: ProcedureInput<Client["validationRules"]["create"]>["appliesTo"];
     rule?: string;
   }) => {
     const data = await parseJsonObject(opts.data).catch(fail);
     const rule = await parseOptionalJsonObject(opts.rule).catch(fail);
-    await callAndPrint(
-      "validationRules.create",
-      assignDefined(data, {
+    await callAndPrint((c) =>
+      c.validationRules.create(assignDefined(data, {
         name: opts.name,
         description: opts.description,
         appliesTo: opts.appliesTo,
         rule,
-      }),
+      })),
     );
   },
 );
 
 addJsonDataOption(validationRules.command("update <id>").description("Update a validation rule"))
   .action(async (id: string, opts: { data?: string }) => {
-    await callAndPrint("validationRules.update", {
+    const patch = await parseJsonObject<
+      ProcedureInput<Client["validationRules"]["update"]>["body"]["patch"]
+    >(opts.data).catch(fail);
+    await callAndPrint((c) => c.validationRules.update({
       params: { id },
-      body: { patch: await parseJsonObject(opts.data).catch(fail) },
-    });
+      body: { patch },
+    }));
   });
 
 validationRules
   .command("delete <id>")
   .description("Delete a validation rule")
   .action(async (id: string) => {
-    await callAndPrint("validationRules.delete", { params: { id } });
+    await callAndPrint((c) => c.validationRules.delete({ params: { id } }));
   });
 
 const customers = program.command("customers").description("Manage customers");
@@ -822,77 +877,139 @@ customers.command("get <id>").action(async (id: string) => {
 });
 
 customers.command("get-by-external-id <externalId>").action(async (externalId: string) => {
-  await callAndPrint("customers.getByExternalId", { params: { externalId } });
+  await callAndPrint((c) => c.customers.getByExternalId({ params: { externalId } }));
 });
 
 addJsonDataOption(customers.command("create").description("Create customer"))
   .action(async (opts: { data?: string }) => {
-    await callAndPrint("customers.create", await parseJsonObject(opts.data).catch(fail));
+    const input = await parseJsonObject<ProcedureInput<Client["customers"]["create"]>>(
+      opts.data,
+    ).catch(fail);
+    await callAndPrint((c) => c.customers.create(input));
   });
 
 addJsonDataOption(customers.command("upsert").description("Create or update customer by externalId"))
   .action(async (opts: { data?: string }) => {
-    await callAndPrint("customers.upsert", await parseJsonObject(opts.data).catch(fail));
+    const input = await parseJsonObject<ProcedureInput<Client["customers"]["upsert"]>>(
+      opts.data,
+    ).catch(fail);
+    await callAndPrint((c) => c.customers.upsert(input));
   });
 
 addJsonDataOption(customers.command("update <id>").description("Update customer"))
   .action(async (id: string, opts: { data?: string }) => {
-    await callAndPrint("customers.update", {
+    const patch = await parseJsonObject<
+      ProcedureInput<Client["customers"]["update"]>["body"]["patch"]
+    >(opts.data).catch(fail);
+    await callAndPrint((c) => c.customers.update({
       params: { id },
-      body: { patch: await parseJsonObject(opts.data).catch(fail) },
-    });
+      body: { patch },
+    }));
   });
 
 customers
   .command("delete <id>")
   .description("Delete customer")
   .action(async (id: string) => {
-    await callAndPrint("customers.delete", { params: { id } });
+    await callAndPrint((c) => c.customers.delete({ params: { id } }));
   });
 
-const segments = addSimpleCrudCommands(program, {
+const segments = addSimpleCrudCommands<
+  ProcedureInput<Client["segments"]["list"]>,
+  ProcedureInput<Client["segments"]["create"]>,
+  ProcedureInput<Client["segments"]["update"]>["body"]["patch"]
+>(program, {
   name: "segments",
-  path: "segments",
+  calls: {
+    list: (c, input) => c.segments.list(input),
+    get: (c, id) => c.segments.get({ params: { id } }),
+    create: (c, input) => c.segments.create(input),
+    update: (c, id, patch) => c.segments.update({ params: { id }, body: { patch } }),
+    delete: (c, id) => c.segments.delete({ params: { id } }),
+  },
 });
 addJsonDataOption(segments.command("preview").description("Preview a segment rule"))
   .action(async (opts: { data?: string }) => {
-    await callAndPrint("segments.preview", await parseJsonObject(opts.data).catch(fail));
+    const input = await parseJsonObject<ProcedureInput<Client["segments"]["preview"]>>(
+      opts.data,
+    ).catch(fail);
+    await callAndPrint((c) => c.segments.preview(input));
   });
 
 const promotions = program.command("promotions").description("Manage promotions");
-addSimpleCrudCommands(promotions, {
+addSimpleCrudCommands<
+  ProcedureInput<Client["promotions"]["tiers"]["list"]>,
+  ProcedureInput<Client["promotions"]["tiers"]["create"]>,
+  ProcedureInput<Client["promotions"]["tiers"]["update"]>["body"]["patch"]
+>(promotions, {
   name: "tiers",
-  path: "promotions.tiers",
+  calls: {
+    list: (c, input) => c.promotions.tiers.list(input),
+    create: (c, input) => c.promotions.tiers.create(input),
+    update: (c, id, patch) =>
+      c.promotions.tiers.update({ params: { id }, body: { patch } }),
+    delete: (c, id) => c.promotions.tiers.delete({ params: { id } }),
+  },
 });
 addJsonDataOption(promotions.command("qualify").description("Qualify auto-applied promotions"))
   .action(async (opts: { data?: string }) => {
-    await callAndPrint("promotions.qualify", await parseJsonObject(opts.data).catch(fail));
+    const input = await parseJsonObject<ProcedureInput<Client["promotions"]["qualify"]>>(
+      opts.data,
+    ).catch(fail);
+    await callAndPrint((c) => c.promotions.qualify(input));
   });
 
-addSimpleCrudCommands(program, {
+addSimpleCrudCommands<
+  ProcedureInput<Client["rewardTypes"]["list"]>,
+  ProcedureInput<Client["rewardTypes"]["create"]>,
+  ProcedureInput<Client["rewardTypes"]["update"]>["body"]["patch"]
+>(program, {
   name: "reward-types",
-  path: "rewardTypes",
+  calls: {
+    list: (c, input) => c.rewardTypes.list(input),
+    get: (c, id) => c.rewardTypes.get({ params: { id } }),
+    create: (c, input) => c.rewardTypes.create(input),
+    update: (c, id, patch) => c.rewardTypes.update({ params: { id }, body: { patch } }),
+    delete: (c, id) => c.rewardTypes.delete({ params: { id } }),
+  },
 });
 
 const referrals = program.command("referrals").description("Manage referrals");
-addSimpleCrudCommands(referrals, {
+addSimpleCrudCommands<
+  ProcedureInput<Client["referrals"]["programs"]["list"]>,
+  ProcedureInput<Client["referrals"]["programs"]["create"]>,
+  ProcedureInput<Client["referrals"]["programs"]["update"]>["body"]["patch"]
+>(referrals, {
   name: "programs",
-  path: "referrals.programs",
   listSearch: false,
+  calls: {
+    list: (c, input) => c.referrals.programs.list(input),
+    get: (c, id) => c.referrals.programs.get({ params: { id } }),
+    create: (c, input) => c.referrals.programs.create(input),
+    update: (c, id, patch) =>
+      c.referrals.programs.update({ params: { id }, body: { patch } }),
+    delete: (c, id) => c.referrals.programs.delete({ params: { id } }),
+  },
 });
 referrals
   .command("get-by-code <code>")
   .description("Look up a referral code")
   .action(async (code: string) => {
-    await callAndPrint("referrals.getByCode", { params: { code } });
+    await callAndPrint((c) => c.referrals.getByCode({ params: { code } }));
   });
 addJsonDataOption(referrals.command("issue").description("Issue or fetch a referral code"))
   .action(async (opts: { data?: string }) => {
-    await callAndPrint("referrals.issue", await parseJsonObject(opts.data).catch(fail));
+    const input = await parseJsonObject<ProcedureInput<Client["referrals"]["issue"]>>(
+      opts.data,
+    ).catch(fail);
+    await callAndPrint((c) => c.referrals.issue(input));
   });
 addJsonDataOption(referrals.command("convert").description("Convert a referral"))
   .action(async (opts: { data?: string }) => {
-    await callAndPrint("referrals.convert", await parseJsonObject(opts.data).catch(fail));
+    const input = await parseJsonObject<ProcedureInput<Client["referrals"]["convert"]>>(
+      opts.data,
+    ).catch(fail);
+    await callAndPrint((c) => c.referrals.convert(input));
   });
 referrals
   .command("codes <programId>")
@@ -900,10 +1017,13 @@ referrals
   .option("--limit <n>", "Page size", "20")
   .option("--cursor <cursor>", "Pagination cursor")
   .action(async (programId: string, opts: { limit?: string; cursor?: string }) => {
-    await callAndPrint("referrals.listCodes", {
+    const query = await listInput<ProcedureInput<Client["referrals"]["listCodes"]>["query"]>(
+      opts,
+    );
+    await callAndPrint((c) => c.referrals.listCodes({
       params: { programId },
-      query: await listInput(opts),
-    });
+      query,
+    }));
   });
 referrals
   .command("conversions <codeId>")
@@ -911,10 +1031,13 @@ referrals
   .option("--limit <n>", "Page size", "20")
   .option("--cursor <cursor>", "Pagination cursor")
   .action(async (codeId: string, opts: { limit?: string; cursor?: string }) => {
-    await callAndPrint("referrals.listConversions", {
+    const query = await listInput<
+      ProcedureInput<Client["referrals"]["listConversions"]>["query"]
+    >(opts);
+    await callAndPrint((c) => c.referrals.listConversions({
       params: { codeId },
-      query: await listInput(opts),
-    });
+      query,
+    }));
   });
 referrals
   .command("program-conversions <programId>")
@@ -922,24 +1045,46 @@ referrals
   .option("--limit <n>", "Page size", "20")
   .option("--cursor <cursor>", "Pagination cursor")
   .action(async (programId: string, opts: { limit?: string; cursor?: string }) => {
-    await callAndPrint("referrals.listProgramConversions", {
+    const query = await listInput<
+      ProcedureInput<Client["referrals"]["listProgramConversions"]>["query"]
+    >(opts);
+    await callAndPrint((c) => c.referrals.listProgramConversions({
       params: { programId },
-      query: await listInput(opts),
-    });
+      query,
+    }));
   });
 
 const loyalty = program.command("loyalty").description("Manage loyalty");
-addSimpleCrudCommands(loyalty, {
+addSimpleCrudCommands<
+  ProcedureInput<Client["loyalty"]["programs"]["list"]>,
+  ProcedureInput<Client["loyalty"]["programs"]["create"]>,
+  ProcedureInput<Client["loyalty"]["programs"]["update"]>["body"]["patch"]
+>(loyalty, {
   name: "programs",
-  path: "loyalty.programs",
   listSearch: false,
+  calls: {
+    list: (c, input) => c.loyalty.programs.list(input),
+    get: (c, id) => c.loyalty.programs.get({ params: { id } }),
+    create: (c, input) => c.loyalty.programs.create(input),
+    update: (c, id, patch) =>
+      c.loyalty.programs.update({ params: { id }, body: { patch } }),
+    delete: (c, id) => c.loyalty.programs.delete({ params: { id } }),
+  },
 });
 
-function addProgramChildCommands(
+function addProgramChildCommands<
+  TCreateInput extends JsonRecord,
+  TUpdatePatch extends JsonRecord,
+>(
   parent: Command,
   config: {
     name: string;
-    path: string;
+    calls: {
+      list: (c: Client, programId: string) => Promise<unknown>;
+      create: (c: Client, input: TCreateInput) => Promise<unknown>;
+      update: (c: Client, id: string, patch: TUpdatePatch) => Promise<unknown>;
+      delete: (c: Client, id: string) => Promise<unknown>;
+    };
   },
 ): void {
   const group = parent.command(config.name).description(`Manage loyalty ${config.name}`);
@@ -947,33 +1092,63 @@ function addProgramChildCommands(
     .command("list <programId>")
     .description(`List loyalty ${config.name}`)
     .action(async (programId: string) => {
-      await callAndPrint(`${config.path}.list`, { params: { programId } });
+      await callAndPrint((c) => config.calls.list(c, programId));
     });
   addJsonDataOption(group.command("create").description(`Create loyalty ${config.name}`))
     .action(async (opts: { data?: string }) => {
-      await callAndPrint(`${config.path}.create`, await parseJsonObject(opts.data).catch(fail));
+      const input = await parseJsonObject<TCreateInput>(opts.data).catch(fail);
+      await callAndPrint((c) => config.calls.create(c, input));
     });
   addJsonDataOption(group.command("update <id>").description(`Update loyalty ${config.name}`))
     .action(async (id: string, opts: { data?: string }) => {
-      await callAndPrint(`${config.path}.update`, {
-        params: { id },
-        body: { patch: await parseJsonObject(opts.data).catch(fail) },
-      });
+      const patch = await parseJsonObject<TUpdatePatch>(opts.data).catch(fail);
+      await callAndPrint((c) => config.calls.update(c, id, patch));
     });
   group
     .command("delete <id>")
     .description(`Delete loyalty ${config.name}`)
     .action(async (id: string) => {
-      await callAndPrint(`${config.path}.delete`, { params: { id } });
+      await callAndPrint((c) => config.calls.delete(c, id));
     });
 }
 
-addProgramChildCommands(loyalty, { name: "tiers", path: "loyalty.tiers" });
-addProgramChildCommands(loyalty, {
-  name: "earning-rules",
-  path: "loyalty.earningRules",
+addProgramChildCommands<
+  ProcedureInput<Client["loyalty"]["tiers"]["create"]>,
+  ProcedureInput<Client["loyalty"]["tiers"]["update"]>["body"]["patch"]
+>(loyalty, {
+  name: "tiers",
+  calls: {
+    list: (c, programId) => c.loyalty.tiers.list({ params: { programId } }),
+    create: (c, input) => c.loyalty.tiers.create(input),
+    update: (c, id, patch) => c.loyalty.tiers.update({ params: { id }, body: { patch } }),
+    delete: (c, id) => c.loyalty.tiers.delete({ params: { id } }),
+  },
 });
-addProgramChildCommands(loyalty, { name: "rewards", path: "loyalty.rewards" });
+addProgramChildCommands<
+  ProcedureInput<Client["loyalty"]["earningRules"]["create"]>,
+  ProcedureInput<Client["loyalty"]["earningRules"]["update"]>["body"]["patch"]
+>(loyalty, {
+  name: "earning-rules",
+  calls: {
+    list: (c, programId) => c.loyalty.earningRules.list({ params: { programId } }),
+    create: (c, input) => c.loyalty.earningRules.create(input),
+    update: (c, id, patch) =>
+      c.loyalty.earningRules.update({ params: { id }, body: { patch } }),
+    delete: (c, id) => c.loyalty.earningRules.delete({ params: { id } }),
+  },
+});
+addProgramChildCommands<
+  ProcedureInput<Client["loyalty"]["rewards"]["create"]>,
+  ProcedureInput<Client["loyalty"]["rewards"]["update"]>["body"]["patch"]
+>(loyalty, {
+  name: "rewards",
+  calls: {
+    list: (c, programId) => c.loyalty.rewards.list({ params: { programId } }),
+    create: (c, input) => c.loyalty.rewards.create(input),
+    update: (c, id, patch) => c.loyalty.rewards.update({ params: { id }, body: { patch } }),
+    delete: (c, id) => c.loyalty.rewards.delete({ params: { id } }),
+  },
+});
 
 const loyaltyMembers = loyalty.command("members").description("Manage loyalty members");
 loyaltyMembers
@@ -982,60 +1157,85 @@ loyaltyMembers
   .option("--limit <n>", "Page size", "20")
   .option("--cursor <cursor>", "Pagination cursor")
   .action(async (programId: string, opts: { limit?: string; cursor?: string }) => {
-    await callAndPrint("loyalty.members.list", {
+    const query = await listInput<ProcedureInput<Client["loyalty"]["members"]["list"]>["query"]>(
+      opts,
+    );
+    await callAndPrint((c) => c.loyalty.members.list({
       params: { programId },
-      query: await listInput(opts),
-    });
+      query,
+    }));
   });
 loyaltyMembers
   .command("get <id>")
   .description("Get loyalty member")
   .action(async (id: string) => {
-    await callAndPrint("loyalty.members.get", { params: { id } });
+    await callAndPrint((c) => c.loyalty.members.get({ params: { id } }));
   });
 addJsonDataOption(loyaltyMembers.command("enroll").description("Enroll customer"))
   .action(async (opts: { data?: string }) => {
-    await callAndPrint("loyalty.members.enroll", await parseJsonObject(opts.data).catch(fail));
+    const input = await parseJsonObject<ProcedureInput<Client["loyalty"]["members"]["enroll"]>>(
+      opts.data,
+    ).catch(fail);
+    await callAndPrint((c) => c.loyalty.members.enroll(input));
   });
 addJsonDataOption(loyaltyMembers.command("earn").description("Earn points"))
   .action(async (opts: { data?: string }) => {
-    await callAndPrint("loyalty.members.earn", await parseJsonObject(opts.data).catch(fail));
+    const input = await parseJsonObject<ProcedureInput<Client["loyalty"]["members"]["earn"]>>(
+      opts.data,
+    ).catch(fail);
+    await callAndPrint((c) => c.loyalty.members.earn(input));
   });
 addJsonDataOption(loyaltyMembers.command("adjust").description("Manual points adjustment"))
   .action(async (opts: { data?: string }) => {
-    await callAndPrint("loyalty.members.adjust", await parseJsonObject(opts.data).catch(fail));
+    const input = await parseJsonObject<ProcedureInput<Client["loyalty"]["members"]["adjust"]>>(
+      opts.data,
+    ).catch(fail);
+    await callAndPrint((c) => c.loyalty.members.adjust(input));
   });
 addJsonDataOption(loyaltyMembers.command("redeem").description("Redeem loyalty reward"))
   .action(async (opts: { data?: string }) => {
-    await callAndPrint("loyalty.members.redeem", await parseJsonObject(opts.data).catch(fail));
+    const input = await parseJsonObject<ProcedureInput<Client["loyalty"]["members"]["redeem"]>>(
+      opts.data,
+    ).catch(fail);
+    await callAndPrint((c) => c.loyalty.members.redeem(input));
   });
 loyaltyMembers
   .command("history <id>")
   .description("List loyalty member transaction history")
   .action(async (id: string) => {
-    await callAndPrint("loyalty.members.history", { params: { id } });
+    await callAndPrint((c) => c.loyalty.members.history({ params: { id } }));
   });
 
-const webhooks = addSimpleCrudCommands(program, {
+const webhooks = addSimpleCrudCommands<
+  JsonRecord,
+  ProcedureInput<Client["webhooks"]["create"]>,
+  ProcedureInput<Client["webhooks"]["update"]>["body"]["patch"]
+>(program, {
   name: "webhooks",
-  path: "webhooks",
   listSearch: false,
+  calls: {
+    list: (c) => c.webhooks.list(),
+    get: (c, id) => c.webhooks.get({ params: { id } }),
+    create: (c, input) => c.webhooks.create(input),
+    update: (c, id, patch) => c.webhooks.update({ params: { id }, body: { patch } }),
+    delete: (c, id) => c.webhooks.delete({ params: { id } }),
+  },
 });
 webhooks
   .command("deliveries <id>")
   .description("List webhook deliveries")
   .option("--limit <n>", "Page size", "50")
   .action(async (id: string, opts: { limit?: string }) => {
-    await callAndPrint("webhooks.deliveries", {
+    await callAndPrint((c) => c.webhooks.deliveries({
       params: { id },
       query: { limit: Number(opts.limit ?? "50") },
-    });
+    }));
   });
 webhooks
   .command("replay <deliveryId>")
   .description("Replay webhook delivery")
   .action(async (deliveryId: string) => {
-    await callAndPrint("webhooks.replay", { params: { deliveryId } });
+    await callAndPrint((c) => c.webhooks.replay({ params: { id: deliveryId } }));
   });
 
 const events = program.command("events").description("Inspect events");
@@ -1044,115 +1244,132 @@ events
   .option("--limit <n>", "Page size", "20")
   .option("--cursor <cursor>", "Pagination cursor")
   .action(async (opts: { limit?: string; cursor?: string }) => {
-    await callAndPrint("events.list", await listInput(opts));
+    const input = await listInput<ProcedureInput<Client["events"]["list"]>>(opts);
+    await callAndPrint((c) => c.events.list(input));
   });
 events
   .command("get <id>")
   .description("Get one event")
   .action(async (id: string) => {
-    await callAndPrint("events.get", { params: { id } });
+    await callAndPrint((c) => c.events.get({ params: { id } }));
   });
 
 const orders = program.command("orders").description("Manage orders");
 addListOptions(orders.command("list").description("List orders"), false)
   .option("--data <json>", "Order list input JSON, @file.json, or - from stdin")
   .action(async (opts: { data?: string; limit?: string; cursor?: string }) => {
-    const data = await parseJsonObject(opts.data, await listInput(opts)).catch(fail);
-    await callAndPrint("orders.list", data);
+    const fallback = await listInput<ProcedureInput<Client["orders"]["list"]>>(opts);
+    const data = await parseJsonObject(opts.data, fallback).catch(fail);
+    await callAndPrint((c) => c.orders.list(data));
   });
 orders
   .command("get <id>")
   .description("Get one order")
   .action(async (id: string) => {
-    await callAndPrint("orders.get", { params: { id } });
+    await callAndPrint((c) => c.orders.get({ params: { id } }));
   });
 addJsonDataOption(orders.command("create").description("Create an order"))
   .action(async (opts: { data?: string }) => {
-    await callAndPrint("orders.create", await parseJsonObject(opts.data).catch(fail));
+    const input = await parseJsonObject<ProcedureInput<Client["orders"]["create"]>>(
+      opts.data,
+    ).catch(fail);
+    await callAndPrint((c) => c.orders.create(input));
   });
 addJsonDataOption(orders.command("update <id>").description("Update an order"))
   .action(async (id: string, opts: { data?: string }) => {
-    await callAndPrint("orders.update", {
+    const body = await parseJsonObject<ProcedureInput<Client["orders"]["update"]>["body"]>(
+      opts.data,
+    ).catch(fail);
+    await callAndPrint((c) => c.orders.update({
       params: { id },
-      body: await parseJsonObject(opts.data).catch(fail),
-    });
+      body,
+    }));
   });
 orders
   .command("cancel <id>")
   .description("Cancel an order")
   .action(async (id: string) => {
-    await callAndPrint("orders.cancel", { params: { id } });
+    await callAndPrint((c) => c.orders.cancel({ params: { id } }));
   });
 orders
   .command("fulfill <id>")
   .description("Mark an order fulfilled")
   .action(async (id: string) => {
-    await callAndPrint("orders.fulfill", { params: { id } });
+    await callAndPrint((c) => c.orders.fulfill({ params: { id } }));
   });
 orders
   .command("delete <id>")
   .description("Delete an order")
   .action(async (id: string) => {
-    await callAndPrint("orders.delete", { params: { id } });
+    await callAndPrint((c) => c.orders.delete({ params: { id } }));
   });
 orders
   .command("redemptions <id>")
   .description("List order redemptions")
   .action(async (id: string) => {
-    await callAndPrint("orders.redemptions", { params: { id } });
+    await callAndPrint((c) => c.orders.redemptions({ params: { id } }));
   });
 
 const apiKeys = program.command("api-keys").description("Manage API keys");
 apiKeys.command("list").action(async () => {
-  await callAndPrint("apiKeys.list");
+  await callAndPrint((c) => c.apiKeys.list());
 });
 addJsonDataOption(apiKeys.command("create").description("Mint an API key"))
   .action(async (opts: { data?: string }) => {
-    await callAndPrint("apiKeys.create", await parseJsonObject(opts.data).catch(fail));
+    const input = await parseJsonObject<ProcedureInput<Client["apiKeys"]["create"]>>(
+      opts.data,
+    ).catch(fail);
+    await callAndPrint((c) => c.apiKeys.create(input));
   });
 apiKeys
   .command("revoke <id>")
   .description("Revoke an API key")
   .action(async (id: string) => {
-    await callAndPrint("apiKeys.revoke", { params: { id } });
+    await callAndPrint((c) => c.apiKeys.revoke({ params: { id } }));
   });
 
 const users = program.command("users").description("Manage staff users");
 users.command("list").action(async () => {
-  await callAndPrint("users.list");
+  await callAndPrint((c) => c.users.list());
 });
 addJsonDataOption(users.command("create").description("Create staff user"))
   .action(async (opts: { data?: string }) => {
-    await callAndPrint("users.create", await parseJsonObject(opts.data).catch(fail));
+    const input = await parseJsonObject<ProcedureInput<Client["users"]["create"]>>(
+      opts.data,
+    ).catch(fail);
+    await callAndPrint((c) => c.users.create(input));
   });
-addJsonDataOption(users.command("reset-password <id>").description("Reset staff password"))
-  .action(async (id: string, opts: { data?: string }) => {
-    await callAndPrint("users.resetPassword", {
-      params: { id },
-      body: await parseJsonObject(opts.data).catch(fail),
-    });
+users.command("reset-password <id>").description("Reset staff password")
+  .action(async (id: string) => {
+    await callAndPrint((c) => c.users.resetPassword({ params: { id } }));
   });
 addJsonDataOption(users.command("set-role <id>").description("Set staff role"))
   .action(async (id: string, opts: { data?: string }) => {
-    await callAndPrint("users.setRole", {
+    const body = await parseJsonObject<ProcedureInput<Client["users"]["setRole"]>["body"]>(
+      opts.data,
+    ).catch(fail);
+    await callAndPrint((c) => c.users.setRole({
       params: { id },
-      body: await parseJsonObject(opts.data).catch(fail),
-    });
+      body,
+    }));
   });
 users.command("disable <id>").action(async (id: string) => {
-  await callAndPrint("users.disable", { params: { id } });
+  await callAndPrint((c) => c.users.disable({ params: { id } }));
 });
 users.command("enable <id>").action(async (id: string) => {
-  await callAndPrint("users.enable", { params: { id } });
+  await callAndPrint((c) => c.users.enable({ params: { id } }));
 });
 
 const workspace = program.command("workspace").description("Manage workspace settings");
 workspace.command("get").action(async () => {
-  await callAndPrint("workspace.get");
+  await callAndPrint((c) => c.workspace.get());
 });
 addJsonDataOption(workspace.command("update").description("Update workspace settings"))
   .action(async (opts: { data?: string }) => {
-    await callAndPrint("workspace.update", await parseJsonObject(opts.data).catch(fail));
+    const input = await parseJsonObject<ProcedureInput<Client["workspace"]["update"]>>(
+      opts.data,
+    ).catch(fail);
+    await callAndPrint((c) => c.workspace.update(input));
   });
 
 const auditLog = program.command("audit-log").description("Inspect audit log");
@@ -1161,19 +1378,20 @@ auditLog
   .option("--limit <n>", "Page size", "20")
   .option("--cursor <cursor>", "Pagination cursor")
   .action(async (opts: { limit?: string; cursor?: string }) => {
-    await callAndPrint("auditLog.list", await listInput(opts));
+    const input = await listInput<ProcedureInput<Client["auditLog"]["list"]>>(opts);
+    await callAndPrint((c) => c.auditLog.list(input));
   });
 
 const insights = program.command("insights").description("Inspect analytics summaries");
 insights.command("summary").action(async () => {
-  await callAndPrint("insights.summary");
+  await callAndPrint((c) => c.insights.summary());
 });
 
 program.command("health").description("Check liveness").action(async () => {
-  await callAndPrint("health");
+  await callAndPrint((c) => c.health());
 });
 program.command("ready").description("Check readiness").action(async () => {
-  await callAndPrint("ready");
+  await callAndPrint((c) => c.ready());
 });
 
 export async function main(argv = process.argv): Promise<void> {
