@@ -17,6 +17,7 @@ import {
   VoucherForm,
   type VoucherFormState,
 } from "@/components/dashboard/voucher-form";
+import { voucherFormToUpdateInput } from "@/lib/forms/voucher";
 import { formatMinorCurrency } from "@/lib/money";
 import { ovx } from "@/lib/sdk";
 
@@ -27,12 +28,6 @@ interface PageProps {
 function fromIso(iso: string | null | undefined): string {
   if (!iso) return "";
   return new Date(iso).toISOString().slice(0, 16);
-}
-
-function toIsoOrUndefined(local: string): string | undefined {
-  if (!local) return undefined;
-  const d = new Date(local);
-  return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
 }
 
 export default function VoucherDetailPage({ params }: PageProps) {
@@ -59,34 +54,7 @@ export default function VoucherDetailPage({ params }: PageProps) {
       ovx().vouchers.update({
         params: { code },
         body: {
-          patch: {
-            ...(state.type === "GIFT_CARD"
-              ? {
-                  giftBalance: state.giftBalance === "" ? 0 : state.giftBalance,
-                }
-              : {
-                  discount: {
-                    type: state.discountKind,
-                    ...(state.discountKind === "AMOUNT"
-                      ? { amount: state.discountValue }
-                      : { percent: state.discountValue }),
-                    ...(state.maxDiscountAmount !== ""
-                      ? { maxDiscountAmount: state.maxDiscountAmount }
-                      : {}),
-                  },
-                  priority: state.priority,
-                  exclusive: state.exclusive,
-                }),
-            redemptionLimit: state.redemptionLimit === "" ? undefined : state.redemptionLimit,
-            perUserRedemptionLimit:
-              state.perUserRedemptionLimit === ""
-                ? undefined
-                : state.perUserRedemptionLimit,
-            customerId: state.customerId || undefined,
-            active: state.active,
-            startDate: toIsoOrUndefined(state.startDate),
-            endDate: toIsoOrUndefined(state.endDate),
-          },
+          patch: voucherFormToUpdateInput(state),
         },
       }),
     onSuccess: async () => {

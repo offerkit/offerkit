@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { T, useGT } from "gt-next/client";
+import { FormFieldErrors } from "@/components/dashboard/form-field-errors";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,28 +16,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import {
+  voucherCreateFormSchema,
+  voucherEditFormSchema,
+  type VoucherFormState,
+} from "@/lib/forms/voucher";
 
-export type VoucherType = "DISCOUNT" | "GIFT_CARD";
-export type DiscountKind = "AMOUNT" | "PERCENTAGE";
+export type { VoucherFormState } from "@/lib/forms/voucher";
 
-export interface VoucherFormState {
-  code: string;
-  campaignId: string;
-  type: VoucherType;
-  discountKind: DiscountKind;
-  // Cents for AMOUNT, hundredths of a percent for PERCENTAGE.
-  discountValue: number;
-  maxDiscountAmount: number | "";
-  giftBalance: number | "";
-  redemptionLimit: number | "";
-  perUserRedemptionLimit: number | "";
-  customerId: string;
-  priority: number;
-  exclusive: boolean;
-  active: boolean;
-  startDate: string;
-  endDate: string;
-}
+type VoucherType = VoucherFormState["type"];
+type DiscountKind = VoucherFormState["discountKind"];
 
 const TYPES: VoucherType[] = ["DISCOUNT", "GIFT_CARD"];
 
@@ -69,6 +58,7 @@ function DecimalInput({
   max,
   placeholder,
   suffix,
+  invalid,
 }: {
   id: string;
   value: number;
@@ -79,6 +69,7 @@ function DecimalInput({
   max?: number;
   placeholder?: string;
   suffix?: string;
+  invalid?: boolean;
 }) {
   const committed = useRef(value);
   const [displayValue, setDisplayValue] = useState(() =>
@@ -102,6 +93,7 @@ function DecimalInput({
         max={max}
         step={decimals > 0 ? 1 / 10 ** decimals : 1}
         value={displayValue}
+        aria-invalid={invalid}
         onChange={(e) => {
           const next = e.target.value;
           setDisplayValue(next);
@@ -130,6 +122,7 @@ function OptionalDecimalInput({
   decimals,
   min,
   placeholder,
+  invalid,
 }: {
   id: string;
   value: number | "";
@@ -138,6 +131,7 @@ function OptionalDecimalInput({
   decimals: number;
   min?: number;
   placeholder?: string;
+  invalid?: boolean;
 }) {
   const committed = useRef(value);
   const [displayValue, setDisplayValue] = useState(() =>
@@ -159,6 +153,7 @@ function OptionalDecimalInput({
       min={min}
       step={decimals > 0 ? 1 / 10 ** decimals : 1}
       value={displayValue}
+      aria-invalid={invalid}
       onChange={(e) => {
         const next = e.target.value;
         setDisplayValue(next);
@@ -188,6 +183,11 @@ export function VoucherForm({
   const gt = useGT();
   const form = useForm({
     defaultValues: initial,
+    validators: {
+      onMount: mode === "create" ? voucherCreateFormSchema : voucherEditFormSchema,
+      onChange: mode === "create" ? voucherCreateFormSchema : voucherEditFormSchema,
+      onSubmit: mode === "create" ? voucherCreateFormSchema : voucherEditFormSchema,
+    },
     onSubmit: ({ value }) => onSubmit(value),
   });
 
@@ -216,9 +216,14 @@ export function VoucherForm({
                   id={field.name}
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
+                  aria-invalid={field.state.meta.errors.length > 0}
                   placeholder={gt("Leave blank to auto-generate")}
                   disabled={mode === "edit"}
                   className="font-mono"
+                />
+                <FormFieldErrors
+                  errors={field.state.meta.errors}
+                  visible={field.state.meta.isTouched}
                 />
               </div>
             )}
@@ -233,8 +238,13 @@ export function VoucherForm({
                   id={field.name}
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
+                  aria-invalid={field.state.meta.errors.length > 0}
                   placeholder={gt("Optional")}
                   disabled={mode === "edit"}
+                />
+                <FormFieldErrors
+                  errors={field.state.meta.errors}
+                  visible={field.state.meta.isTouched}
                 />
               </div>
             )}
@@ -250,7 +260,10 @@ export function VoucherForm({
                   onValueChange={(v) => field.handleChange(v as VoucherType)}
                   disabled={mode === "edit"}
                 >
-                  <SelectTrigger aria-label={gt("Voucher type")}>
+                  <SelectTrigger
+                    aria-label={gt("Voucher type")}
+                    aria-invalid={field.state.meta.errors.length > 0}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -261,6 +274,10 @@ export function VoucherForm({
                     ))}
                   </SelectContent>
                 </Select>
+                <FormFieldErrors
+                  errors={field.state.meta.errors}
+                  visible={field.state.meta.isTouched}
+                />
               </div>
             )}
           </form.Field>
@@ -278,7 +295,12 @@ export function VoucherForm({
                   onChange={(e) =>
                     field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
                   }
+                  aria-invalid={field.state.meta.errors.length > 0}
                   placeholder={gt("Unlimited")}
+                />
+                <FormFieldErrors
+                  errors={field.state.meta.errors}
+                  visible={field.state.meta.isTouched}
                 />
               </div>
             )}
@@ -297,7 +319,12 @@ export function VoucherForm({
                   onChange={(e) =>
                     field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
                   }
+                  aria-invalid={field.state.meta.errors.length > 0}
                   placeholder={gt("No user cap")}
+                />
+                <FormFieldErrors
+                  errors={field.state.meta.errors}
+                  visible={field.state.meta.isTouched}
                 />
               </div>
             )}
@@ -312,7 +339,12 @@ export function VoucherForm({
                   id={field.name}
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
+                  aria-invalid={field.state.meta.errors.length > 0}
                   placeholder={gt("Optional")}
+                />
+                <FormFieldErrors
+                  errors={field.state.meta.errors}
+                  visible={field.state.meta.isTouched}
                 />
               </div>
             )}
@@ -346,7 +378,12 @@ export function VoucherForm({
                             e.target.value === "" ? "" : Number(e.target.value),
                           )
                         }
+                        aria-invalid={field.state.meta.errors.length > 0}
                         placeholder="10000"
+                      />
+                      <FormFieldErrors
+                        errors={field.state.meta.errors}
+                        visible={field.state.meta.isTouched}
                       />
                       <p className="text-xs text-muted-foreground">
                         <T>10000 = 100.00. Each redemption deducts up to this much.</T>
@@ -398,7 +435,10 @@ export function VoucherForm({
                   value={field.state.value}
                   onValueChange={(v) => field.handleChange(v as DiscountKind)}
                 >
-                  <SelectTrigger aria-label={gt("Discount kind")}>
+                  <SelectTrigger
+                    aria-label={gt("Discount kind")}
+                    aria-invalid={field.state.meta.errors.length > 0}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -406,6 +446,10 @@ export function VoucherForm({
                     <SelectItem value="PERCENTAGE">{gt("Percentage")}</SelectItem>
                   </SelectContent>
                 </Select>
+                <FormFieldErrors
+                  errors={field.state.meta.errors}
+                  visible={field.state.meta.isTouched}
+                />
               </div>
             )}
           </form.Field>
@@ -432,6 +476,7 @@ export function VoucherForm({
                           min={0.01}
                           max={100}
                           suffix="%"
+                          invalid={field.state.meta.errors.length > 0}
                         />
                         <p className="text-xs text-muted-foreground">
                           <T>Enter 20 for 20% off.</T>
@@ -447,11 +492,16 @@ export function VoucherForm({
                           decimals={2}
                           min={0.01}
                           placeholder="10.00"
+                          invalid={field.state.meta.errors.length > 0}
                         />
                       </>
                     )
                   }
                 </form.Subscribe>
+                <FormFieldErrors
+                  errors={field.state.meta.errors}
+                  visible={field.state.meta.isTouched}
+                />
               </div>
             )}
           </form.Field>
@@ -469,6 +519,11 @@ export function VoucherForm({
                   decimals={2}
                   min={0}
                   placeholder={gt("Optional cap")}
+                  invalid={field.state.meta.errors.length > 0}
+                />
+                <FormFieldErrors
+                  errors={field.state.meta.errors}
+                  visible={field.state.meta.isTouched}
                 />
               </div>
             )}
@@ -484,6 +539,11 @@ export function VoucherForm({
                   type="number"
                   value={field.state.value}
                   onChange={(e) => field.handleChange(Number(e.target.value))}
+                  aria-invalid={field.state.meta.errors.length > 0}
+                />
+                <FormFieldErrors
+                  errors={field.state.meta.errors}
+                  visible={field.state.meta.isTouched}
                 />
               </div>
             )}
@@ -527,6 +587,11 @@ export function VoucherForm({
                   type="datetime-local"
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
+                  aria-invalid={field.state.meta.errors.length > 0}
+                />
+                <FormFieldErrors
+                  errors={field.state.meta.errors}
+                  visible={field.state.meta.isTouched}
                 />
               </div>
             )}
@@ -542,6 +607,11 @@ export function VoucherForm({
                   type="datetime-local"
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
+                  aria-invalid={field.state.meta.errors.length > 0}
+                />
+                <FormFieldErrors
+                  errors={field.state.meta.errors}
+                  visible={field.state.meta.isTouched}
                 />
               </div>
             )}
@@ -553,22 +623,12 @@ export function VoucherForm({
       </form.Subscribe>
 
       <div className="flex justify-end gap-2">
-        <form.Subscribe selector={(s) => [s.values, s.isSubmitting] as const}>
-          {([values, isSubmitting]) => {
-            const discountInvalid = values.type === "DISCOUNT" && values.discountValue < 1;
-            const newGiftCardInvalid =
-              mode === "create" &&
-              values.type === "GIFT_CARD" &&
-              (values.giftBalance === "" || values.giftBalance < 1);
-            return (
-              <Button
-                type="submit"
-                disabled={pending || isSubmitting || discountInvalid || newGiftCardInvalid}
-              >
-                {pending || isSubmitting ? <T>Saving…</T> : submitLabel}
-              </Button>
-            );
-          }}
+        <form.Subscribe selector={(s) => [s.canSubmit, s.isSubmitting] as const}>
+          {([canSubmit, isSubmitting]) => (
+            <Button type="submit" disabled={pending || isSubmitting || !canSubmit}>
+              {pending || isSubmitting ? <T>Saving…</T> : submitLabel}
+            </Button>
+          )}
         </form.Subscribe>
       </div>
     </form>

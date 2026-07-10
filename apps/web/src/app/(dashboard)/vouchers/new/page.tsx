@@ -5,13 +5,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { VoucherForm, type VoucherFormState } from "@/components/dashboard/voucher-form";
+import { voucherFormToCreateInput } from "@/lib/forms/voucher";
 import { ovx } from "@/lib/sdk";
-
-function toIsoOrUndefined(local: string): string | undefined {
-  if (!local) return undefined;
-  const d = new Date(local);
-  return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
-}
 
 export default function NewVoucherPage() {
   const router = useRouter();
@@ -28,34 +23,7 @@ export default function NewVoucherPage() {
 
   const create = useMutation({
     mutationFn: (state: VoucherFormState) =>
-      ovx().vouchers.create({
-        code: state.code || undefined,
-        campaignId: state.campaignId || undefined,
-        type: state.type,
-        ...(state.type === "GIFT_CARD"
-          ? {
-              giftBalance: state.giftBalance === "" ? 0 : state.giftBalance,
-            }
-          : {
-              discount: {
-                type: state.discountKind,
-                ...(state.discountKind === "AMOUNT"
-                  ? { amount: state.discountValue }
-                  : { percent: state.discountValue }),
-                ...(state.maxDiscountAmount !== ""
-                  ? { maxDiscountAmount: state.maxDiscountAmount }
-                  : {}),
-              },
-              priority: state.priority,
-              exclusive: state.exclusive,
-            }),
-        redemptionLimit: state.redemptionLimit === "" ? undefined : state.redemptionLimit,
-        perUserRedemptionLimit:
-          state.perUserRedemptionLimit === "" ? undefined : state.perUserRedemptionLimit,
-        customerId: state.customerId || undefined,
-        startDate: toIsoOrUndefined(state.startDate),
-        endDate: toIsoOrUndefined(state.endDate),
-      }),
+      ovx().vouchers.create(voucherFormToCreateInput(state)),
     onSuccess: async (voucher) => {
       await queryClient.invalidateQueries({ queryKey: ["vouchers"] });
       toast.success(gt("Voucher created"));

@@ -2,6 +2,7 @@
 
 import { useForm } from "@tanstack/react-form";
 import { T, useGT } from "gt-next/client";
+import { FormFieldErrors } from "@/components/dashboard/form-field-errors";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,30 +21,15 @@ import {
   TIMEZONE_OPTIONS,
   optionsWithCurrent,
 } from "@/lib/locale-options";
+import {
+  campaignFormSchema,
+  type CampaignFormState,
+} from "@/lib/forms/campaign";
 
-export type CampaignType =
-  | "DISCOUNT"
-  | "GIFT_VOUCHERS"
-  | "LOYALTY_PROGRAM"
-  | "REFERRAL_PROGRAM"
-  | "PROMOTION";
+export type { CampaignFormState } from "@/lib/forms/campaign";
 
-export type CampaignStatus = "draft" | "active" | "paused" | "ended";
-
-export interface CampaignFormState {
-  name: string;
-  description: string;
-  type: CampaignType;
-  status: CampaignStatus;
-  currency: string;
-  timezone: string;
-  startDate: string;
-  endDate: string;
-  perUserRedemptionLimit: number | "";
-  autoApply: boolean;
-  codeLength: number;
-  codePrefix: string;
-}
+type CampaignType = CampaignFormState["type"];
+type CampaignStatus = CampaignFormState["status"];
 
 const TYPES: CampaignType[] = [
   "DISCOUNT",
@@ -70,6 +56,11 @@ export function CampaignForm({
   const gt = useGT();
   const form = useForm({
     defaultValues: initial,
+    validators: {
+      onMount: campaignFormSchema,
+      onChange: campaignFormSchema,
+      onSubmit: campaignFormSchema,
+    },
     onSubmit: ({ value }) => onSubmit(value),
   });
 
@@ -98,8 +89,13 @@ export function CampaignForm({
                   id={field.name}
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
+                  aria-invalid={field.state.meta.errors.length > 0}
                   required
                   placeholder={gt("Summer sale 2026")}
+                />
+                <FormFieldErrors
+                  errors={field.state.meta.errors}
+                  visible={field.state.meta.isTouched}
                 />
               </div>
             )}
@@ -114,8 +110,13 @@ export function CampaignForm({
                   id={field.name}
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
+                  aria-invalid={field.state.meta.errors.length > 0}
                   placeholder={gt("Optional internal description")}
                   className="h-20"
+                />
+                <FormFieldErrors
+                  errors={field.state.meta.errors}
+                  visible={field.state.meta.isTouched}
                 />
               </div>
             )}
@@ -131,7 +132,7 @@ export function CampaignForm({
                   onValueChange={(v) => field.handleChange(v as CampaignType)}
                   disabled={mode === "edit"}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger aria-invalid={field.state.meta.errors.length > 0}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -142,6 +143,10 @@ export function CampaignForm({
                     ))}
                   </SelectContent>
                 </Select>
+                <FormFieldErrors
+                  errors={field.state.meta.errors}
+                  visible={field.state.meta.isTouched}
+                />
               </div>
             )}
           </form.Field>
@@ -156,7 +161,7 @@ export function CampaignForm({
                     value={field.state.value}
                     onValueChange={(v) => field.handleChange(v as CampaignStatus)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger aria-invalid={field.state.meta.errors.length > 0}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -167,6 +172,10 @@ export function CampaignForm({
                       ))}
                     </SelectContent>
                   </Select>
+                  <FormFieldErrors
+                    errors={field.state.meta.errors}
+                    visible={field.state.meta.isTouched}
+                  />
                 </div>
               )}
             </form.Field>
@@ -184,7 +193,11 @@ export function CampaignForm({
                     if (value) field.handleChange(value);
                   }}
                 >
-                  <SelectTrigger id={field.name} className="w-full">
+                  <SelectTrigger
+                    id={field.name}
+                    className="w-full"
+                    aria-invalid={field.state.meta.errors.length > 0}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -195,6 +208,10 @@ export function CampaignForm({
                     ))}
                   </SelectContent>
                 </Select>
+                <FormFieldErrors
+                  errors={field.state.meta.errors}
+                  visible={field.state.meta.isTouched}
+                />
               </div>
             )}
           </form.Field>
@@ -210,7 +227,11 @@ export function CampaignForm({
                     if (value) field.handleChange(value);
                   }}
                 >
-                  <SelectTrigger id={field.name} className="w-full">
+                  <SelectTrigger
+                    id={field.name}
+                    className="w-full"
+                    aria-invalid={field.state.meta.errors.length > 0}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -221,6 +242,10 @@ export function CampaignForm({
                     ))}
                   </SelectContent>
                 </Select>
+                <FormFieldErrors
+                  errors={field.state.meta.errors}
+                  visible={field.state.meta.isTouched}
+                />
               </div>
             )}
           </form.Field>
@@ -235,6 +260,11 @@ export function CampaignForm({
                   id={field.name}
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
+                  aria-invalid={field.state.meta.errors.length > 0}
+                />
+                <FormFieldErrors
+                  errors={field.state.meta.errors}
+                  visible={field.state.meta.isTouched}
                 />
               </div>
             )}
@@ -250,6 +280,11 @@ export function CampaignForm({
                   id={field.name}
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
+                  aria-invalid={field.state.meta.errors.length > 0}
+                />
+                <FormFieldErrors
+                  errors={field.state.meta.errors}
+                  visible={field.state.meta.isTouched}
                 />
               </div>
             )}
@@ -282,7 +317,12 @@ export function CampaignForm({
                   onChange={(e) =>
                     field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
                   }
+                  aria-invalid={field.state.meta.errors.length > 0}
                   placeholder={gt("No campaign-level user cap")}
+                />
+                <FormFieldErrors
+                  errors={field.state.meta.errors}
+                  visible={field.state.meta.isTouched}
                 />
               </div>
             )}
@@ -310,6 +350,11 @@ export function CampaignForm({
                   max={32}
                   value={field.state.value}
                   onChange={(e) => field.handleChange(Number(e.target.value))}
+                  aria-invalid={field.state.meta.errors.length > 0}
+                />
+                <FormFieldErrors
+                  errors={field.state.meta.errors}
+                  visible={field.state.meta.isTouched}
                 />
               </div>
             )}
@@ -324,7 +369,12 @@ export function CampaignForm({
                   id={field.name}
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
+                  aria-invalid={field.state.meta.errors.length > 0}
                   placeholder={gt("Optional, e.g. SUMMER-")}
+                />
+                <FormFieldErrors
+                  errors={field.state.meta.errors}
+                  visible={field.state.meta.isTouched}
                 />
               </div>
             )}
@@ -333,11 +383,11 @@ export function CampaignForm({
       </Card>
 
       <div className="flex justify-end gap-2">
-        <form.Subscribe selector={(s) => [s.values.name, s.values.currency, s.isSubmitting] as const}>
-          {([name, currency, isSubmitting]) => (
+        <form.Subscribe selector={(s) => [s.canSubmit, s.isSubmitting] as const}>
+          {([canSubmit, isSubmitting]) => (
             <Button
               type="submit"
-              disabled={pending || isSubmitting || !name.trim() || currency.length !== 3}
+              disabled={pending || isSubmitting || !canSubmit}
             >
               {pending || isSubmitting ? <T>Saving…</T> : submitLabel}
             </Button>

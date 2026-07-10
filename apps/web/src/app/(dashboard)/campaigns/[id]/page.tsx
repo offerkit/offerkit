@@ -20,6 +20,7 @@ import {
   type CampaignFormState,
 } from "@/components/dashboard/campaign-form";
 import { type ApiListItem, type OfferKitClient, ovx } from "@/lib/sdk";
+import { campaignFormToUpdateInput } from "@/lib/forms/campaign";
 
 type VoucherRow = ApiListItem<OfferKitClient["vouchers"]["list"]>;
 
@@ -31,12 +32,6 @@ function fromIso(iso: string | null | undefined): string {
   if (!iso) return "";
   // datetime-local needs `YYYY-MM-DDTHH:mm` without seconds/timezone.
   return new Date(iso).toISOString().slice(0, 16);
-}
-
-function toIsoOrUndefined(local: string): string | undefined {
-  if (!local) return undefined;
-  const d = new Date(local);
-  return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
 }
 
 export default function CampaignDetailPage({ params }: PageProps) {
@@ -64,22 +59,7 @@ export default function CampaignDetailPage({ params }: PageProps) {
       ovx().campaigns.update({
         params: { id },
         body: {
-          patch: {
-            name: state.name,
-            description: state.description || undefined,
-            status: state.status,
-            currency: state.currency,
-            timezone: state.timezone || undefined,
-            startDate: toIsoOrUndefined(state.startDate),
-            endDate: toIsoOrUndefined(state.endDate),
-            perUserRedemptionLimit:
-              state.perUserRedemptionLimit === "" ? undefined : state.perUserRedemptionLimit,
-            autoApply: state.autoApply,
-            codeConfig: {
-              length: state.codeLength,
-              prefix: state.codePrefix || undefined,
-            },
-          },
+          patch: campaignFormToUpdateInput(state),
         },
       }),
     onSuccess: async () => {

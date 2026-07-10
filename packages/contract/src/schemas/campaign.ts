@@ -9,6 +9,12 @@ export const campaignType = z.enum([
 ]);
 export const campaignStatus = z.enum(["draft", "active", "paused", "ended"]);
 
+export const campaignName = z
+  .string()
+  .min(1)
+  .max(100)
+  .refine((value) => value.trim().length > 0, "Name cannot be blank");
+
 export const codeConfig = z.object({
   length: z.number().int().min(4).max(32).optional(),
   prefix: z.string().max(20).optional(),
@@ -38,7 +44,7 @@ export const campaignOutput = z.object({
 });
 
 export const campaignCreateInput = z.object({
-  name: z.string().min(1).max(100),
+  name: campaignName,
   description: z.string().max(500).optional(),
   type: campaignType,
   currency: z.string().length(3),

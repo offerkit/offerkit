@@ -1,4 +1,18 @@
 export * from "./errors.ts";
+export {
+  campaignCreateInput,
+  campaignName,
+  campaignStatus,
+  campaignType,
+  campaignUpdateInput,
+  codeConfig,
+} from "./schemas/campaign.ts";
+export {
+  voucherCreateInput,
+  voucherDiscount,
+  voucherType,
+  voucherUpdateInput,
+} from "./schemas/voucher.ts";
 export { contract, type Contract } from "./router.ts";
 export {
   mcpMeta,
