@@ -21,11 +21,11 @@
     "release": "turbo run build --filter=@offerkit/sdk --filter=@offerkit/cli --filter=@offerkit/mcp && changeset publish"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.31.0",
-    "@vitest/coverage-v8": "4.1.5",
-    "eslint": "^9.39.4",
-    "lefthook": "^2.1.6",
-    "turbo": "^2.9.14"
+    "@changesets/cli": "^2.31.1",
+    "@vitest/coverage-v8": "4.1.10",
+    "eslint": "^10.7.0",
+    "lefthook": "^2.1.10",
+    "turbo": "^2.10.5"
   },
   "pnpm": {
     "overrides": {
