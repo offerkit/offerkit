@@ -38,9 +38,9 @@
     }
   },
   "dependencies": {
-    "@orpc/client": "^1.14.2",
-    "@orpc/contract": "^1.14.2",
-    "@orpc/openapi-client": "^1.14.2",
+    "@orpc/client": "^1.14.13",
+    "@orpc/contract": "^1.14.13",
+    "@orpc/openapi-client": "^1.14.13",
     "zod": "^4.4.3"
   },
   "devDependencies": {
