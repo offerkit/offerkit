@@ -8,231 +8,213 @@ const capabilities = [
   {
     index: "01",
     title: "Discounts",
-    description: "Fixed or percentage offers, eligibility rules, limits, stacking, and atomic redemption.",
-    accent: "#2db99a",
-    soft: "#e6f7f2",
+    description: "Fixed and percentage offers with targeting, usage limits, priority, exclusivity, and atomic stacking.",
+    detail: "Codes, automatic offers, and cart rules",
+    href: "/docs/solutions/public-promo-code",
   },
   {
     index: "02",
     title: "Gift cards",
-    description: "Stored balances with partial spend, an immutable ledger, expiration, and rollback safety.",
-    accent: "#ffb426",
-    soft: "#fff5dc",
+    description: "Stored value with partial spend, expiration, rollback safety, and an immutable transaction ledger.",
+    detail: "Balances that reconcile cleanly",
+    href: "/docs/solutions/gift-cards",
   },
   {
     index: "03",
     title: "Loyalty",
-    description: "Programs, tiers, earning rules, rewards, member ledgers, and points expiration.",
-    accent: "#388df2",
-    soft: "#eaf2fe",
+    description: "Programs, tiers, earning rules, member balances, reward redemption, and points expiration.",
+    detail: "Every point movement explained",
+    href: "/docs/solutions/loyalty",
   },
   {
     index: "04",
     title: "Referrals",
-    description: "Stable referral codes, idempotent conversion, and configurable rewards for both sides.",
-    accent: "#f56f7f",
-    soft: "#ffedf0",
+    description: "Stable referral codes, idempotent conversion, and configurable rewards for both participants.",
+    detail: "Issue, attribute, convert, reward",
+    href: "/docs/solutions/referrals",
   },
 ];
 
 const surfaces = [
-  ["REST API", "OpenAPI 3.1 from the live contract", "#2db99a"],
-  ["TypeScript SDK", "Types without a codegen step", "#ffb426"],
-  ["CLI", "Back-office actions from the terminal", "#7567e8"],
-  ["MCP server", "Agent tools with explicit risk metadata", "#388df2"],
+  ["REST API", "OpenAPI 3.1", "/docs/reference/api-reference"],
+  ["TypeScript SDK", "No codegen step", "/docs/reference/developer-tools"],
+  ["CLI", "Back-office operations", "/docs/reference/developer-tools"],
+  ["MCP server", "Tools with risk metadata", "/docs/reference/developer-tools"],
 ];
 
 const steps = [
-  ["Validate", "Preview eligibility without changing counters or balances.", "#2db99a"],
-  ["Redeem", "Commit atomically with a stable idempotency key.", "#ffb426"],
-  ["Explain", "Return typed, support-safe reasons for every rejection.", "#388df2"],
-  ["Observe", "Emit events, signed webhooks, audit entries, and telemetry.", "#f56f7f"],
+  ["Validate", "Preview the exact outcome while the cart changes. No counters or balances move."],
+  ["Redeem", "Commit against a stable order ID. Retries return the original result."],
+  ["Explain", "Receive typed, support-safe reasons when a rule rejects the request."],
+  ["Observe", "Follow the decision through audit entries, events, signed webhooks, and telemetry."],
 ];
 
-const redemptionExample = `const result = await offerkit.vouchers.redeem({
-  params: { code: "SUMMER10" },
+const validationExample = `const decision = await offerkit.vouchers.validate({
+  params: { code: "WELCOME10" },
   body: {
-    order: { amount: 9999, currency: "USD" },
-    idempotencyKey: "order-42",
+    order: { amount: 9999, currency: "USD", items: [] },
   },
 });`;
 ---
 
 <Layout title="OfferKit">
-  <div class="relative overflow-hidden">
-    <div class="site-grid pointer-events-none absolute inset-x-0 top-0 h-[52rem]"></div>
+  <div class="landing-shell">
     <SiteHeader active="home" />
 
     <main>
-      <section class="site-container relative grid gap-14 py-16 sm:py-24 lg:grid-cols-[0.88fr_1.12fr] lg:items-center lg:gap-16 lg:py-28">
-        <div class="relative z-10">
-          <p class="site-kicker">Open-source promotion infrastructure</p>
-          <h1 class="mt-7 max-w-3xl text-5xl font-bold leading-[0.98] tracking-[-0.065em] text-[var(--site-heading)] sm:text-6xl lg:text-[4.65rem]">
+      <section class="landing-hero site-container">
+        <div class="hero-copy">
+          <p class="landing-label">Open-source promotion infrastructure</p>
+          <h1>
             Promotions are infrastructure.
-            <span class="block text-[var(--site-primary)]">Treat them like it.</span>
+            <span>Run them like it.</span>
           </h1>
-          <p class="mt-7 max-w-2xl text-lg leading-8 text-[var(--site-muted)] sm:text-xl">
-            Run vouchers, gift cards, loyalty, and referrals behind one typed API. OfferKit is
-            MIT-licensed, agent-ready, and yours to deploy.
+          <p class="hero-summary">
+            One typed API for vouchers, gift cards, loyalty, and referrals. Keep the
+            decision layer close to checkout, keep the data on your infrastructure, and
+            keep every outcome explainable.
           </p>
-          <div class="mt-9 flex flex-wrap gap-3">
-            <a href="/docs/getting-started" class="site-button-primary">
-              Run OfferKit <span class="ml-2" aria-hidden="true">→</span>
-            </a>
-            <a href="https://github.com/offerkit/offerkit" class="site-button-secondary">
-              View on GitHub
+          <div class="hero-actions">
+            <a href="/docs/getting-started" class="landing-button-primary">Run OfferKit</a>
+            <a href="https://github.com/offerkit/offerkit" class="landing-text-link">
+              Read the source <span aria-hidden="true">↗</span>
             </a>
           </div>
-          <ul class="mt-9 flex flex-wrap gap-x-5 gap-y-2 font-mono text-xs uppercase tracking-[0.11em] text-[var(--site-muted-light)]" aria-label="Project attributes">
-            <li>MIT licensed</li>
-            <li>Self-hosted</li>
-            <li>One Docker image</li>
+          <dl class="hero-facts" aria-label="Project attributes">
+            <div>
+              <dt>License</dt>
+              <dd>MIT</dd>
+            </div>
+            <div>
+              <dt>Deploy</dt>
+              <dd>One image</dd>
+            </div>
+            <div>
+              <dt>Control</dt>
+              <dd>Self-hosted</dd>
+            </div>
+          </dl>
+        </div>
+
+        <figure class="decision-example" aria-labelledby="decision-example-title">
+          <figcaption class="decision-example-heading">
+            <span id="decision-example-title">Voucher validation</span>
+            <span>checkout.ts</span>
+          </figcaption>
+          <pre><code>{validationExample}</code></pre>
+          <div class="decision-output">
+            <p>Decision</p>
+            <dl>
+              <div>
+                <dt>valid</dt>
+                <dd>true</dd>
+              </div>
+              <div>
+                <dt>discount</dt>
+                <dd>USD 10.00</dd>
+              </div>
+              <div>
+                <dt>order total</dt>
+                <dd>USD 89.99</dd>
+              </div>
+            </dl>
+          </div>
+          <p class="decision-footnote">Read-only preview · zero state changes</p>
+        </figure>
+      </section>
+
+      <section class="surface-index" aria-labelledby="surface-index-title">
+        <div class="site-container">
+          <h2 id="surface-index-title" class="sr-only">Developer surfaces</h2>
+          <ul>
+            {surfaces.map(([title, description, href], index) => (
+              <li>
+                <a href={href}>
+                  <span class="surface-number">0{index + 1}</span>
+                  <span class="surface-title">{title}</span>
+                  <span class="surface-description">{description}</span>
+                  <span class="surface-arrow" aria-hidden="true">→</span>
+                </a>
+              </li>
+            ))}
           </ul>
         </div>
-
-        <div class="hero-visual relative min-h-[24rem] overflow-hidden rounded-[1.75rem] border border-white bg-white shadow-[var(--site-shadow-lg)] sm:min-h-[30rem]">
-          <img
-            src="/offerkit-banner.png"
-            alt="OfferKit dashboard connected to promotion services and databases"
-            width="2172"
-            height="724"
-            class="absolute inset-0 size-full object-cover object-[66%_center]"
-            fetchpriority="high"
-          />
-          <div class="absolute inset-x-5 top-5 flex items-center justify-between rounded-xl border border-white/90 bg-white/85 px-4 py-3 shadow-[0_8px_24px_rgba(81,100,126,0.12)] backdrop-blur-md">
-            <span class="flex items-center gap-2 text-xs font-semibold text-[var(--site-heading)]">
-              <span class="size-2 rounded-full bg-[var(--site-teal)] shadow-[0_0_0_4px_rgba(45,185,154,0.13)]"></span>
-              Promotion engine
-            </span>
-            <span class="font-mono text-[0.66rem] uppercase tracking-[0.1em] text-[var(--site-primary-strong)]">Healthy</span>
-          </div>
-          <div class="absolute inset-x-5 bottom-5 grid grid-cols-3 gap-2.5">
-            <span class="rounded-xl border border-white/90 bg-white/90 px-3 py-3 text-center text-xs font-semibold text-[var(--site-primary-strong)] shadow-[0_8px_22px_rgba(81,100,126,0.12)] backdrop-blur-md">Typed</span>
-            <span class="rounded-xl border border-white/90 bg-white/90 px-3 py-3 text-center text-xs font-semibold text-[#b47200] shadow-[0_8px_22px_rgba(81,100,126,0.12)] backdrop-blur-md">Atomic</span>
-            <span class="rounded-xl border border-white/90 bg-white/90 px-3 py-3 text-center text-xs font-semibold text-[#276dc2] shadow-[0_8px_22px_rgba(81,100,126,0.12)] backdrop-blur-md">Observable</span>
-          </div>
-        </div>
       </section>
 
-      <section class="border-y border-[var(--site-border)] bg-white/65">
-        <div class="site-container grid divide-y divide-[var(--site-border)] sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
-          {surfaces.map(([title, description, accent]) => (
-            <div class="px-6 py-7 first:pl-0 last:pr-0 sm:first:pl-6 lg:first:pl-0">
-              <div class="flex items-center gap-2.5">
-                <span class="size-2 rounded-full shadow-[0_2px_6px_rgba(65,84,109,0.16)]" style={`background: ${accent}`}></span>
-                <p class="text-sm font-bold text-[var(--site-heading)]">{title}</p>
-              </div>
-              <p class="mt-2 text-sm leading-6 text-[var(--site-muted)]">{description}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section class="site-container py-24 sm:py-32">
-        <div class="max-w-2xl">
-          <p class="site-kicker">The promotion layer</p>
-          <h2 class="mt-6 text-4xl font-bold tracking-[-0.05em] text-[var(--site-heading)] sm:text-5xl">
-            One model for every incentive.
-          </h2>
-          <p class="mt-5 text-lg leading-8 text-[var(--site-muted)]">
-            Replace scattered checkout conditionals and one-off admin tools with a system your
-            team can inspect, test, and operate.
-          </p>
-        </div>
-
-        <div class="mt-12 grid gap-5 md:grid-cols-2">
-          {capabilities.map((capability) => (
-            <article
-              class="capability-card site-card group min-h-64 p-7 sm:p-8"
-              style={`--card-accent: ${capability.accent}; --card-soft: ${capability.soft}`}
-            >
-              <div class="flex items-start justify-between gap-6">
-                <div class="grid size-11 place-items-center rounded-xl border border-white bg-[var(--card-soft)] font-mono text-xs font-bold text-[var(--site-heading)] shadow-sm">
-                  {capability.index}
-                </div>
-                <span class="mt-2 size-2.5 rounded-full bg-[var(--card-accent)] shadow-[0_0_0_5px_var(--card-soft)]"></span>
-              </div>
-              <h3 class="mt-8 text-2xl font-bold tracking-[-0.04em] text-[var(--site-heading)]">{capability.title}</h3>
-              <p class="mt-4 max-w-md leading-7 text-[var(--site-muted)]">{capability.description}</p>
-              <div class="mt-8 h-px bg-gradient-to-r from-[var(--card-accent)]/50 to-transparent"></div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section class="border-y border-[var(--site-border)] bg-[var(--site-bg-subtle)] py-24 sm:py-32">
-        <div class="site-container grid gap-14 lg:grid-cols-[0.8fr_1.2fr] lg:items-start lg:gap-24">
+      <section class="capability-section site-container">
+        <header class="section-intro">
+          <p class="section-index">01 / Incentives</p>
           <div>
-            <p class="site-kicker">Predictable by design</p>
-            <h2 class="mt-6 text-4xl font-bold tracking-[-0.05em] text-[var(--site-heading)] sm:text-5xl">
-              Own the hot path.
-            </h2>
-            <p class="mt-5 text-lg leading-8 text-[var(--site-muted)]">
-              Checkout logic needs clear outcomes under retries, concurrency, and partial failure.
-              OfferKit makes those constraints part of the contract.
+            <h2>One decision layer.<br />Four incentive types.</h2>
+            <p>
+              Stop rebuilding promotion rules inside checkout handlers and admin tools.
+              OfferKit gives each incentive the same operational foundation.
             </p>
-            <a class="mt-7 inline-flex text-sm font-semibold text-[var(--site-primary-strong)] transition hover:text-[var(--site-primary)]" href="/docs/api-reference">
-              Read the API conventions <span class="ml-2" aria-hidden="true">→</span>
-            </a>
           </div>
+        </header>
 
-          <div class="site-card overflow-hidden p-3 sm:p-4">
-            <div class="flex items-center justify-between border-b border-[var(--site-border)] px-3 py-2.5 font-mono text-[0.68rem] uppercase tracking-[0.12em] text-[var(--site-muted-light)]">
-              <span>Live contract</span>
-              <span class="flex items-center gap-2 text-[var(--site-primary-strong)]"><span class="size-1.5 rounded-full bg-[var(--site-teal)]"></span> Ready</span>
-            </div>
-            <div class="p-3 sm:p-5">
-              <div class="flex items-center gap-3 font-mono text-xs">
-                <span class="rounded-md bg-[var(--site-primary-soft)] px-2 py-1 font-semibold text-[var(--site-primary-strong)]">POST</span>
-                <span class="overflow-hidden text-ellipsis text-[var(--site-muted)]">/api/v1/vouchers/SUMMER10/redemption</span>
+        <div class="capability-list">
+          {capabilities.map((capability) => (
+            <a class="capability-row" href={capability.href}>
+              <span class="capability-index">{capability.index}</span>
+              <div>
+                <h3>{capability.title}</h3>
+                <p class="capability-detail">{capability.detail}</p>
               </div>
-              <pre class="mt-5 overflow-x-auto rounded-xl border border-[var(--site-border)] bg-[#f4f7fa] p-4 text-[0.72rem] leading-6 text-[#425168] shadow-inner sm:text-xs"><code>{redemptionExample}</code></pre>
-              <div class="mt-4 rounded-xl border border-[#2db99a]/20 bg-[var(--site-primary-soft)] p-4 font-mono text-xs">
-                <div class="flex items-center justify-between text-[var(--site-text)]">
-                  <span>redemption.accepted</span>
-                  <span class="font-semibold text-[var(--site-primary-strong)]">200 OK</span>
+              <p class="capability-description">{capability.description}</p>
+              <span class="capability-arrow" aria-hidden="true">↗</span>
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <section class="contract-section">
+        <div class="site-container contract-layout">
+          <header class="contract-intro">
+            <p class="section-index">02 / Checkout contract</p>
+            <h2>Preview freely.<br />Commit once.</h2>
+            <p>
+              Promotion logic sits on a failure-sensitive path. OfferKit makes retries,
+              concurrency, and rejection reasons part of the contract instead of leaving
+              them to application code.
+            </p>
+            <a href="/docs/integrate/checkout" class="contract-link">
+              Follow the checkout integration <span aria-hidden="true">→</span>
+            </a>
+          </header>
+
+          <ol class="contract-steps">
+            {steps.map(([title, description], index) => (
+              <li>
+                <span>0{index + 1}</span>
+                <div>
+                  <h3>{title}</h3>
+                  <p>{description}</p>
                 </div>
-                <div class="mt-3 grid grid-cols-3 gap-3 border-t border-[#2db99a]/15 pt-3 text-[0.62rem] uppercase tracking-[0.08em] text-[var(--site-muted)] sm:text-[0.66rem]">
-                  <span>Idempotent</span>
-                  <span>Audited</span>
-                  <span>Event emitted</span>
-                </div>
-              </div>
-            </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <section class="install-section site-container">
+        <div class="install-copy">
+          <p class="section-index">03 / Deploy</p>
+          <h2>Your promotion data stays yours.</h2>
+          <p>
+            Start with Docker Compose. Move the same published image to any container
+            platform when you are ready.
+          </p>
+          <div class="install-actions">
+            <a href="/docs/getting-started" class="landing-button-primary">Get started</a>
+            <a href="/docs/self-host" class="landing-text-link">Self-hosting guide →</a>
           </div>
         </div>
 
-        <ol class="site-container mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {steps.map(([title, description, accent], index) => (
-            <li class="rounded-2xl border border-[var(--site-border)] bg-white p-6 shadow-[var(--site-shadow-sm)]">
-              <div class="flex items-center justify-between">
-                <span class="font-mono text-xs text-[var(--site-muted-light)]">0{index + 1}</span>
-                <span class="size-2.5 rounded-full" style={`background: ${accent}`}></span>
-              </div>
-              <h3 class="mt-6 font-bold text-[var(--site-heading)]">{title}</h3>
-              <p class="mt-2 leading-7 text-[var(--site-muted)]">{description}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      <section class="site-container py-24 sm:py-32">
-        <div class="cta-card site-card relative overflow-hidden px-6 py-16 text-center sm:px-12 sm:py-20">
-          <div class="absolute -left-16 -top-16 size-44 rounded-full bg-[#2db99a]/10 blur-2xl"></div>
-          <div class="absolute -bottom-20 -right-16 size-52 rounded-full bg-[#388df2]/10 blur-2xl"></div>
-          <img src="/icon.png" alt="" width="72" height="72" class="relative mx-auto size-[4.5rem] rounded-2xl shadow-[0_12px_28px_rgba(68,88,113,0.16)]" />
-          <p class="site-kicker relative mt-7">Deploy on your terms</p>
-          <h2 class="relative mx-auto mt-6 max-w-3xl text-4xl font-bold tracking-[-0.055em] text-[var(--site-heading)] sm:text-5xl">
-            Your promotions. Your data. Your infrastructure.
-          </h2>
-          <p class="relative mx-auto mt-5 max-w-2xl text-lg leading-8 text-[var(--site-muted)]">
-            Start locally with Docker Compose, then run the same published image anywhere that
-            speaks containers.
-          </p>
-          <div class="relative mt-8 flex flex-wrap justify-center gap-3">
-            <a href="/docs/getting-started" class="site-button-primary">Get started</a>
-            <a href="/docs/self-host" class="site-button-secondary">Self-hosting guide</a>
-          </div>
+        <div class="install-command" aria-label="OfferKit installation command">
+          <p>Terminal</p>
+          <code><span aria-hidden="true">$</span> docker compose up --build</code>
+          <span class="install-note">API · dashboard · worker</span>
         </div>
       </section>
     </main>
@@ -242,34 +224,635 @@ const redemptionExample = `const result = await offerkit.vouchers.redeem({
 </Layout>
 
 <style>
-  .hero-visual::after {
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.8);
-    pointer-events: none;
-    content: "";
+  .landing-shell {
+    --landing-ink: #101828;
+    --landing-green: #08775d;
+    --landing-green-bright: #19a780;
+    --landing-line: #d6dee8;
+    min-height: 100vh;
+    background: #f8fafc;
   }
 
-  .capability-card {
-    transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+  .landing-hero {
+    display: grid;
+    gap: 4rem;
+    align-items: center;
+    padding-block: 5.5rem 6rem;
   }
 
-  .capability-card:hover {
-    border-color: color-mix(in srgb, var(--card-accent) 42%, white);
-    box-shadow: 0 18px 38px rgba(75, 96, 123, 0.13), 0 2px 8px rgba(75, 96, 123, 0.06);
-    transform: translateY(-2px);
+  .hero-copy {
+    max-width: 42rem;
   }
 
-  .cta-card {
-    background:
-      radial-gradient(circle at 18% 20%, rgba(45, 185, 154, 0.1), transparent 26rem),
-      radial-gradient(circle at 82% 90%, rgba(56, 141, 242, 0.09), transparent 24rem),
-      white;
+  .landing-label,
+  .section-index {
+    color: var(--landing-green);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .landing-hero h1 {
+    margin-top: 1.5rem;
+    color: var(--landing-ink);
+    font-size: clamp(3.65rem, 7.2vw, 6.8rem);
+    font-weight: 760;
+    letter-spacing: -0.075em;
+    line-height: 0.91;
+  }
+
+  .landing-hero h1 span {
+    display: block;
+    color: var(--landing-green);
+  }
+
+  .hero-summary {
+    max-width: 39rem;
+    margin-top: 2rem;
+    color: #58677c;
+    font-size: 1.1rem;
+    line-height: 1.75;
+  }
+
+  .hero-actions,
+  .install-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1.25rem;
+    margin-top: 2.25rem;
+  }
+
+  .landing-button-primary {
+    display: inline-flex;
+    min-height: 2.9rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--landing-ink);
+    border-radius: 0.35rem;
+    background: var(--landing-ink);
+    padding: 0.75rem 1.15rem;
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 700;
+    transition: background 140ms ease, border-color 140ms ease;
+  }
+
+  .landing-button-primary:hover {
+    border-color: var(--landing-green);
+    background: var(--landing-green);
+  }
+
+  .landing-text-link {
+    color: var(--landing-ink);
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-color: #aab7c7;
+    text-underline-offset: 0.3rem;
+    transition: color 140ms ease, text-decoration-color 140ms ease;
+  }
+
+  .landing-text-link:hover {
+    color: var(--landing-green);
+    text-decoration-color: var(--landing-green);
+  }
+
+  .hero-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.75rem;
+    margin-top: 2.75rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--landing-line);
+  }
+
+  .hero-facts div {
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 0.45rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.7rem;
+  }
+
+  .hero-facts dt {
+    color: #8a97a9;
+    text-transform: uppercase;
+  }
+
+  .hero-facts dd {
+    color: #35445a;
+    font-weight: 700;
+  }
+
+  .decision-example {
+    overflow: hidden;
+    border: 1px solid #172033;
+    border-radius: 0.4rem;
+    background: #111827;
+    box-shadow: 10px 10px 0 #d9eee8;
+    color: #d7e0ed;
+  }
+
+  .decision-example-heading {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    border-bottom: 1px solid #2a3549;
+    padding: 0.9rem 1.1rem;
+    color: #aebbd0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .decision-example-heading span:first-child {
+    color: #72d2b8;
+    font-weight: 700;
+  }
+
+  .decision-example pre {
+    overflow-x: auto;
+    padding: 1.5rem 1.25rem 1.75rem;
+    color: #e5eaf2;
+    font-size: clamp(0.7rem, 1.15vw, 0.78rem);
+    line-height: 1.9;
+  }
+
+  .decision-output {
+    margin-inline: 1.1rem;
+    border: 1px solid #344158;
+    background: #172033;
+  }
+
+  .decision-output > p {
+    border-bottom: 1px solid #344158;
+    padding: 0.65rem 0.85rem;
+    color: #8391a7;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .decision-output dl {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .decision-output dl div {
+    padding: 0.9rem 0.85rem;
+    border-right: 1px solid #344158;
+  }
+
+  .decision-output dl div:last-child {
+    border-right: 0;
+  }
+
+  .decision-output dt,
+  .decision-output dd,
+  .decision-footnote {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .decision-output dt {
+    color: #8391a7;
+    font-size: 0.62rem;
+    text-transform: uppercase;
+  }
+
+  .decision-output dd {
+    margin-top: 0.3rem;
+    color: #f6f8fb;
+    font-size: 0.76rem;
+    font-weight: 700;
+  }
+
+  .decision-output dl div:first-child dd {
+    color: #72d2b8;
+  }
+
+  .decision-footnote {
+    padding: 1rem 1.1rem 1.2rem;
+    color: #7f8da3;
+    font-size: 0.63rem;
+    text-transform: uppercase;
+  }
+
+  .surface-index {
+    border-block: 1px solid var(--landing-line);
+    background: #fff;
+  }
+
+  .surface-index ul {
+    display: grid;
+  }
+
+  .surface-index li {
+    border-bottom: 1px solid var(--landing-line);
+  }
+
+  .surface-index li:last-child {
+    border-bottom: 0;
+  }
+
+  .surface-index a {
+    display: grid;
+    grid-template-columns: 2rem minmax(7.5rem, 0.75fr) 1fr auto;
+    gap: 1rem;
+    align-items: center;
+    padding-block: 1rem;
+    transition: color 140ms ease;
+  }
+
+  .surface-number,
+  .surface-description {
+    color: #8794a6;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.68rem;
+  }
+
+  .surface-title {
+    color: var(--landing-ink);
+    font-size: 0.86rem;
+    font-weight: 750;
+  }
+
+  .surface-description {
+    text-transform: uppercase;
+  }
+
+  .surface-arrow {
+    color: #8794a6;
+    transition: transform 140ms ease, color 140ms ease;
+  }
+
+  .surface-index a:hover .surface-title,
+  .surface-index a:hover .surface-arrow {
+    color: var(--landing-green);
+  }
+
+  .surface-index a:hover .surface-arrow {
+    transform: translateX(0.2rem);
+  }
+
+  .capability-section {
+    padding-block: 8rem;
+  }
+
+  .section-intro {
+    display: grid;
+    gap: 2rem;
+    margin-bottom: 4.5rem;
+  }
+
+  .section-intro h2,
+  .contract-intro h2,
+  .install-copy h2 {
+    color: var(--landing-ink);
+    font-size: clamp(2.7rem, 5vw, 4.9rem);
+    font-weight: 750;
+    letter-spacing: -0.065em;
+    line-height: 0.98;
+  }
+
+  .section-intro p:last-child,
+  .contract-intro > p:nth-of-type(2),
+  .install-copy > p:last-of-type {
+    max-width: 36rem;
+    margin-top: 1.5rem;
+    color: #627086;
+    font-size: 1.05rem;
+    line-height: 1.75;
+  }
+
+  .capability-list {
+    border-top: 1px solid #aeb9c7;
+  }
+
+  .capability-row {
+    display: grid;
+    grid-template-columns: 3rem minmax(10rem, 0.65fr) minmax(18rem, 1fr) auto;
+    gap: 2rem;
+    align-items: start;
+    border-bottom: 1px solid var(--landing-line);
+    padding-block: 2rem;
+  }
+
+  .capability-index,
+  .capability-detail {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .capability-index {
+    color: #8b97a8;
+    font-size: 0.72rem;
+  }
+
+  .capability-row h3 {
+    color: var(--landing-ink);
+    font-size: 1.45rem;
+    font-weight: 750;
+    letter-spacing: -0.035em;
+    transition: color 140ms ease;
+  }
+
+  .capability-detail {
+    margin-top: 0.45rem;
+    color: #8390a2;
+    font-size: 0.67rem;
+    text-transform: uppercase;
+  }
+
+  .capability-description {
+    max-width: 38rem;
+    color: #58677c;
+    line-height: 1.7;
+  }
+
+  .capability-arrow {
+    color: #8390a2;
+    transition: color 140ms ease, transform 140ms ease;
+  }
+
+  .capability-row:hover h3,
+  .capability-row:hover .capability-arrow {
+    color: var(--landing-green);
+  }
+
+  .capability-row:hover .capability-arrow {
+    transform: translate(0.15rem, -0.15rem);
+  }
+
+  .contract-section {
+    background: #111827;
+    color: #d8e0eb;
+  }
+
+  .contract-layout {
+    display: grid;
+    gap: 5rem;
+    padding-block: 8rem;
+  }
+
+  .contract-intro .section-index {
+    color: #72d2b8;
+  }
+
+  .contract-intro h2 {
+    margin-top: 1.5rem;
+    color: #f8fafc;
+  }
+
+  .contract-intro > p:nth-of-type(2) {
+    color: #a9b5c7;
+  }
+
+  .contract-link {
+    display: inline-flex;
+    gap: 0.6rem;
+    margin-top: 2rem;
+    color: #91dfca;
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-color: #46685f;
+    text-underline-offset: 0.3rem;
+  }
+
+  .contract-steps {
+    border-top: 1px solid #3a465a;
+  }
+
+  .contract-steps li {
+    display: grid;
+    grid-template-columns: 3rem 1fr;
+    gap: 1.5rem;
+    border-bottom: 1px solid #3a465a;
+    padding-block: 1.8rem;
+  }
+
+  .contract-steps li > span {
+    color: #738198;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.7rem;
+  }
+
+  .contract-steps h3 {
+    color: #f8fafc;
+    font-size: 1.2rem;
+    font-weight: 750;
+  }
+
+  .contract-steps p {
+    max-width: 35rem;
+    margin-top: 0.55rem;
+    color: #a9b5c7;
+    line-height: 1.7;
+  }
+
+  .install-section {
+    display: grid;
+    gap: 4.5rem;
+    align-items: center;
+    padding-block: 8rem;
+  }
+
+  .install-copy h2 {
+    max-width: 39rem;
+    margin-top: 1.5rem;
+  }
+
+  .install-command {
+    border: 1px solid #bac4d1;
+    border-radius: 0.35rem;
+    background: #fff;
+  }
+
+  .install-command > p {
+    border-bottom: 1px solid var(--landing-line);
+    padding: 0.7rem 1rem;
+    color: #7a8799;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .install-command code {
+    display: block;
+    overflow-x: auto;
+    padding: 1.5rem 1rem 0.75rem;
+    color: var(--landing-ink);
+    font-size: clamp(0.78rem, 1.6vw, 0.95rem);
+    white-space: nowrap;
+  }
+
+  .install-command code span {
+    margin-right: 0.65rem;
+    color: var(--landing-green);
+    font-weight: 800;
+  }
+
+  .install-note {
+    display: block;
+    padding: 0.5rem 1rem 1.35rem;
+    color: #8a97a9;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+  }
+
+  @media (min-width: 48rem) {
+    .surface-index ul {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .surface-index li:nth-child(odd) {
+      border-right: 1px solid var(--landing-line);
+    }
+
+    .surface-index li:nth-last-child(-n + 2) {
+      border-bottom: 0;
+    }
+
+    .surface-index a {
+      padding-inline: 1.25rem;
+    }
+
+    .surface-index li:nth-child(odd) a {
+      padding-left: 0;
+    }
+
+    .section-intro {
+      grid-template-columns: minmax(10rem, 0.34fr) 1fr;
+    }
+  }
+
+  @media (min-width: 64rem) {
+    .landing-hero {
+      grid-template-columns: minmax(0, 1.08fr) minmax(27rem, 0.92fr);
+    }
+
+    .surface-index ul {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .surface-index li,
+    .surface-index li:nth-child(odd) {
+      border-right: 1px solid var(--landing-line);
+      border-bottom: 0;
+    }
+
+    .surface-index li:last-child {
+      border-right: 0;
+    }
+
+    .surface-index a {
+      grid-template-columns: 1.6rem 1fr auto;
+      gap: 0.7rem;
+      padding-inline: 1.25rem;
+    }
+
+    .surface-index li:first-child a {
+      padding-left: 0;
+    }
+
+    .surface-description {
+      grid-column: 2 / -1;
+    }
+
+    .surface-arrow {
+      grid-column: 3;
+      grid-row: 1;
+    }
+
+    .contract-layout {
+      grid-template-columns: minmax(0, 0.9fr) minmax(28rem, 1.1fr);
+      gap: 7rem;
+    }
+
+    .install-section {
+      grid-template-columns: minmax(0, 1fr) minmax(26rem, 0.72fr);
+      gap: 7rem;
+    }
+  }
+
+  @media (max-width: 47.99rem) {
+    .landing-hero {
+      gap: 3.25rem;
+      padding-block: 4rem 4.5rem;
+    }
+
+		.landing-hero h1 {
+			font-size: clamp(3rem, 13.4vw, 3.5rem);
+		}
+
+    .decision-example {
+      box-shadow: 6px 6px 0 #d9eee8;
+    }
+
+    .decision-output dl {
+      grid-template-columns: 1fr;
+    }
+
+    .decision-output dl div {
+      border-right: 0;
+      border-bottom: 1px solid #344158;
+    }
+
+    .decision-output dl div:last-child {
+      border-bottom: 0;
+    }
+
+    .surface-index a {
+      grid-template-columns: 2rem 1fr auto;
+    }
+
+    .surface-description {
+      grid-column: 2;
+    }
+
+    .surface-arrow {
+      grid-column: 3;
+      grid-row: 1 / span 2;
+    }
+
+    .capability-section,
+    .contract-layout,
+    .install-section {
+      padding-block: 5.5rem;
+    }
+
+    .section-intro {
+      margin-bottom: 3rem;
+    }
+
+    .capability-row {
+      grid-template-columns: 2rem 1fr auto;
+      gap: 1rem;
+      padding-block: 1.6rem;
+    }
+
+    .capability-description {
+      grid-column: 2 / -1;
+    }
+
+    .capability-arrow {
+      grid-column: 3;
+      grid-row: 1;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .capability-card {
+    .landing-button-primary,
+    .landing-text-link,
+    .surface-arrow,
+    .capability-row h3,
+    .capability-arrow {
       transition: none;
     }
   }
