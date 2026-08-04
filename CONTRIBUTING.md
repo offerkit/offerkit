@@ -24,7 +24,7 @@ pnpm -r test
 pnpm build
 ```
 
-GitHub Actions runs the same checks on pull requests. Lefthook installs on `pnpm install` and runs the local pre-commit gate.
+GitHub Actions runs the same checks for runtime and package pull requests. Site-only changes are built and deployed by Cloudflare instead. Lefthook installs on `pnpm install` and runs the local pre-commit gate.
 
 ## Changesets
 

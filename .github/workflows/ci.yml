@@ -1,10 +1,15 @@
 name: CI
 
+# Cloudflare owns validation and deployment for changes isolated to apps/site.
 on:
   pull_request:
+    paths-ignore:
+      - "apps/site/**"
   push:
     branches:
       - main
+    paths-ignore:
+      - "apps/site/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -37,13 +42,13 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Typecheck
-        run: pnpm -r typecheck
+        run: pnpm --filter '!@offerkit/site' -r typecheck
 
       - name: Lint
-        run: pnpm -r lint
+        run: pnpm --filter '!@offerkit/site' -r lint
 
       - name: Test
-        run: pnpm -r test
+        run: pnpm --filter '!@offerkit/site' -r test
 
       - name: Build
-        run: pnpm build
+        run: pnpm turbo run build --filter='!@offerkit/site'

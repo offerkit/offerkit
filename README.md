@@ -194,7 +194,7 @@ pnpm -r test
 
 ## ✅ Quality Gates
 
-Pull requests and pushes to `main` run typecheck, lint, tests, and production build in GitHub Actions. Local commits also run the same checks through [lefthook](https://github.com/evilmartians/lefthook):
+Pull requests and pushes to `main` that affect the runtime or packages run typecheck, lint, tests, and a production build in GitHub Actions. Site-only changes are handled by Cloudflare. Local commits also run the same checks through [lefthook](https://github.com/evilmartians/lefthook):
 
 ```bash
 pnpm install            # auto-runs `lefthook install`
