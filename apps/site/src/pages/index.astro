@@ -9,29 +9,44 @@ const capabilities = [
     index: "01",
     title: "Discounts",
     description: "Fixed or percentage offers, eligibility rules, limits, stacking, and atomic redemption.",
+    accent: "#2db99a",
+    soft: "#e6f7f2",
   },
   {
     index: "02",
     title: "Gift cards",
     description: "Stored balances with partial spend, an immutable ledger, expiration, and rollback safety.",
+    accent: "#ffb426",
+    soft: "#fff5dc",
   },
   {
     index: "03",
     title: "Loyalty",
     description: "Programs, tiers, earning rules, rewards, member ledgers, and points expiration.",
+    accent: "#388df2",
+    soft: "#eaf2fe",
   },
   {
     index: "04",
     title: "Referrals",
     description: "Stable referral codes, idempotent conversion, and configurable rewards for both sides.",
+    accent: "#f56f7f",
+    soft: "#ffedf0",
   },
 ];
 
 const surfaces = [
-  ["REST API", "OpenAPI 3.1 from the live contract"],
-  ["TypeScript SDK", "Types without a codegen step"],
-  ["CLI", "Back-office actions from the terminal"],
-  ["MCP server", "Agent tools with explicit risk metadata"],
+  ["REST API", "OpenAPI 3.1 from the live contract", "#2db99a"],
+  ["TypeScript SDK", "Types without a codegen step", "#ffb426"],
+  ["CLI", "Back-office actions from the terminal", "#7567e8"],
+  ["MCP server", "Agent tools with explicit risk metadata", "#388df2"],
+];
+
+const steps = [
+  ["Validate", "Preview eligibility without changing counters or balances.", "#2db99a"],
+  ["Redeem", "Commit atomically with a stable idempotency key.", "#ffb426"],
+  ["Explain", "Return typed, support-safe reasons for every rejection.", "#388df2"],
+  ["Observe", "Emit events, signed webhooks, audit entries, and telemetry.", "#f56f7f"],
 ];
 
 const redemptionExample = `const result = await offerkit.vouchers.redeem({
@@ -49,70 +64,65 @@ const redemptionExample = `const result = await offerkit.vouchers.redeem({
     <SiteHeader active="home" />
 
     <main>
-      <section class="site-container relative grid gap-14 py-20 sm:py-28 lg:grid-cols-[1.06fr_0.94fr] lg:items-center lg:py-32">
-        <div>
+      <section class="site-container relative grid gap-14 py-16 sm:py-24 lg:grid-cols-[0.88fr_1.12fr] lg:items-center lg:gap-16 lg:py-28">
+        <div class="relative z-10">
           <p class="site-kicker">Open-source promotion infrastructure</p>
-          <h1 class="mt-7 max-w-3xl text-5xl font-semibold leading-[0.98] tracking-[-0.06em] text-[#f5faf7] sm:text-6xl lg:text-[4.75rem]">
+          <h1 class="mt-7 max-w-3xl text-5xl font-bold leading-[0.98] tracking-[-0.065em] text-[var(--site-heading)] sm:text-6xl lg:text-[4.65rem]">
             Promotions are infrastructure.
-            <span class="text-[#72f1ad]">Treat them like it.</span>
+            <span class="block text-[var(--site-primary)]">Treat them like it.</span>
           </h1>
-          <p class="mt-7 max-w-2xl text-lg leading-8 text-[#aab6ae] sm:text-xl">
+          <p class="mt-7 max-w-2xl text-lg leading-8 text-[var(--site-muted)] sm:text-xl">
             Run vouchers, gift cards, loyalty, and referrals behind one typed API. OfferKit is
             MIT-licensed, agent-ready, and yours to deploy.
           </p>
           <div class="mt-9 flex flex-wrap gap-3">
-            <a
-              href="/docs/getting-started"
-              class="rounded-xl bg-[#72f1ad] px-5 py-3 text-sm font-semibold text-[#062113] shadow-[0_0_2rem_rgba(114,241,173,0.18)] transition hover:bg-[#8bf5bb]"
-            >
-              Run OfferKit <span aria-hidden="true">→</span>
+            <a href="/docs/getting-started" class="site-button-primary">
+              Run OfferKit <span class="ml-2" aria-hidden="true">→</span>
             </a>
-            <a
-              href="https://github.com/offerkit/offerkit"
-              class="rounded-xl border border-white/[0.12] bg-white/[0.035] px-5 py-3 text-sm font-medium text-[#e2ebe5] transition hover:border-white/20 hover:bg-white/[0.06]"
-            >
+            <a href="https://github.com/offerkit/offerkit" class="site-button-secondary">
               View on GitHub
             </a>
           </div>
-          <ul class="mt-9 flex flex-wrap gap-x-5 gap-y-2 font-mono text-xs uppercase tracking-[0.12em] text-[#7f8d84]" aria-label="Project attributes">
+          <ul class="mt-9 flex flex-wrap gap-x-5 gap-y-2 font-mono text-xs uppercase tracking-[0.11em] text-[var(--site-muted-light)]" aria-label="Project attributes">
             <li>MIT licensed</li>
             <li>Self-hosted</li>
             <li>One Docker image</li>
           </ul>
         </div>
 
-        <div class="site-card relative overflow-hidden p-3 shadow-[0_2rem_6rem_rgba(0,0,0,0.35)]">
-          <div class="flex items-center justify-between border-b border-white/[0.07] px-3 py-2.5 font-mono text-[0.68rem] uppercase tracking-[0.13em] text-[#728078]">
-            <span>Live contract</span>
-            <span class="flex items-center gap-2 text-[#9beec0]"><span class="size-1.5 rounded-full bg-[#72f1ad]"></span> Ready</span>
+        <div class="hero-visual relative min-h-[24rem] overflow-hidden rounded-[1.75rem] border border-white bg-white shadow-[var(--site-shadow-lg)] sm:min-h-[30rem]">
+          <img
+            src="/offerkit-banner.png"
+            alt="OfferKit dashboard connected to promotion services and databases"
+            width="2172"
+            height="724"
+            class="absolute inset-0 size-full object-cover object-[66%_center]"
+            fetchpriority="high"
+          />
+          <div class="absolute inset-x-5 top-5 flex items-center justify-between rounded-xl border border-white/90 bg-white/85 px-4 py-3 shadow-[0_8px_24px_rgba(81,100,126,0.12)] backdrop-blur-md">
+            <span class="flex items-center gap-2 text-xs font-semibold text-[var(--site-heading)]">
+              <span class="size-2 rounded-full bg-[var(--site-teal)] shadow-[0_0_0_4px_rgba(45,185,154,0.13)]"></span>
+              Promotion engine
+            </span>
+            <span class="font-mono text-[0.66rem] uppercase tracking-[0.1em] text-[var(--site-primary-strong)]">Healthy</span>
           </div>
-          <div class="p-3 sm:p-5">
-            <div class="flex items-center gap-3 font-mono text-xs">
-              <span class="rounded-md bg-[#72f1ad]/12 px-2 py-1 text-[#9bf7c4]">POST</span>
-              <span class="text-[#c7d3cb]">/api/v1/vouchers/SUMMER10/redemption</span>
-            </div>
-            <pre class="mt-5 overflow-x-auto text-[0.72rem] leading-6 text-[#a9b8af] sm:text-xs"><code>{redemptionExample}</code></pre>
-            <div class="mt-4 rounded-xl border border-[#72f1ad]/15 bg-[#72f1ad]/[0.055] p-4 font-mono text-xs">
-              <div class="flex items-center justify-between text-[#c7d5cc]">
-                <span>redemption.accepted</span>
-                <span class="text-[#72f1ad]">200 OK</span>
-              </div>
-              <div class="mt-3 grid grid-cols-3 gap-3 border-t border-[#72f1ad]/10 pt-3 text-[0.66rem] uppercase tracking-[0.1em] text-[#718077]">
-                <span>Idempotent</span>
-                <span>Audited</span>
-                <span>Event emitted</span>
-              </div>
-            </div>
+          <div class="absolute inset-x-5 bottom-5 grid grid-cols-3 gap-2.5">
+            <span class="rounded-xl border border-white/90 bg-white/90 px-3 py-3 text-center text-xs font-semibold text-[var(--site-primary-strong)] shadow-[0_8px_22px_rgba(81,100,126,0.12)] backdrop-blur-md">Typed</span>
+            <span class="rounded-xl border border-white/90 bg-white/90 px-3 py-3 text-center text-xs font-semibold text-[#b47200] shadow-[0_8px_22px_rgba(81,100,126,0.12)] backdrop-blur-md">Atomic</span>
+            <span class="rounded-xl border border-white/90 bg-white/90 px-3 py-3 text-center text-xs font-semibold text-[#276dc2] shadow-[0_8px_22px_rgba(81,100,126,0.12)] backdrop-blur-md">Observable</span>
           </div>
         </div>
       </section>
 
-      <section class="border-y border-white/[0.07] bg-[#07100b]/70">
-        <div class="site-container grid divide-y divide-white/[0.07] sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
-          {surfaces.map(([title, description]) => (
+      <section class="border-y border-[var(--site-border)] bg-white/65">
+        <div class="site-container grid divide-y divide-[var(--site-border)] sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
+          {surfaces.map(([title, description, accent]) => (
             <div class="px-6 py-7 first:pl-0 last:pr-0 sm:first:pl-6 lg:first:pl-0">
-              <p class="text-sm font-semibold text-[#e7f0ea]">{title}</p>
-              <p class="mt-2 text-sm leading-6 text-[#849188]">{description}</p>
+              <div class="flex items-center gap-2.5">
+                <span class="size-2 rounded-full shadow-[0_2px_6px_rgba(65,84,109,0.16)]" style={`background: ${accent}`}></span>
+                <p class="text-sm font-bold text-[var(--site-heading)]">{title}</p>
+              </div>
+              <p class="mt-2 text-sm leading-6 text-[var(--site-muted)]">{description}</p>
             </div>
           ))}
         </div>
@@ -121,77 +131,107 @@ const redemptionExample = `const result = await offerkit.vouchers.redeem({
       <section class="site-container py-24 sm:py-32">
         <div class="max-w-2xl">
           <p class="site-kicker">The promotion layer</p>
-          <h2 class="mt-6 text-4xl font-semibold tracking-[-0.045em] sm:text-5xl">
+          <h2 class="mt-6 text-4xl font-bold tracking-[-0.05em] text-[var(--site-heading)] sm:text-5xl">
             One model for every incentive.
           </h2>
-          <p class="mt-5 text-lg leading-8 text-[#9ba89f]">
+          <p class="mt-5 text-lg leading-8 text-[var(--site-muted)]">
             Replace scattered checkout conditionals and one-off admin tools with a system your
             team can inspect, test, and operate.
           </p>
         </div>
 
-        <div class="mt-12 grid gap-4 md:grid-cols-2">
+        <div class="mt-12 grid gap-5 md:grid-cols-2">
           {capabilities.map((capability) => (
-            <article class="site-card group min-h-64 p-7 transition hover:border-[#72f1ad]/25 sm:p-8">
+            <article
+              class="capability-card site-card group min-h-64 p-7 sm:p-8"
+              style={`--card-accent: ${capability.accent}; --card-soft: ${capability.soft}`}
+            >
               <div class="flex items-start justify-between gap-6">
-                <h3 class="text-2xl font-semibold tracking-[-0.035em]">{capability.title}</h3>
-                <span class="font-mono text-xs text-[#536058]">{capability.index}</span>
+                <div class="grid size-11 place-items-center rounded-xl border border-white bg-[var(--card-soft)] font-mono text-xs font-bold text-[var(--site-heading)] shadow-sm">
+                  {capability.index}
+                </div>
+                <span class="mt-2 size-2.5 rounded-full bg-[var(--card-accent)] shadow-[0_0_0_5px_var(--card-soft)]"></span>
               </div>
-              <p class="mt-6 max-w-md leading-7 text-[#98a69d]">{capability.description}</p>
-              <div class="mt-10 h-px bg-gradient-to-r from-[#72f1ad]/35 to-transparent"></div>
+              <h3 class="mt-8 text-2xl font-bold tracking-[-0.04em] text-[var(--site-heading)]">{capability.title}</h3>
+              <p class="mt-4 max-w-md leading-7 text-[var(--site-muted)]">{capability.description}</p>
+              <div class="mt-8 h-px bg-gradient-to-r from-[var(--card-accent)]/50 to-transparent"></div>
             </article>
           ))}
         </div>
       </section>
 
-      <section class="border-y border-white/[0.07] bg-[#08100c] py-24 sm:py-32">
-        <div class="site-container grid gap-14 lg:grid-cols-[0.8fr_1.2fr] lg:gap-24">
+      <section class="border-y border-[var(--site-border)] bg-[var(--site-bg-subtle)] py-24 sm:py-32">
+        <div class="site-container grid gap-14 lg:grid-cols-[0.8fr_1.2fr] lg:items-start lg:gap-24">
           <div>
             <p class="site-kicker">Predictable by design</p>
-            <h2 class="mt-6 text-4xl font-semibold tracking-[-0.045em] sm:text-5xl">
+            <h2 class="mt-6 text-4xl font-bold tracking-[-0.05em] text-[var(--site-heading)] sm:text-5xl">
               Own the hot path.
             </h2>
-            <p class="mt-5 text-lg leading-8 text-[#9ba89f]">
+            <p class="mt-5 text-lg leading-8 text-[var(--site-muted)]">
               Checkout logic needs clear outcomes under retries, concurrency, and partial failure.
               OfferKit makes those constraints part of the contract.
             </p>
-            <a class="mt-7 inline-flex text-sm font-medium text-[#9ff7c6]" href="/docs/api-reference">
+            <a class="mt-7 inline-flex text-sm font-semibold text-[var(--site-primary-strong)] transition hover:text-[var(--site-primary)]" href="/docs/api-reference">
               Read the API conventions <span class="ml-2" aria-hidden="true">→</span>
             </a>
           </div>
 
-          <ol class="grid gap-px overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.08]">
-            {[
-              ["Validate", "Preview eligibility without changing counters or balances."],
-              ["Redeem", "Commit atomically with a stable idempotency key."],
-              ["Explain", "Return typed, support-safe reasons for every rejection."],
-              ["Observe", "Emit events, signed webhooks, audit entries, and telemetry."],
-            ].map(([title, description], index) => (
-              <li class="grid gap-3 bg-[#09110d] p-6 sm:grid-cols-[3rem_1fr] sm:p-7">
-                <span class="font-mono text-xs text-[#5d6b62]">0{index + 1}</span>
-                <div>
-                  <h3 class="font-semibold text-[#e7f0ea]">{title}</h3>
-                  <p class="mt-1.5 leading-7 text-[#8c9a91]">{description}</p>
+          <div class="site-card overflow-hidden p-3 sm:p-4">
+            <div class="flex items-center justify-between border-b border-[var(--site-border)] px-3 py-2.5 font-mono text-[0.68rem] uppercase tracking-[0.12em] text-[var(--site-muted-light)]">
+              <span>Live contract</span>
+              <span class="flex items-center gap-2 text-[var(--site-primary-strong)]"><span class="size-1.5 rounded-full bg-[var(--site-teal)]"></span> Ready</span>
+            </div>
+            <div class="p-3 sm:p-5">
+              <div class="flex items-center gap-3 font-mono text-xs">
+                <span class="rounded-md bg-[var(--site-primary-soft)] px-2 py-1 font-semibold text-[var(--site-primary-strong)]">POST</span>
+                <span class="overflow-hidden text-ellipsis text-[var(--site-muted)]">/api/v1/vouchers/SUMMER10/redemption</span>
+              </div>
+              <pre class="mt-5 overflow-x-auto rounded-xl border border-[var(--site-border)] bg-[#f4f7fa] p-4 text-[0.72rem] leading-6 text-[#425168] shadow-inner sm:text-xs"><code>{redemptionExample}</code></pre>
+              <div class="mt-4 rounded-xl border border-[#2db99a]/20 bg-[var(--site-primary-soft)] p-4 font-mono text-xs">
+                <div class="flex items-center justify-between text-[var(--site-text)]">
+                  <span>redemption.accepted</span>
+                  <span class="font-semibold text-[var(--site-primary-strong)]">200 OK</span>
                 </div>
-              </li>
-            ))}
-          </ol>
+                <div class="mt-3 grid grid-cols-3 gap-3 border-t border-[#2db99a]/15 pt-3 text-[0.62rem] uppercase tracking-[0.08em] text-[var(--site-muted)] sm:text-[0.66rem]">
+                  <span>Idempotent</span>
+                  <span>Audited</span>
+                  <span>Event emitted</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <ol class="site-container mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {steps.map(([title, description, accent], index) => (
+            <li class="rounded-2xl border border-[var(--site-border)] bg-white p-6 shadow-[var(--site-shadow-sm)]">
+              <div class="flex items-center justify-between">
+                <span class="font-mono text-xs text-[var(--site-muted-light)]">0{index + 1}</span>
+                <span class="size-2.5 rounded-full" style={`background: ${accent}`}></span>
+              </div>
+              <h3 class="mt-6 font-bold text-[var(--site-heading)]">{title}</h3>
+              <p class="mt-2 leading-7 text-[var(--site-muted)]">{description}</p>
+            </li>
+          ))}
+        </ol>
       </section>
 
       <section class="site-container py-24 sm:py-32">
-        <div class="site-card overflow-hidden px-6 py-16 text-center sm:px-12 sm:py-20">
-          <p class="site-kicker">Deploy on your terms</p>
-          <h2 class="mx-auto mt-6 max-w-3xl text-4xl font-semibold tracking-[-0.05em] sm:text-5xl">
+        <div class="cta-card site-card relative overflow-hidden px-6 py-16 text-center sm:px-12 sm:py-20">
+          <div class="absolute -left-16 -top-16 size-44 rounded-full bg-[#2db99a]/10 blur-2xl"></div>
+          <div class="absolute -bottom-20 -right-16 size-52 rounded-full bg-[#388df2]/10 blur-2xl"></div>
+          <img src="/icon.png" alt="" width="72" height="72" class="relative mx-auto size-[4.5rem] rounded-2xl shadow-[0_12px_28px_rgba(68,88,113,0.16)]" />
+          <p class="site-kicker relative mt-7">Deploy on your terms</p>
+          <h2 class="relative mx-auto mt-6 max-w-3xl text-4xl font-bold tracking-[-0.055em] text-[var(--site-heading)] sm:text-5xl">
             Your promotions. Your data. Your infrastructure.
           </h2>
-          <p class="mx-auto mt-5 max-w-2xl text-lg leading-8 text-[#9ba89f]">
+          <p class="relative mx-auto mt-5 max-w-2xl text-lg leading-8 text-[var(--site-muted)]">
             Start locally with Docker Compose, then run the same published image anywhere that
             speaks containers.
           </p>
-          <div class="mt-8 flex flex-wrap justify-center gap-3">
-            <a href="/docs/getting-started" class="rounded-xl bg-[#72f1ad] px-5 py-3 text-sm font-semibold text-[#062113] transition hover:bg-[#8bf5bb]">Get started</a>
-            <a href="/docs/self-host" class="rounded-xl border border-white/[0.12] px-5 py-3 text-sm font-medium text-[#e2ebe5] transition hover:bg-white/[0.05]">Self-hosting guide</a>
+          <div class="relative mt-8 flex flex-wrap justify-center gap-3">
+            <a href="/docs/getting-started" class="site-button-primary">Get started</a>
+            <a href="/docs/self-host" class="site-button-secondary">Self-hosting guide</a>
           </div>
         </div>
       </section>
@@ -200,3 +240,37 @@ const redemptionExample = `const result = await offerkit.vouchers.redeem({
     <SiteFooter />
   </div>
 </Layout>
+
+<style>
+  .hero-visual::after {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+    pointer-events: none;
+    content: "";
+  }
+
+  .capability-card {
+    transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+  }
+
+  .capability-card:hover {
+    border-color: color-mix(in srgb, var(--card-accent) 42%, white);
+    box-shadow: 0 18px 38px rgba(75, 96, 123, 0.13), 0 2px 8px rgba(75, 96, 123, 0.06);
+    transform: translateY(-2px);
+  }
+
+  .cta-card {
+    background:
+      radial-gradient(circle at 18% 20%, rgba(45, 185, 154, 0.1), transparent 26rem),
+      radial-gradient(circle at 82% 90%, rgba(56, 141, 242, 0.09), transparent 24rem),
+      white;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .capability-card {
+      transition: none;
+    }
+  }
+</style>

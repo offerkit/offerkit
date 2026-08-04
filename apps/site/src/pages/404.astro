@@ -9,13 +9,13 @@ import "@/styles/global.css";
   <SiteHeader />
   <main class="site-container flex min-h-[70vh] max-w-2xl flex-col items-start justify-center py-20">
     <p class="site-kicker">404</p>
-    <h1 class="mt-6 text-5xl font-semibold tracking-[-0.05em]">Page not found.</h1>
-    <p class="mt-5 max-w-lg text-lg leading-8 text-[#9ba89f]">
+    <h1 class="mt-6 text-5xl font-bold tracking-[-0.055em] text-[var(--site-heading)]">Page not found.</h1>
+    <p class="mt-5 max-w-lg text-lg leading-8 text-[var(--site-muted)]">
       The page may have moved, or the URL might be incomplete.
     </p>
     <div class="mt-8 flex flex-wrap gap-3">
-      <a href="/" class="rounded-xl bg-[#72f1ad] px-5 py-3 text-sm font-semibold text-[#062113]">Back home</a>
-      <a href="/docs" class="rounded-xl border border-white/[0.12] px-5 py-3 text-sm font-medium text-[#e2ebe5]">Browse docs</a>
+      <a href="/" class="site-button-primary">Back home</a>
+      <a href="/docs" class="site-button-secondary">Browse docs</a>
     </div>
   </main>
   <SiteFooter />

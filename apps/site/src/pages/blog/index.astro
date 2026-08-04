@@ -25,34 +25,39 @@ function formatDate(date: Date) {
 
 <Layout title="Blog" description="Notes on building reliable, self-hosted promotion infrastructure.">
   <SiteHeader active="blog" />
-  <main class="site-container min-h-[70vh] py-20 sm:py-28">
-    <p class="site-kicker">From the OfferKit team</p>
-    <h1 class="mt-6 text-5xl font-semibold tracking-[-0.055em] sm:text-6xl">Build notes.</h1>
-    <p class="mt-5 max-w-2xl text-lg leading-8 text-[#9ba89f]">
-      Product decisions, implementation details, and lessons from treating promotions as
-      infrastructure.
-    </p>
+  <main class="relative min-h-[70vh] overflow-hidden">
+    <div class="site-grid pointer-events-none absolute inset-x-0 top-0 h-[34rem]"></div>
+    <header class="site-container relative py-20 sm:py-28">
+      <p class="site-kicker">From the OfferKit team</p>
+      <h1 class="mt-6 text-5xl font-bold tracking-[-0.06em] text-[var(--site-heading)] sm:text-6xl">Build notes.</h1>
+      <p class="mt-5 max-w-2xl text-lg leading-8 text-[var(--site-muted)]">
+        Product decisions, implementation details, and lessons from treating promotions as
+        infrastructure.
+      </p>
+    </header>
 
-    <div class="mt-14 border-t border-white/[0.09]">
-      {posts.map((post) => (
-        <article class="group grid gap-5 border-b border-white/[0.09] py-9 sm:grid-cols-[10rem_1fr_auto] sm:items-start">
-          <time class="font-mono text-xs uppercase tracking-[0.1em] text-[#718077]" datetime={post.data.publishedAt.toISOString()}>
-            {formatDate(post.data.publishedAt)}
-          </time>
-          <div>
-            <h2 class="text-2xl font-semibold tracking-[-0.035em] text-[#ebf3ee] transition group-hover:text-[#9ff7c6]">
-              <a href={`/blog/${slugFor(post.id)}`}>{post.data.title}</a>
-            </h2>
-            <p class="mt-3 max-w-2xl leading-7 text-[#8f9d94]">{post.data.description}</p>
-            <div class="mt-4 flex flex-wrap gap-2">
-              {post.data.tags.map((tag) => (
-                <span class="rounded-full border border-white/[0.09] px-2.5 py-1 font-mono text-[0.65rem] uppercase tracking-[0.08em] text-[#7f8d84]">{tag}</span>
-              ))}
+    <div class="border-y border-[var(--site-border)] bg-white/70">
+      <div class="site-container">
+        {posts.map((post) => (
+          <article class="group grid gap-5 border-b border-[var(--site-border)] py-10 last:border-b-0 sm:grid-cols-[10rem_1fr_auto] sm:items-start">
+            <time class="font-mono text-xs uppercase tracking-[0.1em] text-[var(--site-muted-light)]" datetime={post.data.publishedAt.toISOString()}>
+              {formatDate(post.data.publishedAt)}
+            </time>
+            <div>
+              <h2 class="text-2xl font-bold tracking-[-0.04em] text-[var(--site-heading)] transition group-hover:text-[var(--site-primary-strong)]">
+                <a href={`/blog/${slugFor(post.id)}`}>{post.data.title}</a>
+              </h2>
+              <p class="mt-3 max-w-2xl leading-7 text-[var(--site-muted)]">{post.data.description}</p>
+              <div class="mt-4 flex flex-wrap gap-2">
+                {post.data.tags.map((tag) => (
+                  <span class="rounded-full border border-[#2db99a]/20 bg-[var(--site-primary-soft)] px-2.5 py-1 font-mono text-[0.65rem] uppercase tracking-[0.08em] text-[var(--site-primary-strong)]">{tag}</span>
+                ))}
+              </div>
             </div>
-          </div>
-          <span class="hidden pt-1 text-[#72f1ad] sm:block" aria-hidden="true">→</span>
-        </article>
-      ))}
+            <span class="hidden pt-1 text-[var(--site-primary)] transition group-hover:translate-x-1 sm:block" aria-hidden="true">→</span>
+          </article>
+        ))}
+      </div>
     </div>
   </main>
   <SiteFooter />

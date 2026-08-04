@@ -2,30 +2,67 @@
 @import "fumadocs-ui/css/neutral.css";
 @import "fumadocs-ui/css/preset.css";
 
+/*
+ * OfferKit brand theme
+ *
+ * Derived from .github/assets/offerkit-readme-header-text.png and the
+ * ticket artwork in apps/web/public/icon.png. These tokens are shared by
+ * the marketing site, blog, and Fumadocs documentation.
+ */
 :root {
-  --color-fd-primary: oklch(0.78 0.17 164);
-  --site-bg: #050907;
-  --site-surface: #0a100d;
-  --site-surface-raised: #0e1712;
-  --site-border: rgba(184, 255, 216, 0.14);
-  --site-muted: #9aa89f;
-  --site-mint: #72f1ad;
-  --site-mint-soft: #b2f8d0;
+  --color-fd-background: #f8fafc;
+  --color-fd-foreground: #182234;
+  --color-fd-card: #ffffff;
+  --color-fd-card-foreground: #182234;
+  --color-fd-popover: #ffffff;
+  --color-fd-popover-foreground: #182234;
+  --color-fd-primary: #0b8f70;
+  --color-fd-primary-foreground: #ffffff;
+  --color-fd-secondary: #eef3f7;
+  --color-fd-secondary-foreground: #263449;
+  --color-fd-muted: #eef3f7;
+  --color-fd-muted-foreground: #64748b;
+  --color-fd-accent: #e8f7f3;
+  --color-fd-accent-foreground: #08765d;
+  --color-fd-border: #dfe6ef;
+  --color-fd-ring: #2cb895;
+
+  --site-bg: #f8fafc;
+  --site-bg-subtle: #f2f6fa;
+  --site-surface: #ffffff;
+  --site-surface-raised: #ffffff;
+  --site-border: #dfe6ef;
+  --site-border-strong: #cad4e1;
+  --site-heading: #111827;
+  --site-text: #263449;
+  --site-muted: #66758c;
+  --site-muted-light: #8795a8;
+  --site-primary: #169b78;
+  --site-primary-strong: #08775d;
+  --site-primary-soft: #e6f7f2;
+  --site-teal: #2db99a;
+  --site-amber: #ffb426;
+  --site-blue: #388df2;
+  --site-coral: #f56f7f;
+  --site-violet: #7567e8;
+  --site-shadow-sm: 0 1px 2px rgba(31, 50, 73, 0.05), 0 8px 24px rgba(69, 91, 119, 0.08);
+  --site-shadow-lg: 0 24px 60px rgba(80, 101, 130, 0.16), 0 4px 16px rgba(80, 101, 130, 0.08);
 }
 
 html {
   scrollbar-gutter: stable;
   background: var(--site-bg);
-  color-scheme: dark;
+  color-scheme: light;
   scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
   background:
-    radial-gradient(circle at 50% -12rem, rgba(45, 200, 119, 0.13), transparent 36rem),
+    radial-gradient(circle at 9% 4%, rgba(45, 185, 154, 0.08), transparent 25rem),
+    radial-gradient(circle at 92% 9%, rgba(56, 141, 242, 0.07), transparent 23rem),
     var(--site-bg);
-  color: #f1f7f3;
+  color: var(--site-text);
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   text-rendering: optimizeLegibility;
@@ -37,15 +74,14 @@ html > body[data-scroll-locked] {
 }
 
 ::selection {
-  background: color-mix(in oklab, var(--color-fd-primary) 30%, transparent);
+  background: color-mix(in oklab, var(--site-teal) 24%, white);
+  color: var(--site-heading);
 }
 
 .site-grid {
-  background-image:
-    linear-gradient(rgba(114, 241, 173, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(114, 241, 173, 0.045) 1px, transparent 1px);
-  background-size: 44px 44px;
-  mask-image: linear-gradient(to bottom, black 28%, transparent 92%);
+  background-image: radial-gradient(circle, rgba(100, 116, 139, 0.22) 1.25px, transparent 1.35px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, black 20%, transparent 92%);
 }
 
 .site-container {
@@ -57,39 +93,81 @@ html > body[data-scroll-locked] {
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
-  color: var(--site-mint-soft);
+  color: var(--site-primary-strong);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.75rem;
-  letter-spacing: 0.12em;
+  font-weight: 650;
+  letter-spacing: 0.11em;
   text-transform: uppercase;
 }
 
 .site-kicker::before {
-  width: 0.45rem;
-  height: 0.45rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  border: 2px solid white;
   border-radius: 999px;
-  background: var(--site-mint);
-  box-shadow: 0 0 1rem rgba(114, 241, 173, 0.75);
+  background: var(--site-teal);
+  box-shadow: 0 0 0 1px rgba(45, 185, 154, 0.28), 0 3px 9px rgba(45, 185, 154, 0.28);
   content: "";
 }
 
 .site-card {
   border: 1px solid var(--site-border);
-  border-radius: 1.25rem;
-  background: linear-gradient(145deg, rgba(17, 29, 23, 0.84), rgba(8, 14, 11, 0.92));
-  box-shadow: inset 0 1px rgba(255, 255, 255, 0.025);
+  border-radius: 1.35rem;
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+  box-shadow: var(--site-shadow-sm);
+}
+
+.site-button-primary,
+.site-button-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.8rem;
+  border-radius: 0.8rem;
+  padding: 0.72rem 1.2rem;
+  font-size: 0.875rem;
+  font-weight: 650;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.site-button-primary {
+  border: 1px solid #08795e;
+  background: linear-gradient(180deg, #22b58f, #119473);
+  box-shadow: 0 8px 20px rgba(22, 155, 120, 0.22), inset 0 1px rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+.site-button-primary:hover {
+  background: linear-gradient(180deg, #25bd96, #0c8869);
+  box-shadow: 0 10px 24px rgba(22, 155, 120, 0.28), inset 0 1px rgba(255, 255, 255, 0.34);
+  transform: translateY(-1px);
+}
+
+.site-button-secondary {
+  border: 1px solid var(--site-border-strong);
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 4px 12px rgba(65, 84, 109, 0.06), inset 0 1px white;
+  color: var(--site-text);
+}
+
+.site-button-secondary:hover {
+  border-color: #aebdcd;
+  background: white;
+  box-shadow: 0 8px 18px rgba(65, 84, 109, 0.1), inset 0 1px white;
+  transform: translateY(-1px);
 }
 
 .site-prose {
-  color: #c9d4cd;
+  color: var(--site-text);
   font-size: 1.0625rem;
   line-height: 1.8;
 }
 
 .site-prose h2,
 .site-prose h3 {
-  color: #f4faf6;
-  font-weight: 650;
+  color: var(--site-heading);
+  font-weight: 680;
   letter-spacing: -0.025em;
   scroll-margin-top: 6rem;
 }
@@ -120,31 +198,33 @@ html > body[data-scroll-locked] {
 }
 
 .site-prose a {
-  color: var(--site-mint-soft);
+  color: var(--site-primary-strong);
+  font-weight: 550;
   text-decoration: underline;
-  text-decoration-color: rgba(114, 241, 173, 0.4);
+  text-decoration-color: rgba(22, 155, 120, 0.35);
   text-underline-offset: 0.2em;
 }
 
 .site-prose strong {
-  color: #edf7f0;
+  color: var(--site-heading);
 }
 
 .site-prose code:not(pre code) {
   border: 1px solid var(--site-border);
-  border-radius: 0.35rem;
-  background: #0c1510;
+  border-radius: 0.4rem;
+  background: #eef4f7;
   padding: 0.12rem 0.35rem;
-  color: #bdfbd6;
+  color: #08775d;
   font-size: 0.9em;
 }
 
 .site-prose pre {
   overflow-x: auto;
   margin-block: 1.5rem;
-  border: 1px solid var(--site-border);
+  border: 1px solid #d7e0e9;
   border-radius: 1rem;
-  background: #07100b !important;
+  background: #f4f7fa !important;
+  box-shadow: inset 0 1px white;
   padding: 1.25rem;
   font-size: 0.9rem;
   line-height: 1.65;
@@ -152,13 +232,18 @@ html > body[data-scroll-locked] {
 
 .site-prose blockquote {
   margin: 1.75rem 0;
-  border-left: 3px solid var(--site-mint);
+  border-left: 3px solid var(--site-teal);
   padding-left: 1.25rem;
-  color: #e1ebe5;
+  color: #34445a;
 }
 
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+  }
+
+  .site-button-primary,
+  .site-button-secondary {
+    transition: none;
   }
 }

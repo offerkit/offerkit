@@ -43,15 +43,24 @@ export function Docs({
         tree={tree}
         githubUrl="https://github.com/offerkit/offerkit"
         themeSwitch={{ enabled: false }}
-          nav={{
-            title: (
-              <span className="font-semibold tracking-tight">
-                Offer<span className="text-fd-primary">Kit</span>
-                <span className="ml-2 text-xs font-normal text-fd-muted-foreground">Docs</span>
+        nav={{
+          title: (
+            <span className="flex items-center gap-2.5 font-bold tracking-[-0.035em] text-fd-foreground">
+              <img
+                src="/icon.png"
+                alt=""
+                width={32}
+                height={32}
+                className="size-8 rounded-[0.65rem] shadow-sm"
+              />
+              <span>OfferKit</span>
+              <span className="text-xs font-normal tracking-normal text-fd-muted-foreground">
+                Docs
               </span>
-            ),
-            url: "/docs",
-          }}
+            </span>
+          ),
+          url: "/docs",
+        }}
         links={[
           {
             type: "menu",

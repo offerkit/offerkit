@@ -25,14 +25,14 @@ const socialImage = new URL("/og.png", Astro.site);
 ---
 
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
     <meta name="description" content={description} />
     <meta name="robots" content={noIndex ? "noindex, follow" : "index, follow"} />
-    <meta name="theme-color" content="#07110d" />
+    <meta name="theme-color" content="#f8fafc" />
     <meta property="og:type" content={type} />
     <meta property="og:site_name" content="OfferKit" />
     <meta property="og:title" content={pageTitle} />
@@ -52,6 +52,7 @@ const socialImage = new URL("/og.png", Astro.site);
     <link rel="canonical" href={canonical} />
     <link rel="alternate" type="application/rss+xml" title="OfferKit blog" href="/blog/rss.xml" />
     <link rel="icon" href="/favicon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>{pageTitle}</title>
     <ClientRouter />
   </head>

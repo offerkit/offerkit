@@ -10,18 +10,17 @@ const navItems = [
 ];
 ---
 
-<header class="relative z-20 border-b border-white/[0.07] bg-[#050907]/85 backdrop-blur-xl">
-  <div class="site-container flex h-16 items-center justify-between gap-6">
+<header class="relative z-20 border-b border-[var(--site-border)] bg-white/85 backdrop-blur-xl">
+  <div class="site-container flex h-16 items-center justify-between gap-2 sm:gap-6">
     <a href="/" class="group flex items-center gap-2.5" aria-label="OfferKit home">
-      <span
-        class="grid size-7 place-items-center rounded-lg border border-[#72f1ad]/35 bg-[#72f1ad]/10 font-mono text-xs font-bold text-[#9ff7c6] transition group-hover:bg-[#72f1ad]/15"
-        aria-hidden="true"
-      >
-        OK
-      </span>
-      <span class="text-[0.95rem] font-semibold tracking-[-0.025em]">
-        Offer<span class="text-[#72f1ad]">Kit</span>
-      </span>
+      <img
+        src="/icon.png"
+        alt=""
+        width="34"
+        height="34"
+        class="size-8 rounded-[0.65rem] shadow-[0_4px_12px_rgba(65,84,109,0.12)] transition duration-200 group-hover:-translate-y-0.5"
+      />
+      <span class="hidden text-[1.02rem] font-bold tracking-[-0.035em] text-[var(--site-heading)] min-[25rem]:inline">OfferKit</span>
     </a>
 
     <nav class="flex items-center gap-1 text-sm" aria-label="Primary navigation">
@@ -30,8 +29,10 @@ const navItems = [
           href={item.href}
           aria-current={active === item.id ? "page" : undefined}
           class:list={[
-            "rounded-lg px-3 py-2 transition hover:bg-white/[0.05] hover:text-white",
-            active === item.id ? "text-white" : "text-[#a5b1a9]",
+            "rounded-lg px-3 py-2 transition hover:bg-[var(--site-bg-subtle)] hover:text-[var(--site-heading)]",
+            active === item.id
+              ? "bg-[var(--site-bg-subtle)] text-[var(--site-heading)]"
+              : "text-[var(--site-muted)]",
           ]}
         >
           {item.label}
@@ -41,15 +42,15 @@ const navItems = [
         href="https://github.com/offerkit/offerkit"
         target="_blank"
         rel="noreferrer"
-        class="hidden rounded-lg px-3 py-2 text-[#a5b1a9] transition hover:bg-white/[0.05] hover:text-white sm:block"
+        class="hidden rounded-lg px-3 py-2 text-[var(--site-muted)] transition hover:bg-[var(--site-bg-subtle)] hover:text-[var(--site-heading)] sm:block"
       >
         GitHub
       </a>
       <a
         href="/docs/getting-started"
-        class="ml-1 rounded-lg border border-[#72f1ad]/35 bg-[#72f1ad]/10 px-3 py-2 font-medium text-[#b9fbd5] transition hover:bg-[#72f1ad]/15"
+        class="ml-1 rounded-lg border border-[#2db99a]/30 bg-[#e6f7f2] px-3 py-2 font-semibold text-[var(--site-primary-strong)] transition hover:border-[#2db99a]/45 hover:bg-[#dff4ee]"
       >
-        Get started
+        <span class="sm:hidden">Start</span><span class="hidden sm:inline">Get started</span>
       </a>
     </nav>
   </div>
