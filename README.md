@@ -142,7 +142,7 @@ offerkit vouchers redeem SUMMER10 --amount 9999
 
 ## 🏗️ Development
 
-Requires Node 24+, pnpm 10+, running Postgres, and Redis.
+Requires Node 26.5.1, pnpm 11.20.0, running Postgres, and Redis.
 
 ```bash
 pnpm install

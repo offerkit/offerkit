@@ -30,6 +30,11 @@ jobs:
           ref: ${{ inputs.ref }}
           fetch-depth: 0
 
+      - name: Install Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 26.5.1
+
       - name: Validate documentation snapshot
         shell: bash
         run: |

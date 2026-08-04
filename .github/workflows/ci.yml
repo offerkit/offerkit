@@ -31,11 +31,13 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
+        with:
+          version: 11.20.0
 
       - name: Install Node
         uses: actions/setup-node@v5
         with:
-          node-version: 24
+          node-version: 26.5.1
           cache: pnpm
 
       - name: Install dependencies

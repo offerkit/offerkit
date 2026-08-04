@@ -30,7 +30,7 @@ name: Release
 # - workflow filename: release.yml · environment: (blank)
 # - Repeat for @offerkit/sdk, @offerkit/cli, @offerkit/mcp.
 #
-# Requires Node 24+ on the runner (ships npm 11+, which speaks OIDC).
+# Requires Node 26.5.1 on the runner (ships npm 11+, which speaks OIDC).
 
 on:
   workflow_dispatch:
@@ -55,11 +55,13 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
+        with:
+          version: 11.20.0
 
       - name: Install Node
         uses: actions/setup-node@v5
         with:
-          node-version: 24
+          node-version: 26.5.1
           cache: pnpm
           registry-url: https://registry.npmjs.org
 

@@ -6,12 +6,12 @@
 
 ARG OFFERKIT_VERSION=edge
 
-FROM node:26-alpine AS base
+FROM node:26.5.1-alpine AS base
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 ENV CI=true
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN npm install -g pnpm@10.23.0
+RUN npm install -g pnpm@11.20.0
 WORKDIR /app
 
 FROM base AS deps

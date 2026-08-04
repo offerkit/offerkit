@@ -5,7 +5,8 @@
   "license": "MIT",
   "packageManager": "pnpm@11.20.0+sha512.9a6f330a95b66446ea088faf1521405a8a01f07fde7124cc9958dfed52d4bb436737e65b08f85f37b46fcba375092558ac51262b816844b22f63406ed166bfee",
   "engines": {
-    "node": ">=24"
+    "node": "26.5.1",
+    "pnpm": "11.20.0"
   },
   "scripts": {
     "build": "turbo run build",
@@ -26,12 +27,5 @@
     "eslint": "^9.39.4",
     "lefthook": "^2.1.6",
     "turbo": "^2.9.14"
-  },
-  "pnpm": {
-    "overrides": {
-      "esbuild": "0.28.1",
-      "hono": "4.12.21",
-      "qs": "6.15.2"
-    }
   }
 }

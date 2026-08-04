@@ -3,6 +3,7 @@
 **/.turbo
 **/dist
 **/coverage
+apps/site
 .git
 .env
 .env.local
