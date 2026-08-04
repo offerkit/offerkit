@@ -48,9 +48,18 @@ Config is stored in `~/.offerkitrc` (chmod 0600). `OFFERKIT_API_URL` / `OFFERKIT
 
 ## MCP server
 
-`offerkit-mcp` is a stdio MCP server generated from the current contract. Contract metadata decides which procedures are exposed and labels every tool as `safe`, `mutating`, or `destructive`. Mutating and destructive tools carry explicit confirmation guidance in their descriptions, so the available tool list stays in sync as the API evolves.
+The deployed web image can expose an OAuth-protected MCP endpoint generated from the current contract. Set `OFFERKIT_MCP_ENABLED=true`, use the deployment's HTTPS origin as `OFFERKIT_PUBLIC_URL`, and connect to `https://your-deployment/mcp`.
 
-Add to your MCP host (Claude Desktop, Cursor, …):
+```bash
+codex mcp add offerkit --url https://your-deployment/mcp
+codex mcp login offerkit
+
+claude mcp add --transport http offerkit https://your-deployment/mcp
+```
+
+Codex opens the OAuth sign-in from `codex mcp login`; in Claude Code, run `/mcp` after adding the server. The grant runs with the signed-in OfferKit user's role and can be revoked under **Settings → Agent connections**.
+
+For a local stdio connection with a scoped API key, add `offerkit-mcp` to your MCP host (Claude Desktop, Cursor, …):
 
 ```json
 {
@@ -67,4 +76,4 @@ Add to your MCP host (Claude Desktop, Cursor, …):
 }
 ```
 
-Tool names follow the SDK path with underscores—for example `vouchers_list`, `vouchers_validate`, `vouchers_redeem`, and `referrals_convert`. Your MCP client shows the authoritative list for the installed package version.
+Contract metadata decides which procedures are exposed and labels every tool as `safe`, `mutating`, or `destructive`. Tool names follow the SDK path with underscores—for example `vouchers_list`, `vouchers_validate`, `vouchers_redeem`, and `referrals_convert`. Your MCP client shows the authoritative list for the running version.

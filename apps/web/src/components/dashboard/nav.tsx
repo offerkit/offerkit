@@ -13,12 +13,22 @@ import {
 } from "@/components/ui/sidebar";
 import { dashboardSections } from "@/components/dashboard/sections";
 
-export function DashboardNav({ role }: { role: "admin" | "member" }) {
+export function DashboardNav({
+  role,
+  hostedMcpEnabled,
+}: {
+  role: "admin" | "member";
+  hostedMcpEnabled: boolean;
+}) {
   const pathname = usePathname();
   return (
     <>
       {dashboardSections.map((section) => {
-        const items = section.items.filter((it) => !it.adminOnly || role === "admin");
+        const items = section.items.filter(
+          (it) =>
+            (!it.adminOnly || role === "admin") &&
+            (!it.requiresHostedMcp || hostedMcpEnabled),
+        );
         if (items.length === 0) return null;
         return (
           <SidebarGroup key={section.label}>

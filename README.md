@@ -125,6 +125,32 @@ offerkit vouchers redeem SUMMER10 --amount 9999
 
 ### MCP server
 
+Enable the hosted MCP endpoint on the `web` service to let Codex and Claude Code connect
+directly to the deployment and sign in with an OfferKit account:
+
+```bash
+OFFERKIT_MCP_ENABLED=true
+OFFERKIT_PUBLIC_URL=https://your-offerkit-deployment
+```
+
+The canonical endpoint is `https://your-offerkit-deployment/mcp` (`/MCP` redirects to
+it). OfferKit publishes OAuth discovery metadata, dynamically registers compatible MCP
+clients, and shows an account consent screen. Add it to Codex with:
+
+```bash
+codex mcp add offerkit --url https://your-offerkit-deployment/mcp
+codex mcp login offerkit
+```
+
+Or add it to Claude Code, then run `/mcp` to authenticate:
+
+```bash
+claude mcp add --transport http offerkit https://your-offerkit-deployment/mcp
+```
+
+Users can revoke an authorized agent from **Settings → Agent connections**. For a local
+stdio connection backed by an API key, use the published package instead:
+
 ```jsonc
 {
   "mcpServers": {

@@ -41,6 +41,7 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-please-change-this-32-chars-min-secret}
       WEBHOOK_SECRET_ENCRYPTION_KEY: ${WEBHOOK_SECRET_ENCRYPTION_KEY:-please-change-this-webhook-encryption-key}
       OFFERKIT_PUBLIC_URL: ${OFFERKIT_PUBLIC_URL:-http://localhost:3000}
+      OFFERKIT_MCP_ENABLED: ${OFFERKIT_MCP_ENABLED:-false}
       BETTER_AUTH_TRUSTED_ORIGINS: ${BETTER_AUTH_TRUSTED_ORIGINS:-}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-changeme123}

@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 import {
   BarChart3,
   Boxes,
+  Cable,
   ClipboardList,
   Coins,
   FileText,
@@ -27,6 +28,8 @@ export interface DashboardSectionItem {
   icon: ComponentType<{ className?: string }>;
   /** Render only for users with role=admin. */
   adminOnly?: boolean;
+  /** Render only when the hosted MCP OAuth surface is enabled. */
+  requiresHostedMcp?: boolean;
 }
 
 export interface DashboardSection {
@@ -141,6 +144,13 @@ export const dashboardSections: DashboardSection[] = [
   {
     label: "Settings",
     items: [
+      {
+        href: "/settings/connections",
+        label: "Agent connections",
+        description: "OAuth access granted to MCP clients.",
+        icon: Cable,
+        requiresHostedMcp: true,
+      },
       {
         href: "/settings/api-keys",
         label: "API keys",

@@ -2,7 +2,9 @@
 
 OfferKit MCP server for exposing the OfferKit API as Model Context Protocol tools.
 
-The server connects to an OfferKit deployment, discovers every procedure in the OfferKit contract, and registers them as stdio MCP tools. Tool descriptions include risk metadata such as `safe`, `mutating`, and `destructive` so MCP hosts and agents can ask for the right confirmation before changing data.
+The package connects to an OfferKit deployment, discovers MCP-exposed procedures in the OfferKit contract, and registers them as tools. Tool descriptions and MCP annotations include risk metadata such as `safe`, `mutating`, and `destructive` so hosts and agents can ask for the right confirmation before changing data.
+
+This package provides the local stdio command and a transport-independent server builder. An OfferKit deployment can expose the same tools at `/mcp` with OAuth by setting `OFFERKIT_MCP_ENABLED=true`; that hosted transport runs inside the web image and does not require this command on the client.
 
 ## Install
 
@@ -44,7 +46,7 @@ The server reads these environment variables:
 
 ## Tools
 
-Tools are derived from the OfferKit contract at server startup. Every API procedure is exposed. Explicit MCP metadata on a contract procedure is used when present; otherwise the server infers risk from the HTTP method: `GET` is `safe`, `DELETE` is `destructive`, and other methods are `mutating`.
+Tools are derived from the OfferKit contract at server startup. Explicit MCP risk metadata is used when present; otherwise the server infers risk from the HTTP method: `GET` is `safe`, `DELETE` is `destructive`, and other methods are `mutating`.
 
 Mutating tools describe their risk level and should be confirmed with the user before invocation. Redemption tools accept idempotency keys where supported by the API.
 

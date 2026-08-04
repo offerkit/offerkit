@@ -69,7 +69,31 @@ production key in shared shell history or CI logs.
 
 ## MCP server
 
-The MCP server exposes contract-selected operations to compatible agent hosts:
+For a hosted deployment, enable the OAuth-protected Streamable HTTP endpoint:
+
+```bash
+OFFERKIT_MCP_ENABLED=true
+OFFERKIT_PUBLIC_URL=https://offerkit.example.com
+```
+
+The canonical endpoint is `https://offerkit.example.com/mcp`. Configure Codex with:
+
+```bash
+codex mcp add offerkit --url https://offerkit.example.com/mcp
+codex mcp login offerkit
+```
+
+Configure Claude Code with the following command, then run `/mcp` and complete the
+browser sign-in:
+
+```bash
+claude mcp add --transport http offerkit https://offerkit.example.com/mcp
+```
+
+The OAuth grant uses the signed-in OfferKit user's role and can be revoked under
+**Settings → Agent connections**.
+
+For a local stdio process using an API key, configure the published package instead:
 
 ```json
 {
@@ -90,8 +114,8 @@ Tool names follow SDK paths with underscores, such as `vouchers_validate` and
 `referrals_convert`. Contract metadata marks tools as safe, mutating, or destructive and
 adds confirmation guidance to state-changing operations.
 
-Grant the MCP server a scoped key appropriate for the intended agent tasks. Risk labels
-help a host present confirmation; they do not replace API authorization.
+Grant a local MCP process a scoped key appropriate for the intended agent tasks. Risk
+labels help a host present confirmation; they do not replace API authorization.
 
 ## Which one should I use?
 

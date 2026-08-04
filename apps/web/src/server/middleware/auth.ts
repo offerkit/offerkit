@@ -1,7 +1,7 @@
 import { ORPCError, os } from "@orpc/server";
 import { and, eq, isNull } from "drizzle-orm";
 import { schema } from "@offerkit/db";
-import type { RequestContext } from "@/server/context";
+import type { RequestContext, TrustedRequestUser } from "@/server/context";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
@@ -14,14 +14,7 @@ import { checkAndRecordIdempotency } from "./idempotency";
 import { requiredScopeFor, scopeAllows } from "./scopes";
 import { takeToken } from "./rate-limit";
 
-interface AuthedUser {
-  id: string;
-  email: string;
-  role: "admin" | "member";
-  actorKind: "user" | "api_key";
-  scopes: readonly string[];
-  rateLimitRps: number | null;
-}
+type AuthedUser = TrustedRequestUser;
 
 export interface AuthedContext extends RequestContext {
   user: AuthedUser;
@@ -57,24 +50,28 @@ async function authenticateApiKey(authorization: string | null): Promise<AuthedU
 export const requireSession = os
   .$context<RequestContext>()
   .middleware(async ({ context, next, path }, input) => {
-    const authHeader = context.headers.get("authorization");
-    const apiUser = await authenticateApiKey(authHeader);
     let user: AuthedUser;
-    if (apiUser) {
-      user = apiUser;
+    if (context.trustedUser) {
+      user = context.trustedUser;
     } else {
-      const session = await auth().api.getSession({ headers: context.headers });
-      if (!session) {
-        throw new ORPCError("UNAUTHORIZED", { message: "Sign in required" });
+      const authHeader = context.headers.get("authorization");
+      const apiUser = await authenticateApiKey(authHeader);
+      if (apiUser) {
+        user = apiUser;
+      } else {
+        const session = await auth().api.getSession({ headers: context.headers });
+        if (!session) {
+          throw new ORPCError("UNAUTHORIZED", { message: "Sign in required" });
+        }
+        user = {
+          id: session.user.id,
+          email: session.user.email,
+          role: (session.user as { role?: "admin" | "member" }).role ?? "member",
+          actorKind: "user",
+          scopes: ["*"],
+          rateLimitRps: null,
+        };
       }
-      user = {
-        id: session.user.id,
-        email: session.user.email,
-        role: (session.user as { role?: "admin" | "member" }).role ?? "member",
-        actorKind: "user",
-        scopes: ["*"],
-        rateLimitRps: null,
-      };
     }
 
     if (user.actorKind === "api_key") {

@@ -162,6 +162,13 @@
       "when": 1783671509172,
       "tag": "0022_ambiguous_silk_fever",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1785840455968,
+      "tag": "0023_moaning_lord_tyger",
+      "breakpoints": true
     }
   ]
 }

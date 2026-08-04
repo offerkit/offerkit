@@ -25,6 +25,9 @@ export default function SignInPage() {
         setError(result.error.message ?? gt("Sign in failed"));
         return;
       }
+      // oauthProviderClient follows the signed OAuth redirect returned by sign-in.
+      // Avoid racing that navigation with the normal dashboard destination.
+      if (params.has("sig") && params.has("client_id")) return;
       router.push(params.get("next") ?? "/dashboard");
       router.refresh();
     },

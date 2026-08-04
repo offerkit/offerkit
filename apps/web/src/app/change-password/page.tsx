@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "@tanstack/react-form";
 import { T, useGT } from "gt-next/client";
-import { changePassword } from "@/lib/auth-client";
+import { changePassword, oauth2 } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 
 export default function ChangePasswordPage() {
   const router = useRouter();
+  const params = useSearchParams();
   const gt = useGT();
   const [error, setError] = useState<string | null>(null);
 
@@ -36,7 +37,18 @@ export default function ChangePasswordPage() {
         setError(result.error.message ?? gt("Password change failed"));
         return;
       }
-      await fetch("/api/v1/me/clear-must-change-password", { method: "POST" });
+      const cleared = await fetch("/api/v1/me/clear-must-change-password", { method: "POST" });
+      if (!cleared.ok) {
+        setError(gt("Password changed, but the account could not be updated"));
+        return;
+      }
+      if (params.has("sig") && params.has("client_id")) {
+        const continued = await oauth2.continue({ postLogin: true });
+        if (continued.error) {
+          setError(continued.error.message ?? gt("Unable to continue authorization"));
+        }
+        return;
+      }
       router.push("/dashboard");
       router.refresh();
     },

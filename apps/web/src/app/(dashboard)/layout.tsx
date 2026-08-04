@@ -22,6 +22,7 @@ import { UserMenu } from "@/components/dashboard/user-menu";
 import { DashboardWorkspaceBrand } from "@/components/dashboard/workspace-brand";
 import { DashboardDocsLink } from "@/components/dashboard/docs-link";
 import { docsUrlForVersion, getOfferKitVersion } from "@/lib/version";
+import { isHostedMcpEnabled } from "@/lib/hosted-mcp";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await requireDashboardSession();
@@ -35,7 +36,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <DashboardWorkspaceBrand />
         </SidebarHeader>
         <SidebarContent>
-          <DashboardNav role={getDashboardRole(session)} />
+          <DashboardNav
+            role={getDashboardRole(session)}
+            hostedMcpEnabled={isHostedMcpEnabled()}
+          />
         </SidebarContent>
         <SidebarFooter>
           <SidebarMenu>

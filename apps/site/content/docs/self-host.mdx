@@ -42,6 +42,20 @@ BETTER_AUTH_TRUSTED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 
 Do not use a broad wildcard or disable Better Auth's origin check. After changing either variable, recreate the web container with `docker compose up -d --force-recreate web`.
 
+### Hosted MCP with account login
+
+Set this optional variable on the `web` service to expose a Streamable HTTP MCP server:
+
+```bash
+OFFERKIT_MCP_ENABLED=true
+```
+
+The endpoint is `${OFFERKIT_PUBLIC_URL}/mcp` and uses OAuth to sign each MCP client into
+an OfferKit account. Use HTTPS in production and ensure `OFFERKIT_PUBLIC_URL` is the exact
+external origin, because it is also the OAuth issuer and callback origin. No MCP variable
+is needed on the `worker` service. Authorized clients can be revoked from **Settings →
+Agent connections**.
+
 Pin a release by setting `OFFERKIT_IMAGE_TAG`, for example:
 
 ```bash

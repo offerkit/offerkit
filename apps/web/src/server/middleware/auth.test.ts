@@ -23,7 +23,7 @@ vi.mock("@offerkit/core/observability", () => ({
 
 import { requireSession } from "./auth";
 
-function createMutationCall(output: unknown) {
+function createMutationCall(output: unknown, trustedUser?: RequestContext["trustedUser"]) {
   const procedure = os
     .$context<RequestContext>()
     .use(requireSession)
@@ -32,6 +32,7 @@ function createMutationCall(output: unknown) {
       context: {
         request: new Request("http://test.local"),
         headers: new Headers(),
+        trustedUser,
       },
       path: ["campaigns", "create"],
     });
@@ -89,6 +90,29 @@ describe("requireSession audit persistence", () => {
         entityId: "campaign-2",
       }),
       "failed to persist audit log",
+    );
+  });
+
+  it("uses an identity supplied by a trusted in-process transport", async () => {
+    mocks.auditValues.mockResolvedValue(undefined);
+
+    await expect(
+      createMutationCall(
+        { id: "campaign-3" },
+        {
+          id: "oauth-user-1",
+          email: "oauth@example.com",
+          role: "member",
+          actorKind: "user",
+          scopes: ["*"],
+          rateLimitRps: null,
+        },
+      )(),
+    ).resolves.toEqual({ id: "campaign-3" });
+
+    expect(mocks.getSession).not.toHaveBeenCalled();
+    expect(mocks.auditValues).toHaveBeenCalledWith(
+      expect.objectContaining({ actorId: "oauth-user-1", actor: "user" }),
     );
   });
 });
