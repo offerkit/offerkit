@@ -1,0 +1,48 @@
+---
+title: API reference
+description: REST + RPC routes, generated from the live oRPC contract.
+---
+
+The API contract is defined once in `packages/contract` as Zod schemas + oRPC route metadata. From the same definition, OfferKit serves:
+
+- **REST** at `/api/v1/...` (the path conventions you'd expect — `POST /vouchers/{code}/redemption`, `GET /campaigns`, etc.)
+- A typed RPC transport for the SDK
+- An **OpenAPI 3.1** spec at `https://<your-offerkit-host>/api/openapi.json` for third-party tooling
+
+## Authentication
+
+Send `Authorization: Bearer <api_key>`. Mint keys at **Settings → API keys**. Tokens look like `offerkit_<prefix12>_<secret40>`. Cookie sessions also work for browser callers (the dashboard uses them).
+
+## Pagination
+
+List endpoints take `limit` (1-100, default 20) and an opaque `cursor`. The response is `{ data: [...], next?: "<cursor>", prev?: "<cursor>" }`. Treat cursors as implementation details: store and return them unchanged.
+
+## Idempotency
+
+Mutations that can be safely retried accept an `idempotencyKey` (e.g. `vouchers.redeem`, `redemptions.stack`). Replays return the original outcome with `idempotent: true`.
+
+## Errors and domain outcomes
+
+Authentication, malformed input, and missing routes use transport-level HTTP errors. Hot-path business decisions such as voucher validation and redemption return a typed result instead, so callers can show a useful reason without parsing an HTTP error.
+
+For example, redemption returns `ok`, an optional support-safe `code` and `message`, and an `explanations` array. Common explanation codes include:
+
+- `voucher_not_found`
+- `campaign_inactive`
+- `voucher_disabled`
+- `voucher_expired`
+- `redemption_limit_reached`
+- `per_user_redemption_limit_reached`
+- `customer_required`
+- `currency_mismatch`
+- `gift_balance_zero`
+- `order_required`
+
+## Hot path
+
+- `POST /vouchers/{code}/validate` — read-only preview against an order
+- `POST /vouchers/{code}/redemption` — single-voucher commit
+- `POST /redemptions/stack` — N-voucher atomic batch (priority sort + exclusivity short-circuit + per-voucher cap)
+- `GET /vouchers/{code}/transactions` — gift card balance ledger lookup
+
+Your running OfferKit deployment exposes every path, method, request schema, and response schema at `/api/openapi.json`.

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { GTProvider } from "gt-next";
-import { RootProvider } from "fumadocs-ui/provider/next";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { QueryProvider } from "@/components/query-provider";
@@ -67,12 +66,10 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col font-sans">
         <GTProvider>
-          <RootProvider theme={{ enabled: false }}>
-            <QueryProvider>
-              <TooltipProvider delay={300}>{children}</TooltipProvider>
-              <Toaster richColors position="top-right" />
-            </QueryProvider>
-          </RootProvider>
+          <QueryProvider>
+            <TooltipProvider delay={300}>{children}</TooltipProvider>
+            <Toaster richColors position="top-right" />
+          </QueryProvider>
         </GTProvider>
       </body>
     </html>

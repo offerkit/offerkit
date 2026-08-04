@@ -80,5 +80,5 @@ Mint an API key in the OfferKit dashboard at `/settings/api-keys`, then pass it 
 ## Links
 
 - Repository: https://github.com/offerkit/offerkit
-- Docs: https://github.com/offerkit/offerkit/tree/main/apps/web/content/docs
+- Docs: https://offerkit.dev/docs
 - License: MIT

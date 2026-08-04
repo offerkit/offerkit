@@ -1,0 +1,59 @@
+---
+import { getCollection } from "astro:content";
+import Layout from "@/components/layout.astro";
+import SiteFooter from "@/components/site-footer.astro";
+import SiteHeader from "@/components/site-header.astro";
+import "@/styles/global.css";
+
+const posts = (await getCollection("blog"))
+  .filter((post) => !post.data.draft)
+  .sort((left, right) => right.data.publishedAt.valueOf() - left.data.publishedAt.valueOf());
+
+function slugFor(id: string) {
+  return id.replace(/\.(md|mdx)$/, "");
+}
+
+function formatDate(date: Date) {
+  return new Intl.DateTimeFormat("en", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
+}
+---
+
+<Layout title="Blog" description="Notes on building reliable, self-hosted promotion infrastructure.">
+  <SiteHeader active="blog" />
+  <main class="site-container min-h-[70vh] py-20 sm:py-28">
+    <p class="site-kicker">From the OfferKit team</p>
+    <h1 class="mt-6 text-5xl font-semibold tracking-[-0.055em] sm:text-6xl">Build notes.</h1>
+    <p class="mt-5 max-w-2xl text-lg leading-8 text-[#9ba89f]">
+      Product decisions, implementation details, and lessons from treating promotions as
+      infrastructure.
+    </p>
+
+    <div class="mt-14 border-t border-white/[0.09]">
+      {posts.map((post) => (
+        <article class="group grid gap-5 border-b border-white/[0.09] py-9 sm:grid-cols-[10rem_1fr_auto] sm:items-start">
+          <time class="font-mono text-xs uppercase tracking-[0.1em] text-[#718077]" datetime={post.data.publishedAt.toISOString()}>
+            {formatDate(post.data.publishedAt)}
+          </time>
+          <div>
+            <h2 class="text-2xl font-semibold tracking-[-0.035em] text-[#ebf3ee] transition group-hover:text-[#9ff7c6]">
+              <a href={`/blog/${slugFor(post.id)}`}>{post.data.title}</a>
+            </h2>
+            <p class="mt-3 max-w-2xl leading-7 text-[#8f9d94]">{post.data.description}</p>
+            <div class="mt-4 flex flex-wrap gap-2">
+              {post.data.tags.map((tag) => (
+                <span class="rounded-full border border-white/[0.09] px-2.5 py-1 font-mono text-[0.65rem] uppercase tracking-[0.08em] text-[#7f8d84]">{tag}</span>
+              ))}
+            </div>
+          </div>
+          <span class="hidden pt-1 text-[#72f1ad] sm:block" aria-hidden="true">→</span>
+        </article>
+      ))}
+    </div>
+  </main>
+  <SiteFooter />
+</Layout>

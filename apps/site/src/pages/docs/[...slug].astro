@@ -1,0 +1,80 @@
+---
+import { render, type CollectionEntry } from "astro:content";
+import type { TOCItemType } from "fumadocs-core/toc";
+import defaultMdxComponents from "fumadocs-ui/mdx";
+import { Docs } from "@/components/docs";
+import Layout from "@/components/layout.astro";
+import {
+  docsVariants,
+  getDocsVariant,
+  getVersionOptions,
+  latestVersion,
+} from "@/lib/source";
+import "@/styles/global.css";
+
+interface Props {
+  page: CollectionEntry<"docs">;
+  slugs: string[];
+  variantId: string;
+}
+
+export async function getStaticPaths() {
+  return docsVariants.flatMap((variant) =>
+    variant.source.getPages().map((page) => ({
+      params: {
+        slug: page.url === "/docs" ? undefined : page.url.replace(/^\/docs\/?/, ""),
+      },
+      props: {
+        page: page.data._raw,
+        slugs: page.slugs,
+        variantId: variant.id,
+      },
+    })),
+  );
+}
+
+const { page, slugs, variantId } = Astro.props;
+const variant = getDocsVariant(variantId);
+const { Content, headings } = await render(page);
+const toc: TOCItemType[] = headings.map((heading) => ({
+  depth: heading.depth,
+  title: heading.text,
+  url: `#${heading.slug}`,
+}));
+const latestUrl = getDocsVariant("stable").source.getPage(slugs)?.url ?? "/docs";
+const noIndex = variant.kind !== "stable";
+---
+
+<Layout title={page.data.title} description={page.data.description} noIndex={noIndex}>
+  <Docs
+    tree={variant.source.getPageTree()}
+    pathname={Astro.url.pathname}
+    params={Astro.params}
+    page={{ toc }}
+    currentVersion={variant.label}
+    searchIndexUrl={variant.searchIndexUrl}
+    versionOptions={getVersionOptions(slugs)}
+    client:load
+  >
+    {variant.kind === "next" && (
+      <aside class="mb-6 rounded-lg border border-fd-primary/35 bg-fd-primary/10 px-4 py-3 text-sm">
+        <strong>Unreleased documentation.</strong>{" "}
+        This content tracks the main branch and may change before the next stable release.{" "}
+        <a class="font-medium underline underline-offset-4" href={latestUrl}>View latest stable</a>.
+      </aside>
+    )}
+    {variant.kind === "archive" && variant.version !== latestVersion && (
+      <aside class="mb-6 rounded-lg border border-fd-border bg-fd-muted/50 px-4 py-3 text-sm">
+        You are viewing documentation for <strong>v{variant.version}</strong>.{" "}
+        <a class="font-medium underline underline-offset-4" href={latestUrl}>View latest stable</a>.
+      </aside>
+    )}
+    <h1 class="text-3xl font-semibold tracking-tight">{page.data.title}</h1>
+    {page.data.description && (
+      <p class="mb-8 text-lg text-fd-muted-foreground">{page.data.description}</p>
+    )}
+    <div class="prose flex-1">
+      <Content components={{ ...defaultMdxComponents }} />
+    </div>
+  </Docs>
+</Layout>

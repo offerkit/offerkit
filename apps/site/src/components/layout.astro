@@ -1,0 +1,61 @@
+---
+import { ClientRouter } from "astro:transitions";
+
+interface Props {
+  title: string;
+  description?: string;
+  noIndex?: boolean;
+  type?: "website" | "article";
+  publishedAt?: Date;
+  updatedAt?: Date;
+}
+
+const {
+  title,
+  description = "Open-source promotion infrastructure for vouchers, gift cards, loyalty, and referrals.",
+  noIndex = false,
+  type = "website",
+  publishedAt,
+  updatedAt,
+} = Astro.props;
+const pageTitle =
+  title === "OfferKit" ? "OfferKit — Open-source promotion infrastructure" : `${title} — OfferKit`;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const socialImage = new URL("/og.png", Astro.site);
+---
+
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={description} />
+    <meta name="robots" content={noIndex ? "noindex, follow" : "index, follow"} />
+    <meta name="theme-color" content="#07110d" />
+    <meta property="og:type" content={type} />
+    <meta property="og:site_name" content="OfferKit" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={socialImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="OfferKit open-source promotion infrastructure" />
+    {publishedAt && <meta property="article:published_time" content={publishedAt.toISOString()} />}
+    {updatedAt && <meta property="article:modified_time" content={updatedAt.toISOString()} />}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImage} />
+    <meta name="twitter:image:alt" content="OfferKit open-source promotion infrastructure" />
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" type="application/rss+xml" title="OfferKit blog" href="/blog/rss.xml" />
+    <link rel="icon" href="/favicon.png" type="image/png" />
+    <title>{pageTitle}</title>
+    <ClientRouter />
+  </head>
+  <body class="min-h-screen" transition:persist>
+    <slot />
+  </body>
+</html>

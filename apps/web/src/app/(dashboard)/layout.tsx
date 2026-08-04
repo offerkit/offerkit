@@ -20,10 +20,13 @@ import { Separator } from "@/components/ui/separator";
 import { DashboardNav } from "@/components/dashboard/nav";
 import { UserMenu } from "@/components/dashboard/user-menu";
 import { DashboardWorkspaceBrand } from "@/components/dashboard/workspace-brand";
+import { DashboardDocsLink } from "@/components/dashboard/docs-link";
+import { docsUrlForVersion, getOfferKitVersion } from "@/lib/version";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await requireDashboardSession();
   if (userMustChangePassword(session)) redirect("/change-password");
+  const documentationUrl = docsUrlForVersion(getOfferKitVersion());
 
   return (
     <SidebarProvider>
@@ -36,6 +39,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </SidebarContent>
         <SidebarFooter>
           <SidebarMenu>
+            <DashboardDocsLink href={documentationUrl} />
             <SidebarMenuItem>
               <UserMenu name={session.user.name} email={session.user.email} />
             </SidebarMenuItem>

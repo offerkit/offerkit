@@ -1,0 +1,30 @@
+---
+title: OfferKit
+description: Self-hostable, MIT-licensed promotion engine — vouchers, gift cards, loyalty, referrals, all in one.
+---
+
+Welcome. **OfferKit** is an MIT-licensed promotion engine you run yourself. One published Docker image, one Docker Compose file, or two Railway Docker Image services gives you:
+
+- a **dashboard** to manage campaigns, vouchers, customers, segments, loyalty, referrals, webhooks, API keys
+- a **REST API** at `/api/v1/...` generated from the same contract as the typed SDK
+- a typed **TypeScript SDK** — no codegen, types flow from the oRPC contract
+- a **CLI** (`offerkit`) with verbs for the most common back-office tasks
+- a contract-derived **MCP server** so an agent can drive your promotion stack with explicit risk metadata
+
+## Where to start
+
+- [Get started](/getting-started) — install + your first redemption end-to-end
+- [Self-host](/self-host) — published Docker image locally or on Railway
+- [API reference](/api-reference) — the REST routes and shared contract conventions
+- [Webhooks](/webhooks) — HMAC signatures + retry semantics
+- [SDK / CLI / MCP](/integrations) — the three programmatic surfaces
+- [Referrals](/referrals) — wiring refer-a-friend into your checkout
+- [Migrating existing referrals](/migrating-referrals) — one-time bulk import from a legacy system
+
+## Domain model at a glance
+
+A **campaign** is a parent for one of five kinds of programs (`DISCOUNT`, `GIFT_VOUCHERS`, `LOYALTY_PROGRAM`, `REFERRAL_PROGRAM`, `PROMOTION`). A **voucher** belongs to a discount or gift campaign and either carries a discount config or a gift-card balance. A **loyalty program** has tiers, earning rules, rewards, and member ledgers. A **referral program** issues `{prefix}-{code}` codes that, on convert, hand out two configurable rewards. **Validation rules** live in a reusable JSON-Logic library. Every state-changing operation emits an **event**; **webhooks** subscribe to event types and receive HMAC-signed POSTs with exponential-backoff retries.
+
+## License
+
+MIT, across the entire monorepo.

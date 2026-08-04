@@ -125,5 +125,6 @@ offerkit api-keys create --data '{"name":"CI","scopes":["*"]}'
 ## Links
 
 - Repository: https://github.com/offerkit/offerkit
+- Docs: https://offerkit.dev/docs/integrations
 - SDK package: https://www.npmjs.com/package/@offerkit/sdk
 - License: MIT

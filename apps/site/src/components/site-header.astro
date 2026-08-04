@@ -1,0 +1,56 @@
+---
+interface Props {
+  active?: "blog" | "docs" | "home";
+}
+
+const { active = "home" } = Astro.props;
+const navItems = [
+  { label: "Docs", href: "/docs", id: "docs" },
+  { label: "Blog", href: "/blog", id: "blog" },
+];
+---
+
+<header class="relative z-20 border-b border-white/[0.07] bg-[#050907]/85 backdrop-blur-xl">
+  <div class="site-container flex h-16 items-center justify-between gap-6">
+    <a href="/" class="group flex items-center gap-2.5" aria-label="OfferKit home">
+      <span
+        class="grid size-7 place-items-center rounded-lg border border-[#72f1ad]/35 bg-[#72f1ad]/10 font-mono text-xs font-bold text-[#9ff7c6] transition group-hover:bg-[#72f1ad]/15"
+        aria-hidden="true"
+      >
+        OK
+      </span>
+      <span class="text-[0.95rem] font-semibold tracking-[-0.025em]">
+        Offer<span class="text-[#72f1ad]">Kit</span>
+      </span>
+    </a>
+
+    <nav class="flex items-center gap-1 text-sm" aria-label="Primary navigation">
+      {navItems.map((item) => (
+        <a
+          href={item.href}
+          aria-current={active === item.id ? "page" : undefined}
+          class:list={[
+            "rounded-lg px-3 py-2 transition hover:bg-white/[0.05] hover:text-white",
+            active === item.id ? "text-white" : "text-[#a5b1a9]",
+          ]}
+        >
+          {item.label}
+        </a>
+      ))}
+      <a
+        href="https://github.com/offerkit/offerkit"
+        target="_blank"
+        rel="noreferrer"
+        class="hidden rounded-lg px-3 py-2 text-[#a5b1a9] transition hover:bg-white/[0.05] hover:text-white sm:block"
+      >
+        GitHub
+      </a>
+      <a
+        href="/docs/getting-started"
+        class="ml-1 rounded-lg border border-[#72f1ad]/35 bg-[#72f1ad]/10 px-3 py-2 font-medium text-[#b9fbd5] transition hover:bg-[#72f1ad]/15"
+      >
+        Get started
+      </a>
+    </nav>
+  </div>
+</header>

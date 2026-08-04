@@ -1,0 +1,56 @@
+---
+import { getCollection, render, type CollectionEntry } from "astro:content";
+import Layout from "@/components/layout.astro";
+import SiteFooter from "@/components/site-footer.astro";
+import SiteHeader from "@/components/site-header.astro";
+import "@/styles/global.css";
+
+interface Props {
+  post: CollectionEntry<"blog">;
+}
+
+export async function getStaticPaths() {
+  const posts = await getCollection("blog", ({ data }) => !data.draft);
+  return posts.map((post) => ({
+    params: { slug: post.id.replace(/\.(md|mdx)$/, "") },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+const formattedDate = new Intl.DateTimeFormat("en", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "UTC",
+}).format(post.data.publishedAt);
+---
+
+<Layout
+  title={post.data.title}
+  description={post.data.description}
+  type="article"
+  publishedAt={post.data.publishedAt}
+  updatedAt={post.data.updatedAt}
+>
+  <SiteHeader active="blog" />
+  <main class="site-container py-16 sm:py-24">
+    <article class="mx-auto max-w-3xl">
+      <a href="/blog" class="font-mono text-xs uppercase tracking-[0.1em] text-[#8a998f] transition hover:text-[#b8f9d3]">← All posts</a>
+      <header class="mt-10 border-b border-white/[0.09] pb-10">
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-xs uppercase tracking-[0.09em] text-[#718077]">
+          <time datetime={post.data.publishedAt.toISOString()}>{formattedDate}</time>
+          <span aria-hidden="true">·</span>
+          <span>{post.data.author}</span>
+        </div>
+        <h1 class="mt-6 text-4xl font-semibold leading-tight tracking-[-0.05em] sm:text-6xl">{post.data.title}</h1>
+        <p class="mt-6 text-xl leading-8 text-[#9eaba3]">{post.data.description}</p>
+      </header>
+      <div class="site-prose pt-4">
+        <Content />
+      </div>
+    </article>
+  </main>
+  <SiteFooter />
+</Layout>

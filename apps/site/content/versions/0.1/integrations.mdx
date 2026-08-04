@@ -1,0 +1,70 @@
+---
+title: SDK, CLI, and MCP
+description: Three programmatic surfaces over the same typed contract.
+---
+
+All three use the same contract and authenticate with the same `OFFERKIT_API_KEY`. The SDK uses OfferKit's typed RPC transport; the CLI and MCP server build on the same SDK.
+
+## TypeScript SDK
+
+```bash
+pnpm add @offerkit/sdk
+```
+
+```ts
+import { createClient, verifyWebhook } from "@offerkit/sdk";
+
+const offerkit = createClient({
+  baseUrl: "https://your-offerkit-deployment",
+  apiKey: process.env.OFFERKIT_API_KEY!,
+});
+
+const result = await offerkit.vouchers.redeem({
+  params: { code: "SUMMER10" },
+  body: {
+    order: { amount: 9999, currency: "USD", items: [] },
+    idempotencyKey: "order-42",
+  },
+});
+```
+
+Types flow directly from the oRPC contract — no codegen step. Edge-runtime safe (`node:crypto` is only used for the optional `verifyWebhook` helper).
+
+## CLI (`offerkit`)
+
+```bash
+pnpm add -g @offerkit/cli
+offerkit login --url https://your-offerkit-deployment --api-key offerkit_…
+
+offerkit vouchers list
+offerkit vouchers validate SUMMER10 --amount 9999
+offerkit vouchers redeem SUMMER10 --amount 9999 --idempotency-key order-42
+
+offerkit campaigns create --name "Spring 2026" --type DISCOUNT --currency USD
+offerkit customers list --search alice
+```
+
+Config is stored in `~/.offerkitrc` (chmod 0600). `OFFERKIT_API_URL` / `OFFERKIT_API_KEY` env vars override the file.
+
+## MCP server
+
+`offerkit-mcp` is a stdio MCP server generated from the current contract. Contract metadata decides which procedures are exposed and labels every tool as `safe`, `mutating`, or `destructive`. Mutating and destructive tools carry explicit confirmation guidance in their descriptions, so the available tool list stays in sync as the API evolves.
+
+Add to your MCP host (Claude Desktop, Cursor, …):
+
+```json
+{
+  "mcpServers": {
+    "offerkit": {
+      "command": "npx",
+      "args": ["-y", "@offerkit/mcp"],
+      "env": {
+        "OFFERKIT_API_URL": "https://your-offerkit-deployment",
+        "OFFERKIT_API_KEY": "offerkit_…"
+      }
+    }
+  }
+}
+```
+
+Tool names follow the SDK path with underscores—for example `vouchers_list`, `vouchers_validate`, `vouchers_redeem`, and `referrals_convert`. Your MCP client shows the authoritative list for the installed package version.

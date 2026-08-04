@@ -1,0 +1,13 @@
+{
+  "title": "OfferKit",
+  "pages": [
+    "index",
+    "getting-started",
+    "api-reference",
+    "integrations",
+    "webhooks",
+    "referrals",
+    "migrating-referrals",
+    "self-host"
+  ]
+}

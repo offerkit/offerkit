@@ -1,0 +1,202 @@
+---
+import Layout from "@/components/layout.astro";
+import SiteFooter from "@/components/site-footer.astro";
+import SiteHeader from "@/components/site-header.astro";
+import "@/styles/global.css";
+
+const capabilities = [
+  {
+    index: "01",
+    title: "Discounts",
+    description: "Fixed or percentage offers, eligibility rules, limits, stacking, and atomic redemption.",
+  },
+  {
+    index: "02",
+    title: "Gift cards",
+    description: "Stored balances with partial spend, an immutable ledger, expiration, and rollback safety.",
+  },
+  {
+    index: "03",
+    title: "Loyalty",
+    description: "Programs, tiers, earning rules, rewards, member ledgers, and points expiration.",
+  },
+  {
+    index: "04",
+    title: "Referrals",
+    description: "Stable referral codes, idempotent conversion, and configurable rewards for both sides.",
+  },
+];
+
+const surfaces = [
+  ["REST API", "OpenAPI 3.1 from the live contract"],
+  ["TypeScript SDK", "Types without a codegen step"],
+  ["CLI", "Back-office actions from the terminal"],
+  ["MCP server", "Agent tools with explicit risk metadata"],
+];
+
+const redemptionExample = `const result = await offerkit.vouchers.redeem({
+  params: { code: "SUMMER10" },
+  body: {
+    order: { amount: 9999, currency: "USD" },
+    idempotencyKey: "order-42",
+  },
+});`;
+---
+
+<Layout title="OfferKit">
+  <div class="relative overflow-hidden">
+    <div class="site-grid pointer-events-none absolute inset-x-0 top-0 h-[52rem]"></div>
+    <SiteHeader active="home" />
+
+    <main>
+      <section class="site-container relative grid gap-14 py-20 sm:py-28 lg:grid-cols-[1.06fr_0.94fr] lg:items-center lg:py-32">
+        <div>
+          <p class="site-kicker">Open-source promotion infrastructure</p>
+          <h1 class="mt-7 max-w-3xl text-5xl font-semibold leading-[0.98] tracking-[-0.06em] text-[#f5faf7] sm:text-6xl lg:text-[4.75rem]">
+            Promotions are infrastructure.
+            <span class="text-[#72f1ad]">Treat them like it.</span>
+          </h1>
+          <p class="mt-7 max-w-2xl text-lg leading-8 text-[#aab6ae] sm:text-xl">
+            Run vouchers, gift cards, loyalty, and referrals behind one typed API. OfferKit is
+            MIT-licensed, agent-ready, and yours to deploy.
+          </p>
+          <div class="mt-9 flex flex-wrap gap-3">
+            <a
+              href="/docs/getting-started"
+              class="rounded-xl bg-[#72f1ad] px-5 py-3 text-sm font-semibold text-[#062113] shadow-[0_0_2rem_rgba(114,241,173,0.18)] transition hover:bg-[#8bf5bb]"
+            >
+              Run OfferKit <span aria-hidden="true">→</span>
+            </a>
+            <a
+              href="https://github.com/offerkit/offerkit"
+              class="rounded-xl border border-white/[0.12] bg-white/[0.035] px-5 py-3 text-sm font-medium text-[#e2ebe5] transition hover:border-white/20 hover:bg-white/[0.06]"
+            >
+              View on GitHub
+            </a>
+          </div>
+          <ul class="mt-9 flex flex-wrap gap-x-5 gap-y-2 font-mono text-xs uppercase tracking-[0.12em] text-[#7f8d84]" aria-label="Project attributes">
+            <li>MIT licensed</li>
+            <li>Self-hosted</li>
+            <li>One Docker image</li>
+          </ul>
+        </div>
+
+        <div class="site-card relative overflow-hidden p-3 shadow-[0_2rem_6rem_rgba(0,0,0,0.35)]">
+          <div class="flex items-center justify-between border-b border-white/[0.07] px-3 py-2.5 font-mono text-[0.68rem] uppercase tracking-[0.13em] text-[#728078]">
+            <span>Live contract</span>
+            <span class="flex items-center gap-2 text-[#9beec0]"><span class="size-1.5 rounded-full bg-[#72f1ad]"></span> Ready</span>
+          </div>
+          <div class="p-3 sm:p-5">
+            <div class="flex items-center gap-3 font-mono text-xs">
+              <span class="rounded-md bg-[#72f1ad]/12 px-2 py-1 text-[#9bf7c4]">POST</span>
+              <span class="text-[#c7d3cb]">/api/v1/vouchers/SUMMER10/redemption</span>
+            </div>
+            <pre class="mt-5 overflow-x-auto text-[0.72rem] leading-6 text-[#a9b8af] sm:text-xs"><code>{redemptionExample}</code></pre>
+            <div class="mt-4 rounded-xl border border-[#72f1ad]/15 bg-[#72f1ad]/[0.055] p-4 font-mono text-xs">
+              <div class="flex items-center justify-between text-[#c7d5cc]">
+                <span>redemption.accepted</span>
+                <span class="text-[#72f1ad]">200 OK</span>
+              </div>
+              <div class="mt-3 grid grid-cols-3 gap-3 border-t border-[#72f1ad]/10 pt-3 text-[0.66rem] uppercase tracking-[0.1em] text-[#718077]">
+                <span>Idempotent</span>
+                <span>Audited</span>
+                <span>Event emitted</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="border-y border-white/[0.07] bg-[#07100b]/70">
+        <div class="site-container grid divide-y divide-white/[0.07] sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
+          {surfaces.map(([title, description]) => (
+            <div class="px-6 py-7 first:pl-0 last:pr-0 sm:first:pl-6 lg:first:pl-0">
+              <p class="text-sm font-semibold text-[#e7f0ea]">{title}</p>
+              <p class="mt-2 text-sm leading-6 text-[#849188]">{description}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section class="site-container py-24 sm:py-32">
+        <div class="max-w-2xl">
+          <p class="site-kicker">The promotion layer</p>
+          <h2 class="mt-6 text-4xl font-semibold tracking-[-0.045em] sm:text-5xl">
+            One model for every incentive.
+          </h2>
+          <p class="mt-5 text-lg leading-8 text-[#9ba89f]">
+            Replace scattered checkout conditionals and one-off admin tools with a system your
+            team can inspect, test, and operate.
+          </p>
+        </div>
+
+        <div class="mt-12 grid gap-4 md:grid-cols-2">
+          {capabilities.map((capability) => (
+            <article class="site-card group min-h-64 p-7 transition hover:border-[#72f1ad]/25 sm:p-8">
+              <div class="flex items-start justify-between gap-6">
+                <h3 class="text-2xl font-semibold tracking-[-0.035em]">{capability.title}</h3>
+                <span class="font-mono text-xs text-[#536058]">{capability.index}</span>
+              </div>
+              <p class="mt-6 max-w-md leading-7 text-[#98a69d]">{capability.description}</p>
+              <div class="mt-10 h-px bg-gradient-to-r from-[#72f1ad]/35 to-transparent"></div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section class="border-y border-white/[0.07] bg-[#08100c] py-24 sm:py-32">
+        <div class="site-container grid gap-14 lg:grid-cols-[0.8fr_1.2fr] lg:gap-24">
+          <div>
+            <p class="site-kicker">Predictable by design</p>
+            <h2 class="mt-6 text-4xl font-semibold tracking-[-0.045em] sm:text-5xl">
+              Own the hot path.
+            </h2>
+            <p class="mt-5 text-lg leading-8 text-[#9ba89f]">
+              Checkout logic needs clear outcomes under retries, concurrency, and partial failure.
+              OfferKit makes those constraints part of the contract.
+            </p>
+            <a class="mt-7 inline-flex text-sm font-medium text-[#9ff7c6]" href="/docs/api-reference">
+              Read the API conventions <span class="ml-2" aria-hidden="true">→</span>
+            </a>
+          </div>
+
+          <ol class="grid gap-px overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.08]">
+            {[
+              ["Validate", "Preview eligibility without changing counters or balances."],
+              ["Redeem", "Commit atomically with a stable idempotency key."],
+              ["Explain", "Return typed, support-safe reasons for every rejection."],
+              ["Observe", "Emit events, signed webhooks, audit entries, and telemetry."],
+            ].map(([title, description], index) => (
+              <li class="grid gap-3 bg-[#09110d] p-6 sm:grid-cols-[3rem_1fr] sm:p-7">
+                <span class="font-mono text-xs text-[#5d6b62]">0{index + 1}</span>
+                <div>
+                  <h3 class="font-semibold text-[#e7f0ea]">{title}</h3>
+                  <p class="mt-1.5 leading-7 text-[#8c9a91]">{description}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <section class="site-container py-24 sm:py-32">
+        <div class="site-card overflow-hidden px-6 py-16 text-center sm:px-12 sm:py-20">
+          <p class="site-kicker">Deploy on your terms</p>
+          <h2 class="mx-auto mt-6 max-w-3xl text-4xl font-semibold tracking-[-0.05em] sm:text-5xl">
+            Your promotions. Your data. Your infrastructure.
+          </h2>
+          <p class="mx-auto mt-5 max-w-2xl text-lg leading-8 text-[#9ba89f]">
+            Start locally with Docker Compose, then run the same published image anywhere that
+            speaks containers.
+          </p>
+          <div class="mt-8 flex flex-wrap justify-center gap-3">
+            <a href="/docs/getting-started" class="rounded-xl bg-[#72f1ad] px-5 py-3 text-sm font-semibold text-[#062113] transition hover:bg-[#8bf5bb]">Get started</a>
+            <a href="/docs/self-host" class="rounded-xl border border-white/[0.12] px-5 py-3 text-sm font-medium text-[#e2ebe5] transition hover:bg-white/[0.05]">Self-hosting guide</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <SiteFooter />
+  </div>
+</Layout>

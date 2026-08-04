@@ -9,6 +9,7 @@ on:
     paths-ignore:
       - ".changeset/**"
       - ".github/**"
+      - "apps/site/**"
       - "*.md"
       - "LICENSE"
   workflow_dispatch:
@@ -43,6 +44,7 @@ jobs:
           short_sha="$(git rev-parse --short=12 HEAD)"
           tags="${image}:sha-${short_sha}"
           platforms="linux/amd64"
+          offerkit_version="edge"
 
           ref_name="${GITHUB_REF_NAME}"
           if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
@@ -57,6 +59,7 @@ jobs:
 
           if [[ "${ref_name}" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             version="${ref_name#v}"
+            offerkit_version="${version}"
             tags="${tags}"$'\n'"${image}:v${version}"$'\n'"${image}:${version}"$'\n'"${image}:latest"
           elif [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" && "${ref_name}" == "main" ]]; then
             tags="${tags}"$'\n'"${image}:edge"
@@ -68,6 +71,7 @@ jobs:
             echo "EOF"
             echo "revision=$(git rev-parse HEAD)"
             echo "platforms=${platforms}"
+            echo "offerkit_version=${offerkit_version}"
           } >> "${GITHUB_OUTPUT}"
 
       - name: Set up Docker Buildx
@@ -95,3 +99,5 @@ jobs:
             org.opencontainers.image.description=Self-hostable promotion engine runtime
             org.opencontainers.image.source=https://github.com/offerkit/offerkit
             org.opencontainers.image.revision=${{ steps.image.outputs.revision }}
+          build-args: |
+            OFFERKIT_VERSION=${{ steps.image.outputs.offerkit_version }}

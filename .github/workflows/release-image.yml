@@ -30,6 +30,22 @@ jobs:
           ref: ${{ inputs.ref }}
           fetch-depth: 0
 
+      - name: Validate documentation snapshot
+        shell: bash
+        run: |
+          version="${{ inputs.version }}"
+          if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Version must be plain semver, for example 0.1.0."
+            exit 1
+          fi
+          minor="${version%.*}"
+          latest="$(node -p "require('./apps/site/versions.json').latest")"
+          if [[ "${latest}" != "${minor}" ]]; then
+            echo "Promote docs for v${minor} before releasing: pnpm --filter @offerkit/site snapshot ${version}"
+            exit 1
+          fi
+          test -f "apps/site/content/versions/${minor}/index.mdx"
+
       - name: Create release tag
         id: release
         shell: bash
@@ -98,6 +114,8 @@ jobs:
             org.opencontainers.image.description=Self-hostable promotion engine runtime
             org.opencontainers.image.source=https://github.com/offerkit/offerkit
             org.opencontainers.image.revision=${{ steps.release.outputs.revision }}
+          build-args: |
+            OFFERKIT_VERSION=${{ steps.release.outputs.version }}
 
       - name: Create GitHub image release
         env:

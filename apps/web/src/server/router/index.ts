@@ -19,12 +19,13 @@ import { usersRouter } from "./users";
 import { ordersRouter } from "./orders";
 import { auditLogRouter } from "./audit-log";
 import { workspaceRouter } from "./workspace";
+import { getOfferKitVersion } from "@/lib/version";
 
 const os = implement(contract).$context<RequestContext>();
 
 const health = os.health.handler(() => ({
   status: "ok" as const,
-  version: process.env["npm_package_version"] ?? "0.0.0",
+  version: getOfferKitVersion(),
 }));
 
 const ready = os.ready.handler(async () => {

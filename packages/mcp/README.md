@@ -51,5 +51,6 @@ Mutating tools describe their risk level and should be confirmed with the user b
 ## Links
 
 - Repository: https://github.com/offerkit/offerkit
+- Docs: https://offerkit.dev/docs/integrations
 - SDK package: https://www.npmjs.com/package/@offerkit/sdk
 - License: MIT

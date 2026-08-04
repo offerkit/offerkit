@@ -1,0 +1,131 @@
+---
+title: Self-host
+description: Run the published Docker image locally or on Railway. No source build required.
+---
+
+## Local: Docker compose
+
+The provided `docker-compose.yml` boots four services. `web` and `worker` use the same published image, `ghcr.io/offerkit/offerkit`:
+
+- `web` — Next.js dashboard + REST API on `:3000`
+- `worker` — long-running Node process pulling jobs out of the queue
+- `postgres` — Postgres 17 on `:5432`
+- `redis` — Redis 7 on `:6379`
+
+```bash
+cp .env.example .env
+# Required:
+#   DATABASE_URL=postgres://offerkit:dev@postgres:5432/offerkit
+#   BETTER_AUTH_SECRET=…
+#   WEBHOOK_SECRET_ENCRYPTION_KEY=… # openssl rand -base64 32
+#   ADMIN_EMAIL=…
+#   ADMIN_PASSWORD=…
+#   OFFERKIT_PUBLIC_URL=http://localhost:3000
+docker compose up -d
+```
+
+`web` runs migrations before starting Next.js, so a fresh DB is fully migrated on first boot. The `worker` reclaims orphaned jobs on startup and re-seeds the recurring `loyalty.points.expire` sweep if it's missing.
+
+Pin a release by setting `OFFERKIT_IMAGE_TAG`, for example:
+
+```bash
+OFFERKIT_IMAGE_TAG=v0.1.0 docker compose up -d
+```
+
+Image channels are intentionally narrow: `edge` follows the latest `main` commit, `latest` follows the newest stable version, and stable versions are published as both `v0.1.0` and `0.1.0`.
+
+Contributors who need to test local source changes can build the same image shape:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+```
+
+## Production: Railway
+
+Railway should deploy the published image directly. Do not connect the monorepo as a GitHub source.
+
+In one Railway project, create:
+
+- Postgres
+- Redis
+- `web` Docker Image service using `ghcr.io/offerkit/offerkit:latest`
+- `worker` Docker Image service using `ghcr.io/offerkit/offerkit:latest`
+
+For production, pin both image services to a version tag such as `ghcr.io/offerkit/offerkit:v0.1.0` instead of `latest`.
+
+Set these variables on `web`:
+
+```
+DATABASE_URL=postgres://...
+REDIS_URL=redis://...
+ADMIN_EMAIL=…
+ADMIN_PASSWORD=…
+BETTER_AUTH_SECRET=…
+WEBHOOK_SECRET_ENCRYPTION_KEY=…
+OFFERKIT_PUBLIC_URL=https://your-domain
+```
+
+`web` uses the image default command and should expose a public domain. Configure its healthcheck path as `/api/v1/ready`.
+
+Set these variables on `worker`:
+
+```
+DATABASE_URL=postgres://...
+REDIS_URL=redis://...
+WEBHOOK_SECRET_ENCRYPTION_KEY=…
+```
+
+Override the `worker` start command:
+
+```bash
+node apps/worker/dist/index.js
+```
+
+`worker` should not expose a public domain. Configure its healthcheck path as `/health`.
+
+## Production: Diploi
+
+Diploi should use the same deployment shape as Docker compose and Railway:
+
+- `web` — public HTTP component from `ghcr.io/offerkit/offerkit`, exposes `:3000`
+- `worker` — private/background component from `ghcr.io/offerkit/offerkit`, command `node apps/worker/dist/index.js`, exposes health on `:9091`
+- `postgres` — managed Postgres service wired into both components as `DATABASE_URL`
+- `redis` — Redis service wired into both components as `REDIS_URL`; BullMQ stores background jobs here
+
+Required `web` environment variables:
+
+```
+DATABASE_URL=postgres://...
+REDIS_URL=redis://...
+BETTER_AUTH_SECRET=…
+WEBHOOK_SECRET_ENCRYPTION_KEY=…
+OFFERKIT_PUBLIC_URL=https://your-diploi-domain
+ADMIN_EMAIL=…
+ADMIN_PASSWORD=…
+```
+
+Required `worker` environment variables:
+
+```
+DATABASE_URL=postgres://...
+REDIS_URL=redis://...
+WEBHOOK_SECRET_ENCRYPTION_KEY=…
+WORKER_HEALTH_PORT=9091
+```
+
+Use the README's **Launch with Diploi** button if you want to start from Diploi's project wizard. After the first deploy, verify `/api/v1/ready` on `web`, `:9091/health` on `worker`, and sign in with the seeded admin account.
+
+## Observability
+
+The image is OpenTelemetry-ready out of the box. Set:
+
+```
+OTEL_EXPORTER_OTLP_ENDPOINT=https://api.axiom.co
+OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer <AXIOM_TOKEN>,X-Axiom-Dataset=offerkit
+```
+
+…and you'll get traces and metrics from `apps/web` and `apps/worker` in the same dataset, separable by `service.name`. Set `OTEL_SDK_DISABLED=true` to opt out entirely.
+
+## Multi-environment
+
+The model is "run two deploys" — each environment is its own Railway project with its own Postgres. There's no concept of a logical environment within a single deployment. Staging and production roll forward independently.

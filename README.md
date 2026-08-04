@@ -19,7 +19,7 @@
   <a href="#-quick-start">Quick Start</a> ·
   <a href="#-self-host">Self-Host</a> ·
   <a href="#-sdk-cli-mcp">SDK, CLI, MCP</a> ·
-  <a href="#-docs">Docs</a> ·
+  <a href="#-website-and-docs">Website &amp; Docs</a> ·
   <a href="#-license">License</a>
 </p>
 
@@ -29,7 +29,7 @@ OfferKit is open-source promotion infrastructure for coupons, gift cards, loyalt
 
 **Agent-first.** The MCP server is a first-class surface, not bolted on. Every mutating endpoint declares its risk level (`safe` / `mutating` / `destructive`) so LLM hosts can render the right confirmation. New procedures opt into MCP exposure declaratively via `.meta()` — no separate package to update.
 
-**Dev-friendly.** The typed SDK is derived directly from the oRPC contract, so client types stay in lockstep with the server with zero codegen. Strict TypeScript, linted against explicit `any`, with typed contracts at API boundaries. The `/docs` site lives inside the app (Fumadocs). Local-first dev with Docker compose, plus CI and lefthook quality gates.
+**Dev-friendly.** The typed SDK is derived directly from the oRPC contract, so client types stay in lockstep with the server with zero codegen. Strict TypeScript, linted against explicit `any`, with typed contracts at API boundaries. The public website, blog, and documentation share an Astro + Fumadocs workspace that deploys as a static site. Local-first dev with Docker Compose, plus CI and lefthook quality gates.
 
 **Open source.** MIT-licensed first-party packages. No CLA required. No commercial features paywalled. Built on top of permissive OSS.
 
@@ -67,7 +67,7 @@ Visit <http://localhost:3000> and sign in with the `ADMIN_EMAIL` / `ADMIN_PASSWO
 
 ### Docker compose
 
-The `docker-compose.yml` brings up `web` + `worker` + `postgres` + `redis`. Both runtime services use the same published image, `ghcr.io/offerkit/offerkit`. Migrations run automatically on web boot. Background jobs use Redis/BullMQ when `REDIS_URL` is set, with a Postgres fallback otherwise. See [`/docs/self-host`](apps/web/content/docs/self-host.mdx) for env vars and tuning.
+The `docker-compose.yml` brings up `web` + `worker` + `postgres` + `redis`. Both runtime services use the same published image, `ghcr.io/offerkit/offerkit`. Migrations run automatically on web boot. Background jobs use Redis/BullMQ when `REDIS_URL` is set, with a Postgres fallback otherwise. See the [self-hosting guide](https://offerkit.dev/docs/self-host) for env vars and tuning.
 
 Image channels:
 
@@ -104,8 +104,11 @@ const client = createClient({
 });
 
 const result = await client.vouchers.redeem({
-  code: "SUMMER10",
-  order: { amount: 9999, currency: "USD" },
+  params: { code: "SUMMER10" },
+  body: {
+    order: { amount: 9999, currency: "USD" },
+    idempotencyKey: "order-42",
+  },
 });
 ```
 
@@ -145,6 +148,7 @@ cp .env.example .env             # edit DATABASE_URL etc.
 docker compose up -d postgres redis
 pnpm --filter @offerkit/db push
 pnpm --filter @offerkit/web dev          # web on :3000
+pnpm --filter @offerkit/site dev         # public site on :4321
 pnpm --filter @offerkit/worker dev       # worker on :9091
 ```
 
@@ -155,7 +159,8 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
 ```
-apps/web         Next.js dashboard + REST API + /docs (Fumadocs embedded)
+apps/web         Next.js dashboard + REST API
+apps/site        Astro marketing site + blog + Fumadocs documentation
 apps/worker      Long-running Node process — runs the Redis/BullMQ job queue
 packages/contract  oRPC router contract + Zod schemas (single source of truth)
 packages/core    Domain logic (rules, redemption, discount, jobs, observability, email)
@@ -181,7 +186,7 @@ pnpm -r test
 - **oRPC** + **Zod** — single contract for RPC, REST, and OpenAPI
 - **Tailwind v4** + **shadcn/ui** — dashboard UI
 - **gt-next** — i18n runtime
-- **Fumadocs** — `/docs` embedded in the app
+- **Astro** + **Fumadocs** — static website, blog, and documentation
 - **OpenTelemetry** — traces, metrics, logs
 - **TypeScript** strict, **MIT** first-party packages
 
@@ -194,9 +199,9 @@ pnpm install            # auto-runs `lefthook install`
 git commit              # pre-commit runs eslint + typecheck + test
 ```
 
-## 📖 Docs
+## 🌐 Website and docs
 
-The full reference lives inside the app at <http://localhost:3000/docs> (Fumadocs-rendered). Source MDX at [`apps/web/content/docs/`](apps/web/content/docs/).
+The public website is at <https://offerkit.dev>, with documentation at <https://offerkit.dev/docs> and the blog at <https://offerkit.dev/blog>. The Astro + Fumadocs source lives in [`apps/site/`](apps/site/).
 
 ## 🤝 Contributing
 

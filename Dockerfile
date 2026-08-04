@@ -4,6 +4,8 @@
 # The same image runs the web service by default and the worker service when
 # started with: node apps/worker/dist/index.js
 
+ARG OFFERKIT_VERSION=edge
+
 FROM node:26-alpine AS base
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
@@ -26,6 +28,8 @@ COPY packages/mcp/package.json packages/mcp/
 RUN --mount=type=cache,target=/pnpm/store pnpm install --frozen-lockfile --ignore-scripts
 
 FROM base AS builder
+ARG OFFERKIT_VERSION
+ENV OFFERKIT_VERSION=$OFFERKIT_VERSION
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Re-run install to wire up workspace symlinks for the just-copied source.
@@ -37,7 +41,9 @@ FROM builder AS worker-prod-deps
 RUN --mount=type=cache,target=/pnpm/store pnpm --filter @offerkit/worker deploy --prod --legacy --ignore-scripts /prod/worker
 
 FROM base AS runtime
+ARG OFFERKIT_VERSION
 ENV NODE_ENV=production
+ENV OFFERKIT_VERSION=$OFFERKIT_VERSION
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 ENV NEXT_TELEMETRY_DISABLED=1

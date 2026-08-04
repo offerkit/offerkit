@@ -1,0 +1,62 @@
+---
+title: Promotion logic is infrastructure
+description: Why coupons, gift cards, loyalty, and referrals deserve the same engineering discipline as payments and identity.
+publishedAt: 2026-08-04
+author: OfferKit team
+tags:
+  - architecture
+  - open source
+---
+
+Most promotion systems begin with a checkout conditional.
+
+If the code is `SUMMER10`, subtract ten percent. If the customer is in a certain segment, allow it. Store a counter somewhere. Add an expiration date when someone asks for it.
+
+That implementation is entirely reasonable—until promotions become a product surface instead of a campaign detail.
+
+## The hidden system behind a coupon field
+
+A production promotion engine has to answer more than “how much should we subtract?” It must decide whether an offer is active, whether the customer is eligible, whether the order meets its conditions, whether the code has reached a global or per-customer limit, and whether it can stack with another incentive.
+
+Then it has to make that decision safely when a payment webhook retries, a customer double-clicks, or two requests reach the database at the same time.
+
+Gift cards add stored balances and a ledger. Loyalty adds earning rules, tiers, expiration, and reward issuance. Referrals add relationships between two customers and a conversion event that must never issue twice.
+
+These are infrastructure concerns: state transitions, concurrency, idempotency, auditability, and observability.
+
+## One decision model, many surfaces
+
+OfferKit starts with a single typed contract. The dashboard, REST API, TypeScript SDK, CLI, and MCP server all operate on that same model.
+
+That matters because secondary interfaces tend to drift. A dashboard adds a field the API does not expose. A CLI accepts an old enum. An agent tool mutates something without communicating its risk. When every surface derives from the same contract, differences become deliberate instead of accidental.
+
+The contract also separates transport failures from business outcomes. Invalid authentication is an HTTP error. A voucher that cannot apply because the currency differs is a typed decision with a support-safe explanation. Callers can present a useful answer without parsing an exception string.
+
+## Validation and redemption are different operations
+
+Checkout needs a read-only preview while the cart changes. That is validation: evaluate the same rules, return the same explanations, but do not consume a redemption or change a gift-card balance.
+
+Redemption is the commit. It runs atomically and accepts an idempotency key tied to the caller's order. A retry returns the original result rather than issuing a second discount.
+
+Keeping those operations distinct makes the integration easier to reason about:
+
+1. Validate while the customer edits the cart.
+2. Capture or confirm the order at the appropriate point in your payment flow.
+3. Redeem with a stable order identifier.
+4. React to the emitted event or signed webhook.
+
+## Self-hosting should not mean rebuilding
+
+OfferKit is designed to run from one published container image. The web service and background worker use the same artifact with different commands, alongside Postgres and optionally Redis.
+
+That gives operators control over customer and promotion data without requiring every adopter to become a maintainer of the build pipeline. Pin a release, configure the environment, and roll forward deliberately.
+
+The project is MIT-licensed because promotion infrastructure should be inspectable. Eligibility and redemption logic affect money, customer trust, and support workloads. Teams should be able to read the code that makes those decisions.
+
+## Where OfferKit is going
+
+The immediate goal is a dependable foundation: discounts, gift cards, loyalty, referrals, reusable validation rules, signed webhooks, audit history, and first-class programmatic surfaces.
+
+From there, the system can become more expressive without making the hot path mysterious. New capabilities should preserve the same properties: typed decisions, atomic mutations, explicit risk, and an operational trail.
+
+If that is the promotion layer you want to run, start with the [getting started guide](/docs/getting-started) or inspect the project on [GitHub](https://github.com/offerkit/offerkit).
