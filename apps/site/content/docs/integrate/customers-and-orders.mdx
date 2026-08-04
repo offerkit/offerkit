@@ -1,0 +1,123 @@
+---
+title: Customers and orders
+description: Map application identities and transactions into OfferKit without creating competing sources of truth.
+---
+
+Customer and order context powers assignment, per-user limits, targeting, loyalty,
+referrals, checkout decisions, and support history. The safest integration uses your
+existing IDs at the boundary and clearly chooses which system owns each field.
+
+## Map customers by external ID
+
+Use the stable, immutable user ID from your application as `externalId`:
+
+```ts
+const result = await offerkit.customers.upsert({
+  externalId: user.id,
+  email: user.email,
+  name: user.name,
+  phone: user.phone,
+  metadata: {
+    plan: user.plan,
+    region: user.region,
+  },
+});
+
+const customer = result.customer;
+```
+
+Upsert is idempotent on `externalId`. Existing customers are updated in place, omitted
+fields are left unchanged, and `result.created` tells you whether a new row was made.
+
+Use `customers.getByExternalId` for lookup when you do not have the OfferKit UUID:
+
+```ts
+const customer = await offerkit.customers.getByExternalId({
+  params: { externalId: user.id },
+});
+```
+
+Do not use an email address as the primary mapping if customers can change email or
+share one. Do not create a new OfferKit customer on every checkout attempt.
+
+## Choose a sync point
+
+Common patterns are:
+
+- **Account lifecycle:** upsert on registration and relevant profile changes.
+- **Just in time:** upsert before the first promotion, loyalty, or referral operation.
+- **Event driven:** send changes through an application outbox or worker.
+
+Just-in-time upsert is the simplest reliable default. Add event-driven updates when
+targeting depends on data that must remain fresh outside checkout.
+
+## Design metadata deliberately
+
+Metadata is part of the targeting contract. Prefer stable, documented fields with
+predictable types:
+
+```json
+{
+  "plan": "pro",
+  "region": "AE",
+  "lifecycle": "active",
+  "marketingOptIn": true
+}
+```
+
+Avoid copying sensitive data that rules do not need. Plan how fields are renamed or
+removed, because an old value can continue to affect eligibility.
+
+## Send cart context without creating an order
+
+Voucher validation, redemption, and promotion qualification accept an inline order
+context containing an amount, currency, and optional product items. This is enough for
+most checkout decisions and does not create an OfferKit order row.
+
+Use inline context when your own commerce system is the order source of truth and you
+only need OfferKit to decide and record incentives.
+
+## Create OfferKit order records when useful
+
+Create an order when operators should search orders in the OfferKit dashboard, inspect
+their lifecycle, or see attached redemptions:
+
+```ts
+const offerkitOrder = await offerkit.orders.create({
+  externalId: order.id,
+  customerId: customer.id,
+  items: order.items.map((item) => ({
+    productId: item.productId,
+    sku: item.sku,
+    name: item.name,
+    quantity: item.quantity,
+    unitPrice: item.unitPriceCents,
+  })),
+  amount: order.subtotalCents,
+  discountAmount: order.discountCents,
+  currency: order.currency,
+  status: "CREATED",
+});
+```
+
+Pass `offerkitOrder.id` as `orderId` when redeeming. You may also pass your own
+`externalOrderId` for direct reconciliation.
+
+OfferKit order states are `CREATED`, `PAID`, `FULFILLED`, and `CANCELED`. Keep state
+transitions driven by your authoritative order workflow.
+
+## Understand the two item shapes
+
+Stored orders contain operator-facing item fields such as SKU and name. Runtime discount
+context uses `productId`, optional `collectionId`, quantity, and unit price. Build each
+shape deliberately rather than serializing a database row blindly.
+
+The order amount sent to OfferKit should match the subtotal basis your promotion policy
+uses. Decide whether tax and shipping are included, document it, and use the same basis
+during validation and redemption.
+
+## Deletion and retention
+
+Customer and order deletion is soft deletion. Before deleting a customer, decide how
+their vouchers, loyalty membership, referrals, and audit needs should be handled. Avoid
+using deletion as a routine sync mechanism for temporarily disabled accounts.

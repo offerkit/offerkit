@@ -1,0 +1,72 @@
+---
+title: Test an integration
+description: Verify successful, rejected, concurrent, and retried promotion flows before production.
+---
+
+Promotion bugs usually live at boundaries: one unit below a threshold, a changed cart
+between preview and payment, a retry after timeout, or two requests spending the same
+balance. A useful test plan covers decisions and state transitions, not only API connectivity.
+
+## Use a separate deployment
+
+Run staging and production as separate OfferKit deployments with separate databases and
+API keys. Mirror configuration intentionally; do not test against production customer,
+voucher, balance, or loyalty data.
+
+## Build deterministic fixtures
+
+Create known customers, carts, campaigns, and codes for each policy. Use fixed clocks
+or explicit activation dates when testing time windows. Keep amounts in integer minor units.
+
+## Test every rule boundary
+
+For a minimum of `5000`, test `4999`, `5000`, and `5001`. Repeat this approach for:
+
+- percentage caps;
+- tier thresholds;
+- redemption limits;
+- loyalty balances and tier thresholds;
+- start and end timestamps;
+- gift-card balance equal to, below, and above the order amount.
+
+Also test missing customer, missing order, wrong currency, absent metadata, and an
+unexpected metadata type.
+
+## Separate preview and commit tests
+
+Assert that repeated validation or qualification does not change counters or balances.
+Then assert that redemption changes state exactly once and the response matches the
+persisted ledger.
+
+Change the cart between validation and redemption to verify that the server performs a
+fresh final decision rather than trusting browser state.
+
+## Exercise retries and concurrency
+
+- Repeat the same redemption with the same idempotency key.
+- Send the same key with a different request body and expect a conflict.
+- Send simultaneous requests that spend the last gift-card balance.
+- Send simultaneous uses of a one-use voucher.
+- Redeliver the same referral conversion event.
+- Deliver the same webhook event more than once.
+
+## Test failure presentation
+
+Verify the customer receives actionable, non-sensitive copy while logs retain the reason
+code, offer identifiers, order ID, and correlation data. Treat rule evaluation errors and
+transport failures differently from ordinary ineligibility.
+
+## Rehearse operations
+
+Before launch, make sure an operator can:
+
+- find a voucher and its activity;
+- explain a failed validation;
+- pause a campaign;
+- disable a compromised code;
+- inspect gift or loyalty ledgers;
+- find a referral conversion and both outcomes;
+- inspect and replay a webhook delivery;
+- correlate an application order with OfferKit records.
+
+Use [Troubleshoot a live offer](/operate/troubleshooting) as the support runbook.

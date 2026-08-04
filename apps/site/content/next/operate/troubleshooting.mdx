@@ -1,0 +1,115 @@
+---
+title: Troubleshoot a live offer
+description: Diagnose code failures, wrong discounts, missing rewards, balance problems, and webhook incidents.
+---
+
+Start with the exact runtime outcome. Avoid changing campaign configuration until you
+can reproduce the customer's customer, cart, currency, code, and time context.
+
+## A code does not work
+
+1. Look up the voucher by its exact code.
+2. Confirm the voucher is enabled and the parent campaign is active.
+3. Compare campaign and voucher activation windows with the configured timezone.
+4. Check total and per-user redemption limits.
+5. Check customer assignment and whether the request identified that customer.
+6. Confirm order currency and required cart fields.
+7. Re-run validation and inspect every explanation.
+
+Common explanations:
+
+| Code | What to inspect |
+| --- | --- |
+| `voucher_not_found` | Typo, wrong environment, or deleted code |
+| `campaign_inactive` | Campaign status |
+| `voucher_disabled` | Voucher active setting |
+| `voucher_expired` | Campaign and voucher time windows |
+| `redemption_limit_reached` | Voucher usage counter and total limit |
+| `per_user_redemption_limit_reached` | Customer identity and prior activity |
+| `customer_required` | Missing customer context for the policy |
+| `customer_mismatch` | Voucher assigned to another customer |
+| `currency_mismatch` | Campaign currency versus order currency |
+| `validation_failed` | Attached rule and supplied context |
+
+## The discount amount is wrong
+
+- Confirm amounts were sent in minor units.
+- Confirm percentage values use basis points.
+- Check `maxDiscountAmount` on percentage vouchers.
+- Check product and collection IDs on every cart item.
+- Compare the amount basis: subtotal, tax, shipping, and prior discounts.
+- Inspect priority, exclusivity, and the returned calculation breakdown.
+- Confirm the cart was rechecked at commit rather than using an old preview.
+
+## An automatic promotion is missing
+
+Call qualification with `includeSkipped: true`. Inspect campaign status and dates, tier
+status and dates, currency, campaign rule, tier rule, priority, and exclusivity. A
+`rule_error` indicates invalid or unavailable rule evaluation; a `rule_failed` outcome
+means the supplied context did not pass a valid rule.
+
+Remember that a promotion campaign must have auto-apply enabled to participate.
+
+## A gift-card balance looks wrong
+
+Fetch the current voucher and its transaction ledger. Reconcile every credit, redemption,
+rollback, and adjustment entry. Check for two application orders using different
+idempotency keys for the same intended purchase.
+
+Do not repair the balance by editing a cached number in your application. Preserve the
+ledger and use the supported operational adjustment path when available.
+
+## Loyalty points are missing or duplicated
+
+- Confirm the customer is enrolled in the correct program.
+- Find the source event in your application and the member transaction ledger.
+- Confirm the application actually called `members.earn`.
+- Compare `basePoints`, `applyMultiplier`, current tier, and expiration timestamp.
+- Deduplicate the source event in your handler; `eventId` is for correlation and should
+  also be part of your application-side uniqueness strategy.
+- Check the worker and expiration entries if points disappeared after their expiry date.
+
+## A referral reward is missing
+
+Find the conversion using its referral code and application `conversionEventId`. Confirm
+the conversion succeeded and inspect both outcome objects. For loyalty-point rewards,
+verify the recipient was already enrolled. For voucher outcomes, look up the issued code.
+
+If the conversion exists but messaging failed, replay only the delivery workflow—do not
+call conversion again with a new event ID.
+
+## A webhook is failing
+
+Open the webhook and inspect its latest deliveries:
+
+- `401` usually indicates the wrong secret, re-serialized body, or signature parsing;
+- `404` indicates a stale endpoint path;
+- `429` means the receiver needs capacity or queueing;
+- `5xx` means the receiver failed after delivery;
+- transport errors indicate DNS, TLS, routing, or connection problems.
+
+Fix the receiver, then replay the delivery. The handler must deduplicate by OfferKit event
+ID because replay delivers the same event again.
+
+## A retry produced a conflict
+
+An idempotency key identifies one logical request body. Reusing it with different codes,
+customer, order context, or amount returns a conflict. Reconstruct the original request
+for a true retry; use a new key only for a genuinely new business operation.
+
+## Escalation evidence
+
+Capture:
+
+- deployment version and environment;
+- timestamp and timezone;
+- API route or SDK method;
+- customer external ID and OfferKit ID;
+- order external ID and OfferKit ID;
+- campaign, voucher, tier, program, or reward IDs;
+- idempotency key or source event ID;
+- response reason codes and explanations;
+- relevant event, delivery, and audit-log IDs.
+
+Remove API keys, webhook secrets, passwords, and unnecessary personal data before sharing
+diagnostic material.

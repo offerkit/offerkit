@@ -1,0 +1,128 @@
+---
+title: Run a promotional code
+description: Launch a shared or unique discount code and integrate it into checkout.
+---
+
+Use this pattern when a customer should enter a code such as `WELCOME10`, or when you
+want to distribute a unique code to each recipient. OfferKit validates the code against
+the customer and cart, calculates the result, and records committed use.
+
+## Decide how codes should work
+
+Choose a **shared code** when memorability and reach matter. A single `SUMMER20` code
+can be placed in an advertisement, shared by an affiliate, or given to support agents.
+Use per-customer limits when the same customer should not use it repeatedly.
+
+Choose **unique codes** when attribution, leakage control, or individual assignment
+matters. Generate them in bulk or create them on demand and optionally attach each
+voucher to a customer.
+
+Before building, decide:
+
+- fixed amount or percentage discount;
+- whole order or selected product and collection IDs;
+- total and per-customer usage limits;
+- start and end dates;
+- whether the code can combine with other vouchers;
+- what your checkout should say when it does not apply.
+
+## Configure the campaign
+
+In **Campaigns**, create a campaign with type **DISCOUNT**. Set its currency, timezone,
+activation window, and any campaign-wide per-user limit. For generated codes, configure
+the default prefix and length. Activate the campaign when it is ready to accept use.
+
+Then create the voucher:
+
+- enter a memorable code for a shared campaign; or
+- use **Bulk generate** on the campaign for a pool of unique codes;
+- choose `AMOUNT` or `PERCENTAGE`;
+- set voucher-specific dates, limits, priority, exclusivity, or customer assignment.
+
+All monetary amounts use minor units. Percentage values use basis points: `1000` means
+10%, and `10000` means 100%. A percentage voucher can include `maxDiscountAmount`.
+
+## Integrate the checkout
+
+Send the code to your own server. Validate it whenever the customer applies the code or
+the cart changes:
+
+```ts
+const validation = await offerkit.vouchers.validate({
+  params: { code: submittedCode },
+  body: {
+    customerExternalId: session.user.id,
+    order: {
+      amount: cart.totalCents,
+      currency: cart.currency,
+      items: cart.items.map((item) => ({
+        productId: item.productId,
+        collectionId: item.collectionId,
+        quantity: item.quantity,
+        unitPrice: item.unitPriceCents,
+      })),
+    },
+  },
+});
+```
+
+When `validation.valid` is true, use `validation.preview.finalOrder` and the breakdown
+to display the result. Keep the original cart amount authoritative in your commerce
+system and persist the accepted discount explicitly.
+
+When the order should consume the code, redeem it:
+
+```ts
+const redemption = await offerkit.vouchers.redeem({
+  params: { code: submittedCode },
+  body: {
+    customerExternalId: session.user.id,
+    externalOrderId: order.id,
+    order: {
+      amount: order.subtotalCents,
+      currency: order.currency,
+      items: order.items,
+    },
+    idempotencyKey: order.id,
+  },
+});
+```
+
+Use the same customer and order context for validation and redemption. Revalidate on
+the server at commit time; do not trust a preview stored in the browser.
+
+## Show useful failures
+
+Validation and redemption can explain conditions such as:
+
+- campaign or voucher inactive;
+- activation window not reached or already ended;
+- redemption limit reached;
+- customer required or not assigned to this voucher;
+- customer has reached their personal limit;
+- currency mismatch;
+- validation rule failed.
+
+Map these reason codes to clear customer copy, and retain the code and details in server
+logs for support. Do not reduce every failure to “invalid coupon.”
+
+## Test before launch
+
+Test at least:
+
+1. a qualifying customer and cart;
+2. a cart just below the threshold;
+3. the wrong currency;
+4. an expired or future code;
+5. a customer using the code twice when a per-user limit is one;
+6. two concurrent requests with the same idempotency key;
+7. any product or collection inclusion boundary.
+
+## Launch and operate
+
+Watch **Insights** for volume and failure reasons. Use the voucher page to inspect or
+disable a leaked code without pausing every voucher in the campaign. Pause the campaign
+when the whole promotion must stop temporarily; mark it ended when it is complete.
+
+For several codes on one order, use [Combine discounts safely](/solutions/stacking).
+For code-free behavior, use [Build an automatic cart discount](/solutions/automatic-cart-discount).

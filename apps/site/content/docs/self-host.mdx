@@ -26,6 +26,22 @@ docker compose up -d
 
 `web` runs migrations before starting Next.js, so a fresh DB is fully migrated on first boot. The `worker` reclaims orphaned jobs on startup and re-seeds the recurring `loyalty.points.expire` sweep if it's missing.
 
+### Access from another device
+
+Authentication requests must come from the exact origin configured in `OFFERKIT_PUBLIC_URL`. To open OfferKit from another computer on your network, set the public URL in `.env` to the address used in that computer's browser:
+
+```bash
+OFFERKIT_PUBLIC_URL=http://192.168.1.108:3000
+```
+
+If the same instance should accept sign-ins through additional URLs, list those exact origins as a comma-separated allowlist:
+
+```bash
+BETTER_AUTH_TRUSTED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+```
+
+Do not use a broad wildcard or disable Better Auth's origin check. After changing either variable, recreate the web container with `docker compose up -d --force-recreate web`.
+
 Pin a release by setting `OFFERKIT_IMAGE_TAG`, for example:
 
 ```bash

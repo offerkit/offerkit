@@ -1,0 +1,75 @@
+---
+title: Combine discounts safely
+description: Apply multiple voucher codes atomically and control which discounts win.
+---
+
+Stacking lets one order use several discount vouchers. OfferKit sorts the codes by
+priority, applies exclusivity, caps each discount against the running total, and commits
+the accepted set in one transaction.
+
+Use stacking only when the commercial policy genuinely allows multiple codes. A simpler
+single-code checkout is easier for customers and support teams to understand.
+
+## Define the policy
+
+For every voucher family, decide:
+
+- whether it may combine with other discounts;
+- its priority relative to other codes;
+- whether applying it should exclude every lower-priority voucher;
+- whether percentage discounts should have a maximum amount;
+- what the customer sees when a code is skipped.
+
+Mark a voucher `exclusive` when it must win alone. Use higher priority for the benefit
+that should be considered first.
+
+## Preview individual codes
+
+Validate codes as the customer adds them so you can show immediate feedback. The final
+commit must still use stack redemption; several independent single redemptions are not
+atomic and can leave a partially discounted order after a failure.
+
+## Commit the stack
+
+```ts
+const result = await offerkit.vouchers.stackRedeem({
+  codes: submittedCodes,
+  customerExternalId: user.id,
+  externalOrderId: order.id,
+  order: {
+    amount: order.subtotalCents,
+    currency: order.currency,
+    items: order.items,
+  },
+  idempotencyKey: order.id,
+});
+```
+
+The operation is all-or-nothing. A successful response contains the batch ID, total
+discount, final order, calculation breakdown, and one redemption entry per committed
+voucher. A retry with the same idempotency key returns the original batch.
+
+Use the breakdown to explain ordering and skipped effects. Reasons can include
+`exclusivity_lost` and `zero_after_running_total`.
+
+## Important constraint
+
+Gift cards are not supported in the discount stack. Treat gift-card spend as a separate
+stored-value or payment step and define whether it happens before or after promotional
+discount calculation in your checkout policy.
+
+## Test before launch
+
+Test:
+
+- two and three ordinary discount codes;
+- an exclusive high-priority code;
+- an exclusive low-priority code;
+- fixed and percentage discounts together;
+- discounts that would reduce the running total below zero;
+- one invalid code in an otherwise valid stack;
+- a gift card submitted in the stack;
+- simultaneous requests with the same idempotency key.
+
+Record the returned batch and entry IDs with the order so support can reconstruct the
+calculation later.

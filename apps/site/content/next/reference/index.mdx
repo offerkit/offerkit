@@ -1,0 +1,29 @@
+---
+title: Reference
+description: Exact conventions, interfaces, terminology, and runtime behavior for OfferKit integrations.
+---
+
+Use the goal and integration guides to design an implementation. Use this section when
+you need the exact name, representation, convention, or interface.
+
+## Developer surfaces
+
+- [SDK, REST, CLI, and MCP](/reference/developer-tools)
+- [API conventions and live OpenAPI](/reference/api-reference)
+- The running deployment's OpenAPI 3.1 document at `/api/openapi.json`
+
+## Concepts and behavior
+
+- [Glossary and data conventions](/reference/glossary)
+- [How OfferKit works](/how-offerkit-works)
+- [Webhook payload and delivery behavior](/integrate/webhooks)
+- [Troubleshooting reason codes](/operate/troubleshooting)
+
+## Important representations
+
+- Monetary values are integer minor units: `1000` USD means USD 10.00.
+- Percentages and earning multipliers use basis points: `1000` is 10%; `10000` is 1× or 100%.
+- IDs minted by OfferKit are UUIDs unless a resource explicitly uses a human code.
+- Dates are ISO 8601 timestamps at API boundaries.
+- List cursors are opaque and must be returned unchanged.
+- API keys and webhook secrets are plaintext only when first created.

@@ -1,0 +1,116 @@
+---
+title: Integration blueprint
+description: Plan the boundary between OfferKit, your application, checkout, payments, and messaging systems.
+---
+
+A production integration has two distinct paths:
+
+- **Control path:** your team or trusted automation configures campaigns, vouchers,
+  programs, rules, and operational settings.
+- **Runtime path:** your application sends customer and cart context, asks OfferKit for
+  a decision, commits business events, and stores the result with its own order.
+
+Keeping those paths separate makes the system easier to secure and reason about.
+
+## Recommended architecture
+
+```text
+Customer UI
+    │
+    ▼
+Your application server ──────── OfferKit API
+    │                              │
+    ├── user and cart data         ├── eligibility decisions
+    ├── authoritative order        ├── redemption and balance ledgers
+    ├── payment state              └── events and webhooks
+    └── customer messaging                 │
+             ▲                              ▼
+             └──────── webhook handler ────┘
+```
+
+Only your server communicates with OfferKit using an API key. The customer UI calls
+your application server. This prevents a public client from reading customer data,
+minting vouchers, or committing redemptions directly.
+
+## Decide ownership before writing code
+
+| Data or behavior | Recommended owner |
+| --- | --- |
+| User account and authentication | Your application |
+| Product catalog and authoritative prices | Your commerce system |
+| Cart, tax, shipping, payment, and final order | Your commerce system |
+| Offer eligibility and discount calculation | OfferKit |
+| Voucher usage, gift balance, loyalty points, referrals | OfferKit |
+| Customer-facing display and fulfillment of custom rewards | Your application |
+| Email, SMS, push, and in-app delivery | Your messaging stack |
+
+OfferKit can store customer and order records, but they exist to provide promotion
+context and operational history. Decide which system is authoritative before building
+a two-way sync.
+
+## Choose an interface
+
+Use the **TypeScript SDK** for a TypeScript server. It is typed from the same contract
+as the API and requires no code generation.
+
+Use the **REST API** for other languages or platforms. Your running deployment exposes
+OpenAPI 3.1 at `/api/openapi.json`.
+
+Use the **CLI** for operator scripts and manual back-office tasks. Use the **MCP server**
+when an agent should work with OfferKit using explicit safe, mutating, and destructive
+tool labels. Neither replaces the runtime checkout integration in your server.
+
+## Establish identity
+
+Use your stable application user ID as the OfferKit customer's `externalId`. Upsert it
+at account creation, profile change, or immediately before a promotion operation. See
+[Customers and orders](/integrate/customers-and-orders).
+
+For anonymous checkout, omit customer context only when the offer policy allows it.
+Create or identify the customer before enforcing assignment, per-user limits, loyalty,
+or referrals.
+
+## Implement one checkout lifecycle
+
+1. Receive the code or cart change from the UI.
+2. Build cart context from server-authoritative data.
+3. Validate a known voucher or qualify automatic promotions.
+4. Return a display-safe preview to the UI.
+5. Recalculate and recheck on the server at the order boundary.
+6. Commit voucher redemption, loyalty, or referral activity at the chosen business event.
+7. Store OfferKit outcome IDs and amounts with your order.
+8. Process resulting webhooks idempotently.
+
+The full pattern is in [Checkout integration](/integrate/checkout).
+
+## Make retries safe
+
+Networks retry, payment providers redeliver webhooks, customers double-click, and workers
+restart. Treat every state-changing integration as retriable:
+
+- use the application order ID as a voucher redemption idempotency key;
+- use the original business event ID for referral conversion;
+- deduplicate loyalty earning in your event handler and pass its source `eventId`;
+- deduplicate outbound side effects using the OfferKit event or transaction ID;
+- never use a random idempotency key generated per attempt.
+
+## Design errors as product behavior
+
+OfferKit returns typed business outcomes for hot-path decisions. Preserve the reason
+code in logs, map it to appropriate customer copy, and decide which failures should be
+retryable. A currency mismatch is a business rejection; a rule evaluation error is an
+operational incident.
+
+## Production checklist
+
+- API keys live only in server secret storage and have the narrowest useful scopes.
+- Customer and order ID mappings are documented.
+- Money is sent as integer minor units and percentage values as basis points.
+- Validation and commit use equivalent customer and cart context.
+- Every mutation has a stable retry strategy.
+- Webhook signatures are verified against the raw request body.
+- Success, rejection, concurrency, and replay cases are tested.
+- Support can find a decision using customer, code, order, or event IDs.
+
+Continue with [Customers and orders](/integrate/customers-and-orders), then implement
+[Checkout integration](/integrate/checkout).

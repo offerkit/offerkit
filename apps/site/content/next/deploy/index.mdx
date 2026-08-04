@@ -1,0 +1,101 @@
+---
+title: Deploy OfferKit
+description: Run the web application, worker, Postgres, and Redis locally or in production.
+---
+
+An OfferKit deployment has four components:
+
+- **web** — dashboard and API on port 3000;
+- **worker** — background jobs and webhook delivery, with health on port 9091;
+- **Postgres** — authoritative application and ledger data;
+- **Redis** — BullMQ background jobs, with a Postgres fallback when Redis is absent.
+
+The web and worker use the same published image,
+`ghcr.io/offerkit/offerkit`, with different start commands.
+
+## Evaluate locally
+
+```bash
+git clone https://github.com/offerkit/offerkit.git
+cd offerkit
+cp .env.example .env
+docker compose up -d
+```
+
+Set at least:
+
+```text
+DATABASE_URL=postgres://offerkit:dev@postgres:5432/offerkit
+REDIS_URL=redis://redis:6379
+BETTER_AUTH_SECRET=replace-me
+WEBHOOK_SECRET_ENCRYPTION_KEY=replace-me
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=replace-me
+OFFERKIT_PUBLIC_URL=http://localhost:3000
+```
+
+Generate a webhook encryption key with `openssl rand -base64 32`. Replace every example
+secret before exposing the deployment beyond local development.
+
+The web service runs database migrations on startup. Sign in at the configured public
+URL and change the seeded administrator password when prompted.
+
+## Production topology
+
+Create managed Postgres and Redis services, one public web service, and one private worker
+service. The worker command is:
+
+```bash
+node apps/worker/dist/index.js
+```
+
+Expose the web service through TLS. Do not expose Postgres, Redis, or the worker directly
+to the public internet.
+
+Set the web health check to `/api/v1/ready` and the worker health check to `/health` on
+its configured health port.
+
+## Pin a release
+
+Use `latest` for evaluation and a version tag for production, for example:
+
+```text
+ghcr.io/offerkit/offerkit:v0.1.0
+```
+
+Use the same image version for web and worker. `edge` follows the latest main-branch
+commit and is not a production stability channel.
+
+## Environments
+
+Run staging and production as separate deployments with separate databases, Redis
+instances, secrets, API keys, customers, campaigns, and voucher codes. Promote
+configuration intentionally; do not treat one database as several logical environments.
+
+## Backups and upgrades
+
+Postgres contains the authoritative configuration and ledgers, so include it in automated
+backups and test restoration. Before upgrading:
+
+1. read the release notes;
+2. back up Postgres;
+3. deploy and verify the version in staging;
+4. upgrade web and worker together;
+5. verify readiness, worker health, sign-in, a safe validation call, and webhook delivery.
+
+## Observability
+
+OfferKit exports OpenTelemetry data when an OTLP endpoint is configured:
+
+```text
+OTEL_EXPORTER_OTLP_ENDPOINT=https://your-collector
+OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer <token>
+```
+
+Web and worker data share the export destination and can be separated by `service.name`.
+Set `OTEL_SDK_DISABLED=true` to disable telemetry.
+
+## Platform-specific walkthroughs
+
+The detailed Docker Compose, Railway, and Diploi variable and service instructions are
+available in the [self-hosting reference](/self-host).

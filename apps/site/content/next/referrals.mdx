@@ -25,7 +25,7 @@ OfferKit's referral model is **one stable code per referrer, many conversions pe
 
   Amounts use the currency's minor unit (for example, cents for USD and EUR). `kind` can be `discount`, `gift_card`, `loyalty_points`, or `custom`.
 
-- A Customer row in OfferKit for every user on your side that will refer or be referred. The cleanest pattern is `customers.upsert({ externalId: yourUserId, email, name, … })` — idempotent on `externalId`, so you can call it any time without tracking the OfferKit-minted uuid on your side. Use `customers.getByExternalId({ externalId })` for lookups.
+- A Customer row in OfferKit for every user on your side that will refer or be referred. The cleanest pattern is `customers.upsert({ externalId: yourUserId, email, name, … })` — idempotent on `externalId`, so you can call it any time without tracking the OfferKit-minted uuid on your side. Use `customers.getByExternalId({ params: { externalId } })` for lookups.
 
 ## Set up the client
 

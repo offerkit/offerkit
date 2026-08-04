@@ -45,7 +45,7 @@ for (const user of legacyUsers) {
 }
 ```
 
-`upsert` is idempotent on `externalId` — safe to re-run after a crash, safe to call repeatedly during normal operation. The response includes `{ customer, created }` so you can fire downstream events on first-create only. For lookups later, call `customers.getByExternalId({ externalId: user.id })`.
+`upsert` is idempotent on `externalId` — safe to re-run after a crash, safe to call repeatedly during normal operation. The response includes `{ customer, created }` so you can fire downstream events on first-create only. For lookups later, call `customers.getByExternalId({ params: { externalId: user.id } })`.
 
 Step 2 and Step 3 below assume customers have `externalId` set this way.
 

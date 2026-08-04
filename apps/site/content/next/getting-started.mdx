@@ -1,72 +1,172 @@
 ---
-title: Get started
-description: Spin up OfferKit locally and run your first redemption.
+title: Build your first working offer
+description: Run OfferKit, create a welcome discount, connect it to a checkout, and inspect the result.
 ---
 
-## 1. Run the stack
+In this tutorial, a customer enters `WELCOME10` on a USD 50 order and receives USD 10
+off. You will configure the offer, preview the result, commit the redemption, and find
+the activity in the dashboard.
+
+The completed flow looks like this:
+
+1. Your team creates and activates the offer in OfferKit.
+2. Your server sends the code and current cart to OfferKit.
+3. OfferKit decides whether the code applies and calculates the discount.
+4. Your server commits the redemption once the order is accepted.
+5. OfferKit records the activity for limits, reporting, and support.
+
+## Before you begin
+
+You need Docker and a terminal. The TypeScript integration later in the guide requires
+a server-side JavaScript or TypeScript project, but you can complete the first test with
+`curl` alone.
+
+## 1. Run OfferKit
 
 ```bash
-git clone https://github.com/offerkit/offerkit
+git clone https://github.com/offerkit/offerkit.git
 cd offerkit
-cp .env.example .env  # set admin, auth, and webhook encryption secrets
+cp .env.example .env
 docker compose up -d
 ```
 
-Compose pulls the published `ghcr.io/offerkit/offerkit` image and runs it as both `web` and `worker`. The web app is at `http://localhost:3000`, the worker exposes a health endpoint at `:9091`, Postgres listens on `:5432`. First boot creates an admin from `ADMIN_EMAIL` / `ADMIN_PASSWORD` and flags `mustChangePassword`.
+Compose starts the dashboard and API at `http://localhost:3000`, a background worker,
+Postgres, and Redis. Sign in using `ADMIN_EMAIL` and `ADMIN_PASSWORD` from `.env`.
+The first sign-in asks you to replace the seeded password.
 
-## 2. Sign in and mint an API key
+If you are connecting from another device or deploying to production, follow
+[Deploy OfferKit](/deploy) before continuing.
 
-Sign in to `/sign-in`, change the password when prompted, then go to **Settings → API keys** and click **Mint key**. You'll see a token like:
+## 2. Create the welcome offer
 
-```
-offerkit_AbCdEfGhIjKl_mnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV
-```
+In the dashboard:
 
-It's shown once. Copy it.
+1. Open **Campaigns** and select **New campaign**.
+2. Name it `Welcome offer`, choose **DISCOUNT**, set the currency to **USD**, and create it.
+3. Open the new campaign and change its status from **draft** to **active**.
+4. Create a voucher in the campaign.
+5. Use `WELCOME10` as the code, choose a fixed amount discount, and enter `1000`.
 
-## 3. Hit the API
+OfferKit represents money in a currency's minor unit. `1000` USD means USD 10.00 and
+`5000` USD means USD 50.00. Keeping money as integers avoids floating-point rounding
+at checkout.
+
+At this point:
+
+- the **campaign** controls the shared lifecycle and currency;
+- the **voucher** is the code the customer enters and carries the discount behavior;
+- the campaign must be active and the voucher must be enabled for it to apply.
+
+## 3. Create a server API key
+
+Open **Settings → API keys** and mint a key. Its value starts with `offerkit_` and is
+shown once, so copy it into your server's secret store.
+
+For this local test:
 
 ```bash
 export OFFERKIT_API_URL=http://localhost:3000
 export OFFERKIT_API_KEY=offerkit_…
-
-curl -H "Authorization: Bearer $OFFERKIT_API_KEY" \
-  $OFFERKIT_API_URL/api/v1/customers?limit=5
 ```
 
-## 4. End-to-end redemption
+Do not put this key in client-side JavaScript, a mobile binary, or a public repository.
+Your browser or mobile UI should call your own server, and your server should call OfferKit.
+
+## 4. Preview the discount
+
+Validation is a read-only decision. It checks the current state without consuming the
+voucher or incrementing a redemption counter.
 
 ```bash
-# Create a discount campaign
-curl -H "Authorization: Bearer $OFFERKIT_API_KEY" -H 'Content-Type: application/json' \
-  -X POST $OFFERKIT_API_URL/api/v1/campaigns \
-  -d '{"name":"Spring 2026","type":"DISCOUNT","currency":"USD"}'
-
-# Activate it (new campaigns start as drafts; use the id returned above)
-curl -H "Authorization: Bearer $OFFERKIT_API_KEY" -H 'Content-Type: application/json' \
-  -X PATCH $OFFERKIT_API_URL/api/v1/campaigns/<CAMPAIGN_ID> \
-  -d '{"patch":{"status":"active"}}'
-
-# Create a 1000-minor-unit voucher inside it
-curl -H "Authorization: Bearer $OFFERKIT_API_KEY" -H 'Content-Type: application/json' \
-  -X POST $OFFERKIT_API_URL/api/v1/vouchers \
-  -d '{"campaignId":"<CAMPAIGN_ID>","type":"DISCOUNT","discount":{"type":"AMOUNT","amount":1000}}'
-
-# Validate (read-only preview)
-curl -H "Authorization: Bearer $OFFERKIT_API_KEY" -H 'Content-Type: application/json' \
-  -X POST $OFFERKIT_API_URL/api/v1/vouchers/<CODE>/validate \
+curl -H "Authorization: Bearer $OFFERKIT_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -X POST "$OFFERKIT_API_URL/api/v1/vouchers/WELCOME10/validate" \
   -d '{"order":{"amount":5000,"currency":"USD","items":[]}}'
-
-# Redeem (commits a row)
-curl -H "Authorization: Bearer $OFFERKIT_API_KEY" -H 'Content-Type: application/json' \
-  -X POST $OFFERKIT_API_URL/api/v1/vouchers/<CODE>/redemption \
-  -d '{"order":{"amount":5000,"currency":"USD","items":[]},"idempotencyKey":"order-123"}'
 ```
 
-The redeem endpoint is idempotent on `(voucherCode, idempotencyKey)` — replays return the same response with `idempotent: true`. Validate, redeem, and stack-redeem failures also include an `explanations` array with support-safe reason codes and details such as activation windows, redemption limits, gift card balance, and stacking skips.
+A successful response includes a preview with a discount amount of `1000` and a final
+order amount of `4000`. Your checkout can show this preview while the customer reviews
+their cart.
 
-## Where next
+Try the same call with `"currency":"EUR"`. It should fail with a
+`currency_mismatch` explanation. Showing the returned explanation is much more useful
+to a customer or support agent than a generic “invalid code” message.
 
-- [Self-host](/self-host)
-- [SDK + CLI + MCP](/integrations)
-- [Webhooks](/webhooks)
+## 5. Commit the redemption
+
+Redeem when your application has decided that the order should consume the offer. Use
+your order ID as the idempotency key so a network retry cannot create a second redemption.
+
+```bash
+curl -H "Authorization: Bearer $OFFERKIT_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -X POST "$OFFERKIT_API_URL/api/v1/vouchers/WELCOME10/redemption" \
+  -d '{
+    "order":{"amount":5000,"currency":"USD","items":[]},
+    "externalOrderId":"order-123",
+    "idempotencyKey":"order-123"
+  }'
+```
+
+Repeat the request. OfferKit returns the original result with `idempotent: true` rather
+than consuming the voucher twice.
+
+## 6. Add the same flow to a TypeScript server
+
+```bash
+pnpm add @offerkit/sdk
+```
+
+```ts
+import { createClient } from "@offerkit/sdk";
+
+const offerkit = createClient({
+  baseUrl: process.env.OFFERKIT_API_URL!,
+  apiKey: process.env.OFFERKIT_API_KEY!,
+});
+
+export async function applyWelcomeCode(order: {
+  id: string;
+  totalCents: number;
+  currency: string;
+}) {
+  const validation = await offerkit.vouchers.validate({
+    params: { code: "WELCOME10" },
+    body: {
+      order: { amount: order.totalCents, currency: order.currency, items: [] },
+    },
+  });
+
+  if (!validation.valid) return validation;
+
+  return offerkit.vouchers.redeem({
+    params: { code: "WELCOME10" },
+    body: {
+      order: { amount: order.totalCents, currency: order.currency, items: [] },
+      externalOrderId: order.id,
+      idempotencyKey: order.id,
+    },
+  });
+}
+```
+
+In a real checkout, keep validation and redemption as separate steps. Validate freely
+while the cart changes. Redeem only at the business event you choose, such as order
+creation or successful payment capture.
+
+## 7. Inspect the result
+
+Open **Vouchers**, select `WELCOME10`, and review its redemption count. If you created
+an OfferKit order and passed its `orderId`, the order page also shows the attached
+redemption. **Insights** summarizes redemption volume and common validation failures.
+
+## What you learned
+
+- Configure business behavior before integrating UI.
+- Send current cart context when asking OfferKit for a decision.
+- Validate to preview; redeem to commit.
+- Use stable external IDs and idempotency keys at integration boundaries.
+- Keep the API key and all mutation calls on your server.
+
+Continue with the [integration blueprint](/integrate), or choose a complete guide under
+[Build for a goal](/solutions).

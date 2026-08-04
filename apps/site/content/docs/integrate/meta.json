@@ -1,0 +1,10 @@
+{
+  "title": "Integrate OfferKit",
+  "pages": [
+    "index",
+    "customers-and-orders",
+    "checkout",
+    "webhooks",
+    "testing"
+  ]
+}

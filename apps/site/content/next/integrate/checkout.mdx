@@ -1,0 +1,167 @@
+---
+title: Checkout integration
+description: Preview incentives as the cart changes and commit the final result safely at the order boundary.
+---
+
+A checkout integration has a read path and a commit path. The read path can run often
+and returns previews. The commit path changes OfferKit state and must run from your server
+with a stable idempotency key.
+
+## 1. Build authoritative context
+
+Do not accept totals or customer IDs from the browser without verification. Rebuild the
+cart from server-known products, prices, quantities, currency, and the authenticated user.
+
+```ts
+const context = {
+  customerExternalId: user?.id,
+  order: {
+    amount: cart.subtotalCents,
+    currency: cart.currency,
+    items: cart.items.map((item) => ({
+      productId: item.productId,
+      collectionId: item.collectionId,
+      quantity: item.quantity,
+      unitPrice: item.unitPriceCents,
+    })),
+  },
+};
+```
+
+Use the same amount basis across your offer policy, validation, final qualification,
+order storage, and support tools.
+
+## 2. Validate a submitted code
+
+```ts
+const result = await offerkit.vouchers.validate({
+  params: { code },
+  body: context,
+});
+```
+
+Validation does not consume the code. On success, return the preview and a display label
+to the UI. On failure, map the first explanation to helpful copy while retaining the full
+explanation array in server logs.
+
+Revalidate when quantity, products, subtotal, currency, identity, or the submitted code
+changes.
+
+## 3. Discover customer-held vouchers
+
+For a wallet or “available offers” panel, ask OfferKit to qualify vouchers already
+assigned to the customer:
+
+```ts
+const applicable = await offerkit.vouchers.qualify({
+  customerExternalId: user.id,
+  order: context.order,
+  filters: { includeSkipped: true },
+});
+```
+
+Use `eligible` for the current cart. `skipped` is useful for messages such as “Spend
+USD 12 more,” account views, or support—not necessarily for the primary checkout UI.
+
+## 4. Discover automatic promotions
+
+```ts
+const promotions = await offerkit.promotions.qualify({
+  customerId: customer.id,
+  order: context.order,
+  metadata: { channel: "web" },
+  filters: { includeSkipped: true },
+});
+```
+
+Promotion qualification returns a combined preview after priority and exclusivity. It
+is read-only, so persist the selected tier IDs and amount with the order if your checkout
+accepts the result.
+
+## 5. Decide the calculation order
+
+Write down how your checkout combines:
+
+- automatic promotions;
+- one or more voucher discounts;
+- gift-card stored value;
+- shipping, tax, and other payments.
+
+OfferKit can calculate each supported decision, but your application orchestrates the
+overall order. Gift cards cannot be submitted in the multi-voucher discount stack.
+
+## 6. Recheck and commit
+
+At order creation or payment capture, rebuild the context and re-run the applicable
+read checks. If the result differs from the customer's displayed total, do not silently
+charge the new total.
+
+Commit one voucher:
+
+```ts
+const result = await offerkit.vouchers.redeem({
+  params: { code },
+  body: {
+    ...context,
+    externalOrderId: order.id,
+    idempotencyKey: order.id,
+  },
+});
+```
+
+Commit several discount vouchers atomically:
+
+```ts
+const result = await offerkit.vouchers.stackRedeem({
+  codes,
+  ...context,
+  externalOrderId: order.id,
+  idempotencyKey: order.id,
+});
+```
+
+Store the redemption or batch ID, applied amount, breakdown, and final order amount.
+Only mark the incentive accepted when `ok` is true.
+
+## 7. Place commit relative to payment
+
+Two common strategies exist:
+
+- **Redeem before payment:** reserves no special session, but a later payment failure
+  can leave a consumed voucher that needs operational correction.
+- **Redeem after payment:** avoids consuming value on failed payment, but the offer can
+  change between authorization and redemption.
+
+Choose deliberately for your payment flow. Keep the interval short, use stable keys,
+and build a reconciliation job for orders whose payment and OfferKit state disagree.
+
+Referral conversion should usually happen after payment capture. Loyalty earning often
+happens after capture or fulfillment. The same business event should not trigger both
+paths twice.
+
+## Customer-safe errors
+
+Good messages preserve the action the customer can take:
+
+| Reason | Possible customer message |
+| --- | --- |
+| `voucher_not_found` | We couldn't find that code. Check it and try again. |
+| `campaign_inactive` or `voucher_disabled` | This offer is not currently available. |
+| `voucher_expired` | This code has expired. |
+| `redemption_limit_reached` | This code has reached its usage limit. |
+| `per_user_redemption_limit_reached` | You've already used this offer. |
+| `currency_mismatch` | This code is not available for this currency. |
+| `validation_failed` | Your cart does not meet this offer's conditions. |
+
+Do not reveal another customer's identity, internal rule expression, or sensitive
+configuration in browser-visible errors.
+
+## Reconciliation
+
+Periodically compare committed orders with their expected OfferKit outcomes. Alert on:
+
+- paid orders with no expected redemption;
+- failed orders with a committed redemption;
+- mismatched discount amounts;
+- referral source codes with no conversion after the success event;
+- duplicate loyalty earning for one source event.

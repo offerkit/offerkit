@@ -1,0 +1,92 @@
+---
+title: API conventions
+description: Authentication, pagination, idempotency, outcomes, and the live OpenAPI reference.
+---
+
+OfferKit serves REST under `/api/v1` and publishes the exact OpenAPI 3.1 contract for the
+running deployment at:
+
+```text
+https://<offerkit-host>/api/openapi.json
+```
+
+Use OpenAPI for the complete method, path, request, response, and schema inventory. This
+page explains the conventions shared across resources.
+
+## Authentication
+
+Send an API key as a bearer token:
+
+```text
+Authorization: Bearer offerkit_<prefix>_<secret>
+```
+
+Mint and scope keys under **Settings → API keys**. The plaintext value is shown once.
+Dashboard cookie sessions also authenticate the dashboard's own API calls.
+
+Authentication and scope failures use transport-level HTTP errors. Never place an API
+key in public client code.
+
+## Pagination
+
+List endpoints generally accept `limit` from 1 to 100 and an opaque `cursor`:
+
+```json
+{
+  "data": [],
+  "next": "opaque-cursor",
+  "prev": "opaque-cursor"
+}
+```
+
+Do not parse or construct cursors. Store and send them unchanged. The presence of
+`next` or `prev` indicates navigation availability.
+
+## Idempotency
+
+Mutations that support safe replay accept an `idempotencyKey`; the HTTP middleware can
+also use its corresponding idempotency header where documented by the live contract.
+
+One key identifies one logical request body. A replay returns the original result, often
+with `idempotent: true`. Reusing the key for different input produces a conflict.
+
+Use stable business identifiers such as an application order ID. Do not generate a new
+random key for every network attempt.
+
+## Business outcomes and HTTP errors
+
+Malformed input, missing routes, authentication, authorization, and resource lookup can
+use HTTP errors. Hot-path business decisions return typed outcome objects so the caller
+can distinguish ordinary ineligibility from a transport failure.
+
+Voucher validation returns `valid`; redemption returns `ok`. Failures can contain a
+machine-readable code, message, and `explanations` array. Preserve the code for support
+and map it to customer-safe language.
+
+## Resource groups
+
+The contract includes:
+
+- workspace, staff users, API keys, and audit log;
+- customers, segments, and orders;
+- campaigns, vouchers, validation, qualification, and stack redemption;
+- automatic promotion tiers and qualification;
+- loyalty programs, tiers, earning rules, rewards, members, and transactions;
+- referral programs, codes, conversions, and outcomes;
+- reusable validation rules and custom reward types;
+- events, webhooks, deliveries, and replay;
+- insights and health checks.
+
+## Health endpoints
+
+- `GET /api/v1/health` checks process liveness.
+- `GET /api/v1/ready` checks readiness, including the database and worker expectations.
+
+Use readiness for the public web-service health check. The background worker exposes its
+own `/health` endpoint on its configured health port.
+
+## Compatibility
+
+Pin web, worker, SDK, CLI, and MCP versions deliberately. The OpenAPI document from the
+running deployment is authoritative for its server version; compile-time SDK types reflect
+the installed package version.

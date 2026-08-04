@@ -3,11 +3,11 @@
   "pages": [
     "index",
     "getting-started",
-    "api-reference",
-    "integrations",
-    "webhooks",
-    "referrals",
-    "migrating-referrals",
-    "self-host"
+    "how-offerkit-works",
+    "solutions",
+    "integrate",
+    "operate",
+    "deploy",
+    "reference"
   ]
 }

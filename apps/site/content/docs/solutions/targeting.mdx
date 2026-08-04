@@ -1,0 +1,115 @@
+---
+title: Target customers with rules
+description: Limit an offer by customer attributes, cart contents, dates, usage history, or metadata.
+---
+
+Targeting turns a broad benefit into a controlled offer. A validation rule can require
+the right customer, order total, product, collection, date, redemption history, or custom
+metadata before OfferKit returns a successful decision.
+
+## Start from the business sentence
+
+Write the policy in plain language before opening the rule builder:
+
+> Give USD 15 off when an identified VIP customer spends at least USD 100 on the web
+> channel before September 1.
+
+Then separate it into facts your integration can actually provide:
+
+- customer identity and `metadata.vip`;
+- order amount and currency;
+- request metadata such as `channel`;
+- the current date.
+
+A rule cannot evaluate data that is absent from the validation or qualification context.
+
+## Prepare customer data
+
+Use stable external IDs and place targeting attributes in consistent metadata fields:
+
+```ts
+await offerkit.customers.upsert({
+  externalId: user.id,
+  email: user.email,
+  metadata: {
+    vip: user.plan === "vip",
+    region: user.region,
+    acquisitionChannel: user.acquisitionChannel,
+  },
+});
+```
+
+Document field names and value types as part of the integration contract. Changing
+`region: "AE"` to `region: { code: "AE" }` can silently change a rule's outcome.
+
+## Build a reusable rule
+
+Open **Validation rules**, create a rule, and choose where it applies: voucher,
+promotion, earning, or reward. The visual builder supports common conditions; raw JSON
+supports more complex JSON Logic expressions and OfferKit operators.
+
+Common conditions include:
+
+- order total above an amount and currency;
+- order contains a product or collection;
+- customer redemption count above a threshold;
+- current date between two timestamps;
+- metadata field equals a value;
+- direct customer fields such as email, address, summary, or customer metadata.
+
+Attach the rule to the campaign or promotion tier that should enforce it. Campaign-level
+rules affect every contained voucher or tier.
+
+## Send complete decision context
+
+```ts
+const result = await offerkit.vouchers.validate({
+  params: { code },
+  body: {
+    customerExternalId: user.id,
+    order: {
+      amount: cart.totalCents,
+      currency: cart.currency,
+      items: cart.items,
+    },
+  },
+});
+```
+
+Promotion qualification additionally accepts request metadata. Voucher validation uses
+the stored customer metadata and the supplied order context.
+
+If a rule needs a customer, make identification mandatory in your checkout flow. A
+missing customer should fail closed rather than accidentally making a targeted offer public.
+
+## Use segments to design an audience
+
+A segment stores a reusable rule over customer data. Use **Preview** to see the total
+match count and a sample before launch. Segments are valuable for validating that your
+customer data expresses the intended audience.
+
+In the current product, creating a segment does not automatically attach its membership
+to a campaign decision. Enforce the corresponding customer conditions in the campaign's
+validation rule. This keeps runtime behavior explicit and prevents a dashboard preview
+from being mistaken for a live eligibility link.
+
+## Test the boundary, not only the happy path
+
+For every condition, test:
+
+- a value that passes;
+- a value that fails;
+- a missing value;
+- an unexpected type;
+- the exact numeric or date boundary;
+- multiple conditions combined with both “all” and “any.”
+
+Preview the segment, validate a voucher, and qualify a promotion with known fixtures.
+Keep these fixtures as regression cases when editing live rules.
+
+## Diagnose failures
+
+A failed voucher rule returns `validation_failed` with rule details appropriate for
+support. Promotion qualification distinguishes `rule_failed` from `rule_error`. A rule
+error means the expression could not be evaluated and should be treated as a configuration
+incident, not as an ineligible customer.

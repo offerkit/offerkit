@@ -1,0 +1,139 @@
+---
+title: How OfferKit works
+description: Understand where OfferKit fits, how an offer moves through the system, and what the main objects mean.
+---
+
+OfferKit is a decision engine and ledger for incentives. It does not replace your cart,
+checkout, payment processor, user database, or messaging system. It receives context
+from those systems, decides which configured benefit applies, records committed use,
+and emits events your application can react to.
+
+## The lifecycle of an offer
+
+Every OfferKit integration follows the same basic lifecycle:
+
+1. **Configure** — define the benefit, audience, limits, dates, and stacking behavior.
+2. **Qualify or validate** — send the current customer and cart to preview what applies.
+3. **Present** — your application shows the code, discount, balance, points, or reward.
+4. **Redeem or convert** — commit the business event at checkout or after payment.
+5. **Record** — OfferKit updates counters or balances and writes ledger activity.
+6. **React** — events and webhooks notify the rest of your stack.
+
+The first two steps are safe to repeat. The commit step changes state and should include
+a stable idempotency key or event ID whenever the operation supports one.
+
+## Start with the customer experience
+
+The object you configure depends on what the customer should experience:
+
+| Customer experience | OfferKit mechanism |
+| --- | --- |
+| “Enter `SAVE10`” | A discount voucher inside a discount campaign |
+| “Your cart automatically qualifies for USD 10 off” | A promotion tier inside a promotion campaign |
+| “Spend the remaining USD 24.50 on this card” | A gift-card voucher with a balance ledger |
+| “You earned 200 points and reached Gold” | A loyalty member inside a loyalty program |
+| “Invite a friend; you both receive a reward” | A referral code and conversion inside a referral program |
+
+In these docs, **offer** is the plain-language umbrella for all of the above. It is not
+an API resource.
+
+## The main objects
+
+### Campaign
+
+A campaign is the common configuration and lifecycle container. It supplies a name,
+currency, timezone, activation window, status, code defaults, and optional limits or
+validation rule. Its type declares the behavior it will contain.
+
+Campaigns move through `draft`, `active`, `paused`, and `ended`. A newly created
+campaign is a draft and cannot be redeemed until it is active.
+
+### Voucher
+
+A voucher is a code. A discount voucher contains a fixed or percentage discount. A
+gift-card voucher contains a spendable balance. Vouchers can be shared, generated in
+bulk, or assigned to one customer.
+
+Vouchers can also have their own dates, redemption limits, priority, exclusivity, and
+metadata. Voucher settings can narrow campaign settings, but cannot make an inactive
+campaign redeemable.
+
+### Promotion tier
+
+A promotion tier is a code-free discount. Your server asks OfferKit to qualify the
+current cart, and OfferKit returns the eligible tiers and a calculated preview. Tiers
+can have different conditions, priorities, dates, and exclusivity behavior.
+
+### Program
+
+Loyalty and referral behavior needs more configuration than a common campaign can hold.
+A loyalty program adds tiers, earning rules, rewards, member balances, and point ledgers.
+A referral program adds advocate codes, conversions, and separate rewards for each side.
+
+The campaign remains the lifecycle container; the program is the type-specific behavior
+attached to it. In normal setup there is one active program of the matching type for a
+campaign.
+
+### Customer
+
+A customer connects your user to vouchers, redemptions, loyalty membership, referral
+activity, and targeting data. Use your stable user ID as `externalId`; this lets you
+upsert safely without storing an OfferKit UUID as the only lookup key.
+
+### Order
+
+An order records a transaction and can connect it to its redemptions. For a lightweight
+integration you can send cart context directly during validation and redemption. Create
+OfferKit order records when you also want lifecycle, order lookup, and redemption history
+inside OfferKit.
+
+### Validation rule and segment
+
+A validation rule answers a question such as “Is the order at least USD 50?”, “Does it
+contain this product?”, or “Is this customer in the intended audience?” Rules can be
+attached to campaigns, promotion tiers, earning behavior, and rewards.
+
+A segment is a reusable audience definition evaluated against customers. Preview a
+segment before using its identifier in targeting logic.
+
+### Reward type
+
+Discounts and gift-card credit are built in. A reward type describes a benefit that your
+own application fulfills, such as free shipping, a complimentary item, or external points.
+OfferKit validates and records the configured payload; your application performs the
+domain-specific action.
+
+## Three kinds of decisions
+
+### Qualification
+
+Qualification discovers applicable offers without the customer already knowing a code.
+Use it for automatic promotions or to list customer-held vouchers that work for the
+current cart.
+
+### Validation
+
+Validation checks a known voucher code and returns a read-only discount preview or a
+support-safe explanation. Call it whenever the cart, currency, or customer changes.
+
+### Redemption
+
+Redemption commits voucher use. It increments counters, reduces gift-card balance when
+applicable, records a ledger entry, and emits an event. Use an idempotency key.
+
+Referral conversion and loyalty earning or reward redemption are their program-specific
+versions of a committed business event.
+
+## Where each responsibility belongs
+
+| Responsibility | Typical owner |
+| --- | --- |
+| Product prices, tax, inventory, and authoritative order total | Your commerce system |
+| Users, authentication, and customer-facing sessions | Your application |
+| Payment capture and refunds | Your payment provider or commerce system |
+| Offer configuration, eligibility, usage limits, balances, and ledgers | OfferKit |
+| Checkout presentation and final order persistence | Your application |
+| Email, push, SMS, and in-app messages | Your messaging stack |
+
+The [integration blueprint](/integrate) turns these boundaries into an implementation
+plan. If you already know what you want to build, go directly to [Build for a goal](/solutions).

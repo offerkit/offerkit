@@ -1,0 +1,104 @@
+---
+title: Build an automatic cart discount
+description: Find and calculate eligible promotions from the current customer and cart without requiring a code.
+---
+
+Use an automatic promotion when the customer should receive a benefit because their cart
+qualifies, without entering a code. Examples include “USD 10 off orders over USD 100”
+and tiered offers where a larger cart earns a larger discount.
+
+## Design the customer experience
+
+Decide whether your storefront will:
+
+- silently apply the best result;
+- show all eligible benefits and let the customer choose;
+- show progress before qualification, such as “Spend USD 12 more”; or
+- explain that another exclusive offer won.
+
+OfferKit returns eligible and skipped tiers plus a calculated preview. Your application
+decides how to present and persist that result.
+
+## Configure the promotion
+
+1. In **Campaigns**, create a **PROMOTION** campaign.
+2. Enable **Auto-apply at checkout**.
+3. Set the currency, dates, and campaign-wide validation rule.
+4. Activate the campaign.
+5. Add one or more promotion tiers to the campaign.
+
+Each tier has its own name, fixed or percentage effect, optional rule and activation
+window, priority, and exclusivity setting.
+
+For “USD 10 off USD 100; USD 25 off USD 200,” create two tiers and attach an order-total
+rule to each. Give the more valuable tier higher priority. Make it exclusive if only one
+tier should win.
+
+## Qualify the cart
+
+Call qualification from your server whenever relevant customer or cart context changes:
+
+```ts
+const result = await offerkit.promotions.qualify({
+  customerId: customer.id,
+  order: {
+    amount: cart.totalCents,
+    currency: cart.currency,
+    items: cart.items.map((item) => ({
+      productId: item.productId,
+      collectionId: item.collectionId,
+      quantity: item.quantity,
+      unitPrice: item.unitPriceCents,
+    })),
+  },
+  metadata: { channel: "web" },
+  filters: { includeSkipped: true },
+});
+```
+
+Use:
+
+- `eligible` to identify the promotion tiers that survived all checks;
+- `preview.amount` for the combined discount;
+- `preview.finalOrder.amount` for the calculated post-discount amount;
+- `skipped` to debug or explain why a tier did not apply.
+
+Qualification is read-only. In the current promotion surface, it does not create a
+redemption ledger row. Persist the chosen promotion tier IDs and applied amount with
+your order so the final commercial decision is auditable in your system.
+
+## Re-run at the commit boundary
+
+Do not rely on a browser-held result. Re-run qualification on your server immediately
+before accepting the order, using the final customer, items, prices, and currency. If
+the result changed, update the order or ask the customer to review it again.
+
+## Priority and exclusivity
+
+OfferKit evaluates eligible tiers by priority when calculating the preview. An exclusive
+tier prevents lower-priority tiers from contributing. Non-exclusive tiers can combine
+until the running order total reaches zero.
+
+The response identifies skipped tiers with reasons such as `exclusivity_lost`,
+`zero_after_running_total`, `currency_mismatch`, or `rule_failed`.
+
+## Test before launch
+
+Test every boundary around each tier, including one minor unit below and at a spend
+threshold. Also test:
+
+- campaign and tier activation windows;
+- wrong currency;
+- missing customer context for customer rules;
+- two simultaneously eligible tiers;
+- an exclusive tier with lower-priority competitors;
+- a discount larger than the remaining cart amount.
+
+## Operate the promotion
+
+Pause the parent campaign to stop every tier. Disable one tier when only that level is
+incorrect. When changing live rules, retest the boundary carts that originally justified
+the campaign.
+
+If the customer must present a code or you need a redemption ledger and usage limits,
+use [Run a promotional code](/solutions/public-promo-code) instead.

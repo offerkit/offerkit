@@ -1,0 +1,132 @@
+---
+title: Launch a referral program
+description: Give advocates stable codes, convert referred customers after success, and issue both rewards safely.
+---
+
+OfferKit's referral model gives each advocate one stable code in a program. Many friends
+can convert through that code, and every successful conversion creates fresh rewards for
+the advocate and the referred customer.
+
+Your application owns the sharing UI and decides what counts as a successful conversion.
+OfferKit owns code identity, duplicate and self-referral protection, conversion records,
+and reward issuance.
+
+## Design the program
+
+Decide:
+
+- who may become an advocate;
+- what the advocate receives;
+- what the referred customer receives;
+- whether conversion means account creation, payment capture, or another event;
+- how generated rewards are delivered;
+- how your application prevents abuse beyond basic duplicate and self-referral checks.
+
+Each side can receive a discount voucher, gift-card credit, loyalty points, or a custom
+reward. Loyalty-point rewards require the customer to already be a member of the selected
+loyalty program.
+
+## Configure the program
+
+1. Create a campaign with type **REFERRAL_PROGRAM**.
+2. Open **Referrals** and create a program attached to that campaign.
+3. Configure the advocate and friend reward separately.
+4. Set the referral code length.
+5. Activate the parent campaign when the program is ready.
+
+Keep the program ID in server configuration. Do not expose OfferKit API credentials in
+the share page or checkout.
+
+## Keep customer identity in sync
+
+Every advocate and referred person must be an OfferKit customer. Upsert from your stable
+application ID:
+
+```ts
+const { customer } = await offerkit.customers.upsert({
+  externalId: user.id,
+  email: user.email,
+  name: user.name,
+});
+```
+
+This is idempotent on `externalId`, so it can run during account provisioning or just
+before a referral operation.
+
+## Give the advocate a shareable code
+
+```ts
+const issued = await offerkit.referrals.issue({
+  programId,
+  referrerCustomerId: customer.id,
+  prefix: "ALICE",
+});
+
+if (!issued.ok) throw new Error(issued.message);
+```
+
+The same `(programId, referrerCustomerId)` always returns the same code. Cache it for
+rendering, but treat OfferKit as the source of truth. Build share links in your own domain,
+for example `https://shop.example/refer/ALICE-7K3PQ9LM`.
+
+## Capture the code without converting it
+
+When the friend follows the link or enters the code, store it with the signup or checkout
+session. Do not call `convert` merely because the code was viewed or applied. Otherwise
+abandoned carts and failed payments will issue real rewards.
+
+You can look up the code before storing it when you want to reject unknown values early.
+
+## Convert after the success event
+
+Call conversion from a trusted server event—commonly the payment webhook or fulfilled
+order job:
+
+```ts
+const conversion = await offerkit.referrals.convert({
+  code: order.referralCode,
+  refereeCustomerId: buyer.id,
+  conversionEventId: order.id,
+});
+
+if (!conversion.ok) {
+  return handleReferralFailure(conversion.errorCode, conversion.message);
+}
+```
+
+Always pass a stable `conversionEventId`. A replay returns the original conversion and
+reward outcomes with `idempotent: true` rather than minting new rewards.
+
+OfferKit rejects a customer using their own code and a referred customer converting the
+same advocate code more than once.
+
+## Deliver both rewards
+
+The successful response contains `referrerReward` and `refereeReward`. A discount or gift
+reward contains a newly issued `voucherCode`. Deliver it through your email or in-app
+messaging system and show it in the customer's wallet. Loyalty and custom rewards return
+their corresponding outcome identifiers or payload.
+
+Do not send a notification before you have persisted the conversion and reward outcome.
+Make downstream delivery idempotent on `conversionId`.
+
+## Test before launch
+
+Test:
+
+- issuing the same advocate code twice;
+- two different friends using the same advocate code;
+- self-referral;
+- the same friend converting twice;
+- replaying the same `conversionEventId`;
+- a failed or abandoned payment that must not convert;
+- every configured reward type;
+- a loyalty reward when the recipient is not enrolled.
+
+## Operate and migrate
+
+Use the referral program page to inspect codes and conversions. Reconcile every
+conversion to its application event ID and both reward outcomes.
+
+If you already have referral history, follow [Migrate existing referrals](/operate/migrating-referrals).
+Do not call `convert` for historical conversions; doing so would issue the rewards again.

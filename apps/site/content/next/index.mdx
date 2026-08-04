@@ -1,30 +1,62 @@
 ---
-title: OfferKit
-description: Self-hostable, MIT-licensed promotion engine — vouchers, gift cards, loyalty, referrals, all in one.
+title: OfferKit documentation
+description: Build, integrate, and operate discounts, gift cards, loyalty, referrals, and automatic promotions.
 ---
 
-Welcome. **OfferKit** is an MIT-licensed promotion engine you run yourself. One published Docker image, one Docker Compose file, or two Railway Docker Image services gives you:
+OfferKit is the promotion engine behind the customer experience you design. Your team
+configures the offer; your application asks OfferKit what applies, commits the result,
+and decides how it appears in checkout, account pages, email, and support tools.
 
-- a **dashboard** to manage campaigns, vouchers, customers, segments, loyalty, referrals, webhooks, API keys
-- a **REST API** at `/api/v1/...` generated from the same contract as the typed SDK
-- a typed **TypeScript SDK** — no codegen, types flow from the oRPC contract
-- a **CLI** (`offerkit`) with verbs for the most common back-office tasks
-- a contract-derived **MCP server** so an agent can drive your promotion stack with explicit risk metadata
+You do not need to understand OfferKit's internal object model before you begin. Start
+with the outcome you want for your customers.
 
-## Where to start
+## What do you want to build?
 
-- [Get started](/getting-started) — install + your first redemption end-to-end
-- [Self-host](/self-host) — published Docker image locally or on Railway
-- [API reference](/api-reference) — the REST routes and shared contract conventions
-- [Webhooks](/webhooks) — HMAC signatures + retry semantics
-- [SDK / CLI / MCP](/integrations) — the three programmatic surfaces
-- [Referrals](/referrals) — wiring refer-a-friend into your checkout
-- [Migrating existing referrals](/migrating-referrals) — one-time bulk import from a legacy system
+| Goal | Start here |
+| --- | --- |
+| Let customers enter a shared or unique discount code | [Run a promotional code](/solutions/public-promo-code) |
+| Apply a discount automatically when a cart qualifies | [Build an automatic cart discount](/solutions/automatic-cart-discount) |
+| Issue prepaid value or store credit | [Issue and accept gift cards](/solutions/gift-cards) |
+| Reward repeat customers with points, tiers, and rewards | [Launch a loyalty program](/solutions/loyalty) |
+| Reward an advocate and the friend they invite | [Launch a referral program](/solutions/referrals) |
+| Limit an offer by customer, cart, product, or date | [Target customers with rules](/solutions/targeting) |
+| Accept more than one code on an order | [Combine discounts safely](/solutions/stacking) |
 
-## Domain model at a glance
+See [Build for a goal](/solutions) for all end-to-end guides.
 
-A **campaign** is a parent for one of five kinds of programs (`DISCOUNT`, `GIFT_VOUCHERS`, `LOYALTY_PROGRAM`, `REFERRAL_PROGRAM`, `PROMOTION`). A **voucher** belongs to a discount or gift campaign and either carries a discount config or a gift-card balance. A **loyalty program** has tiers, earning rules, rewards, and member ledgers. A **referral program** issues `{prefix}-{code}` codes that, on convert, hand out two configurable rewards. **Validation rules** live in a reusable JSON-Logic library. Every state-changing operation emits an **event**; **webhooks** subscribe to event types and receive HMAC-signed POSTs with exponential-backoff retries.
+## New to OfferKit?
 
-## License
+Follow [Get started](/getting-started) to run OfferKit, create a `WELCOME10`
+discount, validate it against a cart, redeem it, and inspect the result. The tutorial
+introduces each OfferKit term only when it becomes useful.
 
-MIT, across the entire monorepo.
+If you are evaluating the architecture first, read [How OfferKit works](/how-offerkit-works)
+and the [integration blueprint](/integrate).
+
+## Three parts of every implementation
+
+1. **Configure the business behavior.** Use the dashboard or API to define the value,
+   eligibility, dates, limits, and stacking behavior.
+2. **Integrate the customer journey.** Your server sends customer and cart context to
+   OfferKit, previews the result, and commits it at the right business moment.
+3. **Operate the live offer.** Your team monitors usage and failures, supports customers,
+   and pauses or adjusts the offer when necessary.
+
+The goal guides cover all three parts. The [reference](/reference) is available when
+you need exact resource fields, error codes, or interface conventions.
+
+## How you can use OfferKit
+
+- The **dashboard** is for configuring and operating offers.
+- The **TypeScript SDK** is the shortest path for a TypeScript server application.
+- The **REST API** works with any backend and exposes an OpenAPI 3.1 document.
+- The **CLI** is useful for scripts and back-office work.
+- The **MCP server** lets an agent work with the same contract and explicit risk labels.
+
+All programmatic surfaces use the same API keys and the same underlying contract. Keep
+API keys on your server; never ship one in browser or mobile application code.
+
+## Self-hosting
+
+OfferKit is MIT licensed and self-hosted. For a local evaluation or production topology,
+go to [Deploy OfferKit](/deploy).

@@ -1,0 +1,133 @@
+---
+title: Launch a loyalty program
+description: Enroll customers, award points, move members through tiers, and exchange points for rewards.
+---
+
+A loyalty program turns customer activity into a points ledger. OfferKit stores each
+member's available balance, lifetime points, current tier, reward redemptions, manual
+adjustments, and expiration entries. Your application decides which real-world events
+award points and presents the program to the customer.
+
+## Design the program first
+
+Write down four decisions before configuring OfferKit:
+
+1. **Enrollment** — automatic for every account or explicit opt-in?
+2. **Earning** — how many base points does each event award?
+3. **Status** — which lifetime-point thresholds define tiers, and do tiers multiply earning?
+4. **Spending** — what can members receive, and how many available points does each reward cost?
+
+Also decide whether earned points expire. OfferKit can record per-entry expiration and
+run a background expiration sweep.
+
+## Configure the program
+
+1. Create a campaign with type **LOYALTY_PROGRAM**.
+2. Open **Loyalty**, create a program, and select that campaign.
+3. Set the point-expiration period if points should not live forever.
+4. Add tiers in increasing threshold order.
+5. Add the rewards customers can buy with points.
+6. Optionally create earning-rule records to describe and attribute earning behavior.
+
+An earning multiplier uses basis points. `10000` means 1×, `15000` means 1.5×, and
+`20000` means 2×.
+
+Rewards can return a discount, gift-card credit, or a custom payload. Your application
+must fulfill the returned reward in the customer experience.
+
+## Upsert and enroll a customer
+
+```ts
+const { customer } = await offerkit.customers.upsert({
+  externalId: user.id,
+  email: user.email,
+  name: user.name,
+});
+
+const member = await offerkit.loyalty.members.enroll({
+  programId,
+  customerId: customer.id,
+});
+```
+
+Both operations are safe to repeat for the same identity and program. Store the member
+ID with your integration data or retrieve it from your server-side mapping.
+
+## Award points at the right event
+
+OfferKit does not infer purchases from your commerce database. Call `earn` when your
+chosen business event occurs—for example, after payment capture or order fulfillment.
+
+```ts
+const earned = await offerkit.loyalty.members.earn({
+  memberId: member.id,
+  basePoints: order.loyaltyPoints,
+  eventId: order.id,
+  note: `Order ${order.number}`,
+  applyMultiplier: true,
+});
+```
+
+Calculate `basePoints` in your integration according to the program policy. Supplying
+an `earningRuleId` attributes the ledger entry to that configured rule; the rule record
+does not subscribe to your application events by itself.
+
+Pass a stable `eventId` so you can reconcile an earning entry to the source event. Your
+event handler should also deduplicate on your side before calling `earn`.
+
+When the member crosses a lifetime-point threshold, OfferKit selects the highest
+qualifying tier. The member's current tier multiplier affects later earning calls when
+`applyMultiplier` is enabled.
+
+## Let a member spend points
+
+List rewards for the program, show the point cost, and submit the selected reward from
+your server:
+
+```ts
+const result = await offerkit.loyalty.members.redeem({
+  memberId: member.id,
+  rewardId: selectedRewardId,
+  note: `Requested from account page`,
+});
+
+if (!result.ok) {
+  return showRewardError(result.code, result.message);
+}
+
+await fulfillReward(result.payload);
+```
+
+OfferKit checks the balance and deducts the cost in one transaction. The returned payload
+describes what was purchased. Treat custom fulfillment as its own reliable workflow:
+record the OfferKit transaction ID, make your fulfillment idempotent, and surface failures
+to operations.
+
+## Show balance and history
+
+```ts
+const current = await offerkit.loyalty.members.get({ params: { id: member.id } });
+const history = await offerkit.loyalty.members.history({ params: { id: member.id } });
+```
+
+Use `current.balance` for spendable points, `current.lifetimePoints` for tier progress,
+and the ledger to explain earning, reward redemption, adjustment, expiration, and rollback.
+
+## Test before launch
+
+Test:
+
+- repeat enrollment;
+- earning below, at, and above every tier threshold;
+- earning with and without a tier multiplier;
+- duplicate application events;
+- a reward with exactly enough points and one point too few;
+- custom reward fulfillment failure and retry;
+- expiration of several earning entries;
+- positive and negative manual adjustments.
+
+## Operate the program
+
+Use manual adjustment only with an explanatory note. The ledger should remain the audit
+trail for every balance change. When changing tier thresholds or reward costs, decide
+how the change should affect existing members before editing a live program.

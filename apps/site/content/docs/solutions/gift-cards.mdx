@@ -1,0 +1,119 @@
+---
+title: Issue and accept gift cards
+description: Create balance-bearing codes, accept partial spend, and show customers their balance history.
+---
+
+A gift card is a voucher with a monetary balance. Each successful redemption spends up
+to the order amount, records a transaction, and leaves any unused balance available for
+a later order.
+
+Use gift cards for prepaid value, promotional credit, or support-issued store credit
+when the balance should be managed inside OfferKit.
+
+## Decide the policy
+
+Before issuing cards, decide:
+
+- whether codes are purchased, promotional, or manually issued;
+- whether each card is assigned to a customer;
+- the initial value and currency;
+- expiration and redemption limits;
+- how the remaining balance appears in checkout and account pages;
+- what your application does when the card covers only part of the order.
+
+OfferKit tracks value and spend. Your application remains responsible for selling the
+card, collecting any remaining payment, and communicating the code securely.
+
+## Configure the campaign and card
+
+Create a **GIFT_VOUCHERS** campaign, set its currency and dates, then activate it. Create
+one gift-card voucher or generate a batch. A gift card requires a positive starting balance.
+
+For example, this creates a USD 50 card through the SDK:
+
+```ts
+const card = await offerkit.vouchers.create({
+  code: "GIFT-7K3PQ9LM",
+  campaignId: giftCampaignId,
+  type: "GIFT_CARD",
+  giftBalance: 5_000,
+  customerId: customer.id,
+});
+```
+
+Money uses minor units, so `5_000` USD is USD 50.00.
+
+## Preview spend at checkout
+
+Validate the card with the current order:
+
+```ts
+const preview = await offerkit.vouchers.validate({
+  params: { code: submittedCode },
+  body: {
+    customerExternalId: session.user.id,
+    order: { amount: cart.totalCents, currency: cart.currency, items: cart.items },
+  },
+});
+```
+
+The preview spends no balance. If the card contains USD 20 and the order is USD 50,
+the calculated benefit is USD 20 and your checkout must collect the remaining USD 30.
+If the card contains more than the order total, only the order amount is used.
+
+## Commit the spend
+
+Redeem the card at the same business boundary you use for other payment value. Pass the
+order ID as the idempotency key:
+
+```ts
+const spend = await offerkit.vouchers.redeem({
+  params: { code: submittedCode },
+  body: {
+    customerExternalId: session.user.id,
+    externalOrderId: order.id,
+    order: { amount: order.totalCents, currency: order.currency, items: order.items },
+    idempotencyKey: `gift-card:${order.id}`,
+  },
+});
+```
+
+Only treat the balance as spent when `spend.ok` is true. Store the redemption ID and
+amount on the order. A replay with the same key returns the original result.
+
+## Show balance and history
+
+Fetch the voucher to show its current `giftBalance`. Fetch its ledger when the customer
+or support agent needs the history:
+
+```ts
+const card = await offerkit.vouchers.get({ params: { code } });
+const history = await offerkit.vouchers.transactions({ params: { code } });
+```
+
+Ledger reasons include initial credit, redemption, rollback, and adjustment. Do not
+calculate the authoritative balance by summing a cached history in the browser; use the
+current balance returned by OfferKit.
+
+## Test before launch
+
+Test a card that:
+
+- fully covers an order;
+- covers only part of an order;
+- has more balance than the order needs;
+- has zero balance;
+- belongs to a different customer;
+- uses the wrong currency;
+- expires before redemption;
+- receives two concurrent spend attempts.
+
+## Operate gift cards
+
+Use the voucher page for current status and the transactions endpoint for its balance
+history. Disable a compromised card immediately. Pause the parent campaign only when
+all cards in that program must stop working.
+
+Gift cards are not supported inside the multi-voucher stack redemption flow. Process a
+gift card separately from stacked discount vouchers and make the payment order explicit
+in your checkout.

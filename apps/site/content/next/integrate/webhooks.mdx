@@ -1,0 +1,108 @@
+---
+title: Webhooks
+description: Receive signed OfferKit events, make handlers idempotent, and recover failed deliveries.
+---
+
+Webhooks notify your server after OfferKit records an event. Use them for downstream
+side effects such as messages, analytics, fulfillment, and reconciliation. Do not use a
+webhook as the only record of a checkout result; store the direct API outcome with the order.
+
+## Create an endpoint
+
+Open **Webhooks** in the dashboard and create an endpoint, or call
+`POST /api/v1/webhooks`. Select `*` for every event or list the event types the handler
+understands.
+
+The plaintext signing secret is shown once. Store it in your server's secret manager.
+
+## Receive the raw request
+
+Each delivery is a JSON `POST`:
+
+```json
+{
+  "id": "event-uuid",
+  "type": "voucher.redeemed",
+  "payload": {
+    "redemptionId": "redemption-uuid",
+    "voucherCode": "WELCOME10",
+    "amount": 1000
+  },
+  "createdAt": "2026-05-08T22:25:00Z"
+}
+```
+
+Headers include:
+
+- `X-Offerkit-Event-Type`
+- `X-Offerkit-Event-Id`
+- `X-Offerkit-Signature: t=<unix>,v1=<hex>`
+
+Preserve the unparsed body bytes for signature verification.
+
+## Verify the signature
+
+The signature is `HMAC-SHA256(secret, "<t>.<rawBody>")`. The TypeScript SDK provides
+constant-time verification and rejects old timestamps by default:
+
+```ts
+import { verifyWebhook } from "@offerkit/sdk";
+
+export async function handleOfferKitWebhook(request: Request) {
+  const rawBody = await request.text();
+  const signature = request.headers.get("x-offerkit-signature") ?? "";
+
+  if (!verifyWebhook(rawBody, signature, process.env.OFFERKIT_WEBHOOK_SECRET!)) {
+    return new Response("Invalid signature", { status: 401 });
+  }
+
+  const event = JSON.parse(rawBody);
+  await processOnce(event.id, event);
+  return new Response(null, { status: 204 });
+}
+```
+
+Never verify a re-serialized JSON object. Whitespace or key-order changes produce a
+different signature.
+
+## Make processing idempotent
+
+Deliveries are at least once. Store the event ID in the same transaction as the side
+effect or enqueue it into an idempotent worker. If the event was already processed,
+return success without repeating the action.
+
+Respond quickly after durable acceptance. Do slow email, analytics, or fulfillment work
+asynchronously rather than holding the HTTP request open.
+
+## Retries and replay
+
+Non-2xx responses and transport errors retry on this schedule:
+
+```text
+1 minute → 5 minutes → 30 minutes → 2 hours → 12 hours → 24 hours → dead
+```
+
+The webhook detail page shows response status, body, error, attempt count, and next retry.
+Replay creates a new attempt for the same event while preserving delivery history. Your
+event-ID deduplication must therefore work for manual replays too.
+
+## Current event catalog
+
+- `customer.created`
+- `voucher.redeemed`
+- `voucher.redeemed.rolled_back`
+- `voucher.stack.redeemed`
+
+Subscribe to `*` only if your handler safely ignores unknown future event types. Prefer
+an explicit default branch that records and acknowledges an unsupported type.
+
+## Test before launch
+
+- a valid signature;
+- a modified body;
+- an old timestamp;
+- the same event delivered twice;
+- a handler timeout followed by retry;
+- an unknown event type;
+- replay from the dashboard;
+- secret rotation in your deployment process.

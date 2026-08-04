@@ -1,0 +1,86 @@
+---
+title: Launch and operate OfferKit
+description: Move an offer safely from draft to production and support it throughout its lifecycle.
+---
+
+An offer is ready when the business policy, application behavior, failure experience,
+and operational owner all agree—not merely when the campaign status says active.
+
+## Launch checklist
+
+### Configuration
+
+- The mechanism matches the intended experience: voucher, promotion, gift card, loyalty,
+  or referral.
+- Currency, timezone, start, and end dates are correct.
+- Discounts and gift balances use minor units; percentages and multipliers use basis points.
+- Campaign and voucher limits match the written policy.
+- Validation rules have been tested with known passing, failing, and missing data.
+- Priority and exclusivity behave correctly with other live offers.
+- The campaign and required tier or voucher are active.
+
+### Integration
+
+- API keys have narrow scopes and exist only on trusted servers.
+- Customer and order identity mappings are documented.
+- Preview and commit use server-authoritative cart context.
+- State-changing calls use stable idempotency or event IDs.
+- Application records store OfferKit outcome identifiers.
+- Customer error copy is mapped from business reason codes.
+- Webhook signatures and duplicate delivery handling are tested.
+
+### Operations
+
+- A named owner can pause the offer.
+- Support can search by code, customer, order, referral, or event.
+- Dashboards or alerts cover unexpected failures and dead webhook deliveries.
+- A reconciliation query or job can find missing and mismatched outcomes.
+- The rollback or customer-remediation policy is written down.
+
+## Campaign lifecycle
+
+- **Draft** is for configuration and testing setup. It cannot be redeemed.
+- **Active** permits runtime use within the configured date window.
+- **Paused** temporarily stops the campaign while preserving its setup.
+- **Ended** communicates that the campaign is complete.
+
+Use a voucher or tier's active setting to stop one item. Use the campaign status to stop
+the whole initiative.
+
+## Monitor the right signals
+
+**Insights** shows recent redemption counts, top campaigns, validation-failure reasons,
+and webhook health. Use it to notice a launch that is much quieter or noisier than expected.
+
+Then move from aggregate to evidence:
+
+- open the campaign to inspect configuration and issued vouchers;
+- open the voucher for status, limits, and activity;
+- open an order for attached redemptions;
+- open a loyalty member or gift card for its ledger;
+- open a referral program for codes and conversion outcomes;
+- open a webhook for delivery attempts and response data;
+- use the audit log to see which actor changed configuration.
+
+## Change a live offer safely
+
+Before changing value, eligibility, or priority:
+
+1. capture examples of currently passing and failing carts;
+2. understand which live vouchers or tiers inherit the setting;
+3. pause the affected scope if an inconsistent decision would be costly;
+4. make the smallest change;
+5. rerun boundary tests;
+6. reactivate and watch the first production decisions.
+
+Do not delete configuration simply to pause it. Soft deletion is appropriate when an
+object should no longer appear in normal operation, not as a temporary safety switch.
+
+## Support workflow
+
+Ask for the customer's account identifier, order ID, code, approximate time, currency,
+and cart contents. Look up the direct record before modifying anything. Preserve the
+reason code and associated IDs in the support ticket.
+
+Continue with [Troubleshoot a live offer](/operate/troubleshooting) for symptom-based
+diagnosis.

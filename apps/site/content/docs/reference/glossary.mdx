@@ -1,0 +1,118 @@
+---
+title: Glossary and data conventions
+description: Plain-language definitions for OfferKit objects, decisions, identifiers, money, dates, and ledgers.
+---
+
+## Product terms
+
+**Offer**  
+The plain-language umbrella used in these docs for any customer benefit. It is not an API resource.
+
+**Campaign**  
+The common lifecycle and configuration container for a discount, gift-voucher,
+automatic-promotion, loyalty, or referral initiative.
+
+**Voucher**  
+A human-entered or distributed code. It represents either a discount or gift-card balance.
+
+**Promotion tier**  
+A code-free discount effect with its own eligibility, dates, priority, and exclusivity.
+It belongs to a promotion campaign.
+
+**Loyalty program**  
+The type-specific configuration attached to a loyalty campaign: tiers, earning rules,
+rewards, members, and point ledgers.
+
+**Referral program**  
+The type-specific configuration attached to a referral campaign: rewards for each side,
+advocate codes, and conversions.
+
+**Customer**  
+The OfferKit representation of a user who can hold vouchers, redeem, join loyalty, refer,
+or be referred. `externalId` should usually contain the application's stable user ID.
+
+**Order**  
+An optional stored transaction record that can be connected to customer and redemption
+history. Runtime decision calls can also use inline order context without storing an order.
+
+**Segment**  
+A reusable audience rule with preview count and sample. A segment preview does not by
+itself attach membership to a live campaign decision.
+
+**Validation rule**  
+A JSON Logic condition evaluated against available customer, order, voucher, date, and
+metadata context.
+
+**Reward type**  
+A schema for a custom benefit that the integrating application fulfills.
+
+## Decision terms
+
+**Qualification**  
+Read-only discovery of which customer-held vouchers or automatic promotions apply to the
+current context.
+
+**Validation**  
+A read-only check of a known voucher code that returns a preview or explanations.
+
+**Redemption**  
+A committed voucher use that updates counters or gift balance and records activity.
+
+**Stack redemption**  
+An atomic redemption of several discount vouchers against one order.
+
+**Referral conversion**  
+A committed successful referral event that records the friend and issues both rewards.
+
+**Loyalty earning**  
+A committed positive point-ledger entry initiated by the integrating application.
+
+**Ledger**  
+An append-oriented history used to explain gift-card balance or loyalty points. The
+current balance is authoritative; ledger entries explain how it changed.
+
+## Data conventions
+
+### Money
+
+Money is an integer in the currency's minor unit. For currencies with two decimal places:
+
+| Integer | Display value |
+| ---: | ---: |
+| `1` | 0.01 |
+| `100` | 1.00 |
+| `1000` | 10.00 |
+
+Use the currency's actual minor-unit rules rather than assuming every currency has two decimals.
+
+### Percentages and multipliers
+
+Percentages and loyalty multipliers use basis points:
+
+| Integer | Meaning |
+| ---: | --- |
+| `1000` | 10% |
+| `10000` | 100% or 1× |
+| `15000` | 150% or 1.5× |
+
+### Dates and time zones
+
+API timestamps are ISO 8601. Campaigns store a timezone for operational interpretation;
+send explicit offsets or UTC timestamps at API boundaries. Both the campaign and its
+voucher or tier activation windows must permit use.
+
+### IDs and codes
+
+OfferKit resource IDs are UUIDs. Voucher and referral codes are human-facing strings.
+Your application IDs belong in `externalId`, `externalOrderId`, idempotency keys, and
+source event IDs according to their purpose.
+
+### Metadata
+
+Metadata is arbitrary JSON attached to supported resources or decision context. Treat
+its field names and types as a versioned integration contract when rules depend on them.
+
+### Soft deletion
+
+Most delete operations remove a resource from normal queries without immediately erasing
+historical database evidence. Use status or active controls for temporary pauses.

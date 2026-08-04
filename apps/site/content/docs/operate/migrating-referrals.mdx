@@ -1,0 +1,73 @@
+---
+title: Migrate existing referrals
+description: Preserve advocate codes and historical conversions without issuing rewards twice.
+---
+
+An existing referral system usually contains two different kinds of data:
+
+1. active advocate codes that may still be in circulation;
+2. historical conversions whose rewards were already issued.
+
+Treat them differently. The most important migration rule is: **never call
+`referrals.convert` for historical conversions**. Conversion is a live business action
+that issues fresh rewards.
+
+## 1. Choose the cutover policy
+
+Decide whether you will:
+
+- preserve existing code strings or issue new OfferKit codes;
+- keep legacy rewards redeemable in the old system;
+- import still-active legacy reward vouchers into OfferKit;
+- preserve original order or event IDs for reconciliation;
+- run a hard cutover or a short period of dual reads.
+
+Document a timestamp after which every new conversion belongs to OfferKit.
+
+## 2. Import customers first
+
+Every advocate and referred customer needs an OfferKit customer. Upsert using your stable
+user ID as `externalId` and build a mapping to the returned OfferKit IDs. This step is
+idempotent and safe to rerun.
+
+## 3. Import advocate codes
+
+`referrals.issue` safely creates or fetches one code per `(programId, customerId)`, but
+it generates the code string. Use it when issuing new codes is acceptable.
+
+If existing strings must remain valid, perform a controlled database import into
+`referral_code`. Validate global uniqueness first and use conflict guards on program and
+customer. Take a database backup and rehearse the import in staging.
+
+## 4. Import conversions as history
+
+Insert historical `referral_conversion` rows directly rather than calling the live
+conversion endpoint. Preserve:
+
+- the advocate code association;
+- referred customer ID;
+- converted timestamp;
+- original order or event ID;
+- reward outcome references when they remain meaningful.
+
+Use uniqueness constraints and `ON CONFLICT` guards so the importer is safe to rerun.
+
+## 5. Decide what happens to old rewards
+
+- If rewards were already used, keep only the historical conversion evidence.
+- If the old system still honors active rewards, let it remain their source of truth.
+- If OfferKit must honor them, create equivalent OfferKit vouchers with the original
+  codes and connect the imported outcomes deliberately.
+
+Avoid mirroring the same active reward into two systems.
+
+## 6. Verify before cutover
+
+Compare counts for imported customers, codes, and conversions. Spot-check records across
+old and recent dates. Verify that a known historical conversion cannot issue rewards again.
+
+Then test one new conversion end to end through [Launch a referral program](/solutions/referrals).
+Keep the legacy data read-only for an agreed retention period so reconciliation remains possible.
+
+The original low-level SQL migration walkthrough remains available at
+[the legacy referral migration reference](/migrating-referrals).

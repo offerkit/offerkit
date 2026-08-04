@@ -1,0 +1,106 @@
+---
+title: SDK, REST, CLI, and MCP
+description: Choose the right programmatic surface over OfferKit's shared typed contract.
+---
+
+OfferKit defines its contract once and exposes it through several interfaces. They share
+the same resources, authentication model, and business behavior; choose based on where
+the caller runs and how it should be operated.
+
+## TypeScript SDK
+
+Use the SDK in a trusted TypeScript server:
+
+```bash
+pnpm add @offerkit/sdk
+```
+
+```ts
+import { createClient, verifyWebhook } from "@offerkit/sdk";
+
+export const offerkit = createClient({
+  baseUrl: process.env.OFFERKIT_API_URL!,
+  apiKey: process.env.OFFERKIT_API_KEY!,
+});
+```
+
+Types flow from the oRPC contract without a code-generation step. The client is safe for
+edge runtimes; `verifyWebhook` uses Node crypto only when that helper is imported and used.
+
+The SDK follows nested resource paths:
+
+```ts
+await offerkit.vouchers.validate(...);
+await offerkit.promotions.qualify(...);
+await offerkit.loyalty.members.earn(...);
+await offerkit.referrals.convert(...);
+```
+
+## REST API
+
+Use REST from any backend language. Send:
+
+```text
+Authorization: Bearer <api-key>
+Content-Type: application/json
+```
+
+Routes are served under `/api/v1`. The current deployment exposes an OpenAPI 3.1 document
+at `/api/openapi.json`, which is the authoritative route and schema inventory for that
+running version.
+
+## CLI
+
+Use the CLI for operator scripts, diagnostics, and back-office work:
+
+```bash
+pnpm add -g @offerkit/cli
+offerkit login --url https://offerkit.example.com --api-key offerkit_…
+
+offerkit vouchers list
+offerkit vouchers validate WELCOME10 --amount 5000
+offerkit vouchers redeem WELCOME10 --amount 5000 --idempotency-key order-42
+offerkit customers list --search alice
+```
+
+Login writes `~/.offerkitrc` with mode 0600. `OFFERKIT_API_URL` and
+`OFFERKIT_API_KEY` environment variables override file configuration. Avoid placing a
+production key in shared shell history or CI logs.
+
+## MCP server
+
+The MCP server exposes contract-selected operations to compatible agent hosts:
+
+```json
+{
+  "mcpServers": {
+    "offerkit": {
+      "command": "npx",
+      "args": ["-y", "@offerkit/mcp"],
+      "env": {
+        "OFFERKIT_API_URL": "https://offerkit.example.com",
+        "OFFERKIT_API_KEY": "offerkit_…"
+      }
+    }
+  }
+}
+```
+
+Tool names follow SDK paths with underscores, such as `vouchers_validate` and
+`referrals_convert`. Contract metadata marks tools as safe, mutating, or destructive and
+adds confirmation guidance to state-changing operations.
+
+Grant the MCP server a scoped key appropriate for the intended agent tasks. Risk labels
+help a host present confirmation; they do not replace API authorization.
+
+## Which one should I use?
+
+| Need | Interface |
+| --- | --- |
+| Runtime TypeScript application | SDK |
+| Runtime application in another language | REST |
+| Exact route and schema discovery | OpenAPI |
+| Shell automation or operator diagnosis | CLI |
+| Agent-driven operations | MCP |
+
+Do not call the SDK or REST API directly from an untrusted browser or mobile client.
