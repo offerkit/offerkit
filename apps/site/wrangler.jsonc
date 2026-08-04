@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "offerkit-site",
+  "name": "offerkit",
   "compatibility_date": "2026-08-04",
   "routes": [
     {
