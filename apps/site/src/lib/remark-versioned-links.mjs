@@ -2,24 +2,38 @@ export function remarkVersionedLinks() {
   return (tree, file) => {
     const filePath = String(file.path ?? file.history?.[0] ?? "").replaceAll("\\", "/");
     const prefix = docsPrefix(filePath);
-    if (!prefix) return;
 
     visit(tree, (node) => {
       if (
         node.type !== "link" ||
         typeof node.url !== "string" ||
         !node.url.startsWith("/") ||
-        node.url.startsWith("//") ||
-        node.url === "/docs" ||
-        node.url.startsWith("/docs/") ||
-        node.url === "/blog" ||
-        node.url.startsWith("/blog/")
+        node.url.startsWith("//")
       ) {
         return;
       }
-      node.url = node.url === "/" ? prefix : `${prefix}${node.url}`;
+
+      const isAbsoluteSiteRoute =
+        node.url === "/docs" ||
+        node.url.startsWith("/docs/") ||
+        node.url === "/blog" ||
+        node.url.startsWith("/blog/");
+      const versionedUrl = isAbsoluteSiteRoute || !prefix
+        ? node.url
+        : node.url === "/"
+          ? prefix
+          : `${prefix}${node.url}`;
+      node.url = withTrailingSlash(versionedUrl);
     });
   };
+}
+
+function withTrailingSlash(url) {
+  const [, pathname, suffix = ""] = url.match(/^([^?#]*)(.*)$/) ?? [];
+  if (!pathname || pathname === "/" || pathname.endsWith("/") || /\.[^/]+$/.test(pathname)) {
+    return url;
+  }
+  return `${pathname}/${suffix}`;
 }
 
 function docsPrefix(filePath) {

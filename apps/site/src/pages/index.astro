@@ -1,61 +1,119 @@
 ---
+import {
+  GiftIcon,
+  GithubLogoIcon,
+  MedalIcon,
+  StarIcon,
+  TagIcon,
+  UsersThreeIcon,
+} from "@phosphor-icons/react/ssr";
 import Layout from "@/components/layout.astro";
 import SiteFooter from "@/components/site-footer.astro";
 import SiteHeader from "@/components/site-header.astro";
+import { formatGitHubStars, getGitHubStars } from "@/lib/github";
 import "@/styles/global.css";
+
+const githubStars = await getGitHubStars();
+const githubStarsLabel = formatGitHubStars(githubStars);
 
 const capabilities = [
   {
-    index: "01",
+    id: "discounts",
     title: "Discounts",
     description: "Fixed or percentage offers, eligibility rules, limits, stacking, and atomic redemption.",
-    accent: "#2db99a",
-    soft: "#e6f7f2",
+    Icon: TagIcon,
+    className: "bento-discounts",
   },
   {
-    index: "02",
+    id: "gift-cards",
     title: "Gift cards",
     description: "Stored balances with partial spend, an immutable ledger, expiration, and rollback safety.",
-    accent: "#ffb426",
-    soft: "#fff5dc",
+    Icon: GiftIcon,
+    className: "bento-gift-cards",
   },
   {
-    index: "03",
+    id: "loyalty",
     title: "Loyalty",
     description: "Programs, tiers, earning rules, rewards, member ledgers, and points expiration.",
-    accent: "#388df2",
-    soft: "#eaf2fe",
+    Icon: MedalIcon,
+    className: "bento-loyalty",
   },
   {
-    index: "04",
+    id: "referrals",
     title: "Referrals",
     description: "Stable referral codes, idempotent conversion, and configurable rewards for both sides.",
-    accent: "#f56f7f",
-    soft: "#ffedf0",
+    Icon: UsersThreeIcon,
+    className: "bento-referrals",
   },
 ];
 
 const surfaces = [
-  ["REST API", "OpenAPI 3.1 from the live contract", "#2db99a"],
-  ["TypeScript SDK", "Types without a codegen step", "#ffb426"],
-  ["CLI", "Back-office actions from the terminal", "#7567e8"],
-  ["MCP server", "Agent tools with explicit risk metadata", "#388df2"],
+  ["REST API", "OpenAPI 3.1 from the live contract"],
+  ["TypeScript SDK", "Types without a codegen step"],
+  ["CLI", "Back-office actions from the terminal"],
+  ["MCP server", "Agent tools with explicit risk metadata"],
 ];
 
 const steps = [
-  ["Validate", "Preview eligibility without changing counters or balances.", "#2db99a"],
-  ["Redeem", "Commit atomically with a stable idempotency key.", "#ffb426"],
-  ["Explain", "Return typed, support-safe reasons for every rejection.", "#388df2"],
-  ["Observe", "Emit events, signed webhooks, audit entries, and telemetry.", "#f56f7f"],
-];
-
-const redemptionExample = `const result = await offerkit.vouchers.redeem({
-  params: { code: "SUMMER10" },
-  body: {
-    order: { amount: 9999, currency: "USD" },
-    idempotencyKey: "order-42",
+  {
+    id: "validate",
+    title: "Validate",
+    description: "Preview eligibility without changing counters or balances.",
+    method: "POST",
+    endpoint: "/api/v1/vouchers/SUMMER10/validate",
+    code: `const preview = await offerkit.vouchers.validate({
+  code: "SUMMER10",
+  order: { amount: 9999, currency: "USD" },
+});`,
+    event: "voucher.eligible",
+    status: "200 OK",
+    details: ["Rules evaluated", "No state changed", "Reason included"],
   },
-});`;
+  {
+    id: "redeem",
+    title: "Redeem",
+    description: "Commit atomically with a stable idempotency key.",
+    method: "POST",
+    endpoint: "/api/v1/vouchers/SUMMER10/redemption",
+    code: `const result = await offerkit.vouchers.redeem({
+  code: "SUMMER10",
+  order: { amount: 9999, currency: "USD" },
+  idempotencyKey: "order-42",
+});`,
+    event: "redemption.accepted",
+    status: "200 OK",
+    details: ["Idempotent", "Balance committed", "Event emitted"],
+  },
+  {
+    id: "explain",
+    title: "Explain",
+    description: "Return typed, support-safe reasons for every rejection.",
+    method: "POST",
+    endpoint: "/api/v1/vouchers/WELCOME/explain",
+    code: `const decision = await offerkit.vouchers.explain({
+  code: "WELCOME",
+  customerId: "cus_88",
+  order: { amount: 2400, currency: "USD" },
+});`,
+    event: "voucher.ineligible",
+    status: "MINIMUM_NOT_MET",
+    details: ["Typed reason", "Safe for support", "Rule identified"],
+  },
+  {
+    id: "observe",
+    title: "Observe",
+    description: "Trace events, signed webhooks, audit entries, and telemetry.",
+    method: "GET",
+    endpoint: "/api/v1/events?subject=order-42",
+    code: `const events = await offerkit.events.list({
+  subject: "order-42",
+  types: ["redemption.accepted"],
+});`,
+    event: "webhook.delivered",
+    status: "SIGNED",
+    details: ["Audit linked", "Webhook verified", "Trace available"],
+  },
+];
 ---
 
 <Layout title="OfferKit">
@@ -66,8 +124,7 @@ const redemptionExample = `const result = await offerkit.vouchers.redeem({
     <main>
       <section class="site-container relative grid gap-14 py-16 sm:py-24 lg:grid-cols-[0.88fr_1.12fr] lg:items-center lg:gap-16 lg:py-28">
         <div class="relative z-10">
-          <p class="site-kicker">Open-source promotion infrastructure</p>
-          <h1 class="mt-7 max-w-3xl text-5xl font-bold leading-[0.98] tracking-[-0.065em] text-[var(--site-heading)] sm:text-6xl lg:text-[4.65rem]">
+          <h1 class="max-w-3xl text-5xl font-bold leading-[0.98] tracking-[-0.065em] text-[var(--site-heading)] sm:text-6xl lg:text-[4.65rem]">
             Promotions are infrastructure.
             <span class="block text-[var(--site-primary)]">Treat them like it.</span>
           </h1>
@@ -76,50 +133,91 @@ const redemptionExample = `const result = await offerkit.vouchers.redeem({
             MIT-licensed, agent-ready, and yours to deploy.
           </p>
           <div class="mt-9 flex flex-wrap gap-3">
-            <a href="/docs/getting-started" class="site-button-primary">
-              Run OfferKit <span class="ml-2" aria-hidden="true">→</span>
+            <a href="/docs/getting-started/" class="site-button-primary">
+              Get started <span class="ml-2" aria-hidden="true">→</span>
             </a>
-            <a href="https://github.com/offerkit/offerkit" class="site-button-secondary">
-              View on GitHub
+            <a
+              href="https://github.com/offerkit/offerkit"
+              target="_blank"
+              rel="noreferrer"
+              class="site-button-secondary"
+              aria-label={`Check out OfferKit on GitHub${githubStars === null ? "" : `, ${githubStars.toLocaleString("en")} stars`}`}
+            >
+              <GithubLogoIcon size={19} weight="bold" aria-hidden="true" />
+              <span class="ml-2">Checkout on GitHub</span>
+              <span class="cta-star-count cta-star-count-secondary" aria-hidden="true">
+                <StarIcon size={13} weight="fill" />
+                {githubStarsLabel}
+              </span>
             </a>
           </div>
-          <ul class="mt-9 flex flex-wrap gap-x-5 gap-y-2 font-mono text-xs uppercase tracking-[0.11em] text-[var(--site-muted-light)]" aria-label="Project attributes">
-            <li>MIT licensed</li>
-            <li>Self-hosted</li>
-            <li>One Docker image</li>
-          </ul>
         </div>
 
-        <div class="hero-visual relative min-h-[24rem] overflow-hidden rounded-[1.75rem] border border-white bg-white shadow-[var(--site-shadow-lg)] sm:min-h-[30rem]">
-          <img
-            src="/offerkit-banner.png"
-            alt="OfferKit dashboard connected to promotion services and databases"
-            width="2172"
-            height="724"
-            class="absolute inset-0 size-full object-cover object-[66%_center]"
-            fetchpriority="high"
-          />
-          <div class="absolute inset-x-5 top-5 flex items-center justify-between rounded-xl border border-white/90 bg-white/85 px-4 py-3 shadow-[0_8px_24px_rgba(81,100,126,0.12)] backdrop-blur-md">
-            <span class="flex items-center gap-2 text-xs font-semibold text-[var(--site-heading)]">
-              <span class="size-2 rounded-full bg-[var(--site-teal)] shadow-[0_0_0_4px_rgba(45,185,154,0.13)]"></span>
-              Promotion engine
-            </span>
-            <span class="font-mono text-[0.66rem] uppercase tracking-[0.1em] text-[var(--site-primary-strong)]">Healthy</span>
+        <div class="hero-system" data-hero-system aria-label="Live OfferKit promotion flow">
+          <div class="hero-system-header">
+            <div>
+              <span class="hero-system-eyebrow">Promotion graph</span>
+              <strong>Live checkout</strong>
+            </div>
+            <span class="hero-system-status"><span></span> Operational</span>
           </div>
-          <div class="absolute inset-x-5 bottom-5 grid grid-cols-3 gap-2.5">
-            <span class="rounded-xl border border-white/90 bg-white/90 px-3 py-3 text-center text-xs font-semibold text-[var(--site-primary-strong)] shadow-[0_8px_22px_rgba(81,100,126,0.12)] backdrop-blur-md">Typed</span>
-            <span class="rounded-xl border border-white/90 bg-white/90 px-3 py-3 text-center text-xs font-semibold text-[#b47200] shadow-[0_8px_22px_rgba(81,100,126,0.12)] backdrop-blur-md">Atomic</span>
-            <span class="rounded-xl border border-white/90 bg-white/90 px-3 py-3 text-center text-xs font-semibold text-[#276dc2] shadow-[0_8px_22px_rgba(81,100,126,0.12)] backdrop-blur-md">Observable</span>
+
+          <div class="hero-canvas">
+            <svg class="hero-flow-lines" viewBox="0 0 720 420" role="img" aria-label="Checkout request flowing through OfferKit to promotion outcomes">
+              <path d="M165 210 C235 210 244 210 310 210"></path>
+              <path d="M408 210 C470 210 470 72 540 72"></path>
+              <path d="M408 210 C482 210 474 166 540 166"></path>
+              <path d="M408 210 C482 210 474 260 540 260"></path>
+              <path d="M408 210 C470 210 470 354 540 354"></path>
+              <circle r="4" fill="var(--site-teal)">
+                <animateMotion dur="2.2s" repeatCount="indefinite" path="M165 210 C235 210 244 210 310 210"></animateMotion>
+              </circle>
+            </svg>
+
+            <div class="hero-request">
+              <span>Incoming checkout</span>
+              <strong data-hero-code>SUMMER10</strong>
+              <small data-hero-order>$129.00 order</small>
+            </div>
+
+            <div class="hero-engine">
+              <span class="hero-engine-mark">OK</span>
+              <strong>OfferKit</strong>
+              <small>evaluate()</small>
+            </div>
+
+            <div class="hero-outcome hero-outcome-discounts is-active" data-hero-outcome="discounts">
+              <TagIcon size={18} weight="bold" aria-hidden="true" />
+              <span><strong>Discount</strong><small data-hero-result>− $12.90</small></span>
+            </div>
+            <div class="hero-outcome hero-outcome-gift" data-hero-outcome="gift-cards">
+              <GiftIcon size={18} weight="bold" aria-hidden="true" />
+              <span><strong>Gift card</strong><small>Balance checked</small></span>
+            </div>
+            <div class="hero-outcome hero-outcome-loyalty" data-hero-outcome="loyalty">
+              <MedalIcon size={18} weight="bold" aria-hidden="true" />
+              <span><strong>Loyalty</strong><small>+116 points</small></span>
+            </div>
+            <div class="hero-outcome hero-outcome-referrals" data-hero-outcome="referrals">
+              <UsersThreeIcon size={18} weight="bold" aria-hidden="true" />
+              <span><strong>Referral</strong><small>Reward queued</small></span>
+            </div>
+          </div>
+
+          <div class="hero-activity">
+            <span class="hero-activity-check">✓</span>
+            <span><strong data-hero-event>redemption.accepted</strong><small data-hero-meta>42 ms · order_1042</small></span>
+            <span class="hero-activity-status">200 OK</span>
           </div>
         </div>
       </section>
 
       <section class="border-y border-[var(--site-border)] bg-white/65">
         <div class="site-container grid divide-y divide-[var(--site-border)] sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
-          {surfaces.map(([title, description, accent]) => (
+          {surfaces.map(([title, description]) => (
             <div class="px-6 py-7 first:pl-0 last:pr-0 sm:first:pl-6 lg:first:pl-0">
               <div class="flex items-center gap-2.5">
-                <span class="size-2 rounded-full shadow-[0_2px_6px_rgba(65,84,109,0.16)]" style={`background: ${accent}`}></span>
+                <span class="grid size-5 place-items-center rounded-full bg-[var(--site-primary-soft)] text-xs font-bold text-[var(--site-primary-strong)]">✓</span>
                 <p class="text-sm font-bold text-[var(--site-heading)]">{title}</p>
               </div>
               <p class="mt-2 text-sm leading-6 text-[var(--site-muted)]">{description}</p>
@@ -130,8 +228,7 @@ const redemptionExample = `const result = await offerkit.vouchers.redeem({
 
       <section class="site-container py-24 sm:py-32">
         <div class="max-w-2xl">
-          <p class="site-kicker">The promotion layer</p>
-          <h2 class="mt-6 text-4xl font-bold tracking-[-0.05em] text-[var(--site-heading)] sm:text-5xl">
+          <h2 class="text-4xl font-bold tracking-[-0.05em] text-[var(--site-heading)] sm:text-5xl">
             One model for every incentive.
           </h2>
           <p class="mt-5 text-lg leading-8 text-[var(--site-muted)]">
@@ -140,98 +237,140 @@ const redemptionExample = `const result = await offerkit.vouchers.redeem({
           </p>
         </div>
 
-        <div class="mt-12 grid gap-5 md:grid-cols-2">
-          {capabilities.map((capability) => (
-            <article
-              class="capability-card site-card group min-h-64 p-7 sm:p-8"
-              style={`--card-accent: ${capability.accent}; --card-soft: ${capability.soft}`}
-            >
-              <div class="flex items-start justify-between gap-6">
-                <div class="grid size-11 place-items-center rounded-xl border border-white bg-[var(--card-soft)] font-mono text-xs font-bold text-[var(--site-heading)] shadow-sm">
-                  {capability.index}
-                </div>
-                <span class="mt-2 size-2.5 rounded-full bg-[var(--card-accent)] shadow-[0_0_0_5px_var(--card-soft)]"></span>
+        <div class="capability-bento mt-12">
+          {capabilities.map(({ id, title, description, Icon, className }) => (
+            <article class:list={["capability-card site-card", className]}>
+              <div class="capability-copy">
+                <span class="capability-icon"><Icon size={25} weight="duotone" aria-hidden="true" /></span>
+                <h3>{title}</h3>
+                <p>{description}</p>
               </div>
-              <h3 class="mt-8 text-2xl font-bold tracking-[-0.04em] text-[var(--site-heading)]">{capability.title}</h3>
-              <p class="mt-4 max-w-md leading-7 text-[var(--site-muted)]">{capability.description}</p>
-              <div class="mt-8 h-px bg-gradient-to-r from-[var(--card-accent)]/50 to-transparent"></div>
+
+              {id === "discounts" && (
+                <div class="discount-visual" aria-hidden="true">
+                  <div class="discount-total">
+                    <span>Cart total</span>
+                    <strong>$129.00</strong>
+                  </div>
+                  <div class="discount-rule"><span>SUMMER10</span><strong>−10%</strong></div>
+                  <div class="discount-rule"><span>Loyal member</span><strong>−$5</strong></div>
+                  <div class="discount-final"><span>Due now</span><strong>$111.10</strong></div>
+                </div>
+              )}
+
+              {id === "gift-cards" && (
+                <div class="gift-card-visual" aria-hidden="true">
+                  <div class="gift-card-balance"><span>Available</span><strong>$84.50</strong></div>
+                  <div class="gift-card-ledger"><span>Order #1042</span><strong>−$24.00</strong></div>
+                  <div class="gift-card-line"><span style="width: 72%"></span></div>
+                </div>
+              )}
+
+              {id === "loyalty" && (
+                <div class="loyalty-visual" aria-hidden="true">
+                  <div><span>Gold tier</span><strong>2,840 pts</strong></div>
+                  <div class="loyalty-track"><span></span></div>
+                  <small>160 points to next reward</small>
+                </div>
+              )}
+
+              {id === "referrals" && (
+                <div class="referral-visual" aria-hidden="true">
+                  <span class="referral-person">AM</span>
+                  <span class="referral-line"></span>
+                  <span class="referral-person">JK</span>
+                  <span class="referral-reward">Reward both sides</span>
+                </div>
+              )}
             </article>
           ))}
         </div>
       </section>
 
-      <section class="border-y border-[var(--site-border)] bg-[var(--site-bg-subtle)] py-24 sm:py-32">
+      <section class="border-y border-[var(--site-border)] bg-[var(--site-bg-subtle)] py-24 sm:py-32" data-hotpath>
         <div class="site-container grid gap-14 lg:grid-cols-[0.8fr_1.2fr] lg:items-start lg:gap-24">
           <div>
-            <p class="site-kicker">Predictable by design</p>
-            <h2 class="mt-6 text-4xl font-bold tracking-[-0.05em] text-[var(--site-heading)] sm:text-5xl">
+            <h2 class="text-4xl font-bold tracking-[-0.05em] text-[var(--site-heading)] sm:text-5xl">
               Own the hot path.
             </h2>
             <p class="mt-5 text-lg leading-8 text-[var(--site-muted)]">
               Checkout logic needs clear outcomes under retries, concurrency, and partial failure.
               OfferKit makes those constraints part of the contract.
             </p>
-            <a class="mt-7 inline-flex text-sm font-semibold text-[var(--site-primary-strong)] transition hover:text-[var(--site-primary)]" href="/docs/api-reference">
+            <a class="mt-7 inline-flex text-sm font-semibold text-[var(--site-primary-strong)] transition hover:text-[var(--site-primary)]" href="/docs/api-reference/">
               Read the API conventions <span class="ml-2" aria-hidden="true">→</span>
             </a>
           </div>
 
-          <div class="site-card overflow-hidden p-3 sm:p-4">
-            <div class="flex items-center justify-between border-b border-[var(--site-border)] px-3 py-2.5 font-mono text-[0.68rem] uppercase tracking-[0.12em] text-[var(--site-muted-light)]">
+          <div class="contract-window site-card">
+            <div class="contract-toolbar">
               <span>Live contract</span>
-              <span class="flex items-center gap-2 text-[var(--site-primary-strong)]"><span class="size-1.5 rounded-full bg-[var(--site-teal)]"></span> Ready</span>
+              <span class="contract-ready"><span></span> Ready</span>
             </div>
-            <div class="p-3 sm:p-5">
-              <div class="flex items-center gap-3 font-mono text-xs">
-                <span class="rounded-md bg-[var(--site-primary-soft)] px-2 py-1 font-semibold text-[var(--site-primary-strong)]">POST</span>
-                <span class="overflow-hidden text-ellipsis text-[var(--site-muted)]">/api/v1/vouchers/SUMMER10/redemption</span>
-              </div>
-              <pre class="mt-5 overflow-x-auto rounded-xl border border-[var(--site-border)] bg-[#f4f7fa] p-4 text-[0.72rem] leading-6 text-[#425168] shadow-inner sm:text-xs"><code>{redemptionExample}</code></pre>
-              <div class="mt-4 rounded-xl border border-[#2db99a]/20 bg-[var(--site-primary-soft)] p-4 font-mono text-xs">
-                <div class="flex items-center justify-between text-[var(--site-text)]">
-                  <span>redemption.accepted</span>
-                  <span class="font-semibold text-[var(--site-primary-strong)]">200 OK</span>
-                </div>
-                <div class="mt-3 grid grid-cols-3 gap-3 border-t border-[#2db99a]/15 pt-3 text-[0.62rem] uppercase tracking-[0.08em] text-[var(--site-muted)] sm:text-[0.66rem]">
-                  <span>Idempotent</span>
-                  <span>Audited</span>
-                  <span>Event emitted</span>
-                </div>
-              </div>
+            <div class="contract-stage">
+              {steps.map((step, index) => (
+                <article
+                  class:list={["contract-panel", index === 0 && "is-active"]}
+                  data-contract-panel={step.id}
+                  id={`hotpath-panel-${step.id}`}
+                  role="tabpanel"
+                  aria-labelledby={`hotpath-tab-${step.id}`}
+                  hidden={index !== 0}
+                >
+                  <div class="contract-endpoint">
+                    <span>{step.method}</span>
+                    <code>{step.endpoint}</code>
+                  </div>
+                  <pre><code>{step.code}</code></pre>
+                  <div class="contract-response">
+                    <div>
+                      <span>{step.event}</span>
+                      <strong>{step.status}</strong>
+                    </div>
+                    <ul>
+                      {step.details.map((detail) => <li>{detail}</li>)}
+                    </ul>
+                  </div>
+                </article>
+              ))}
             </div>
           </div>
         </div>
 
-        <ol class="site-container mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {steps.map(([title, description, accent], index) => (
-            <li class="rounded-2xl border border-[var(--site-border)] bg-white p-6 shadow-[var(--site-shadow-sm)]">
-              <div class="flex items-center justify-between">
-                <span class="font-mono text-xs text-[var(--site-muted-light)]">0{index + 1}</span>
-                <span class="size-2.5 rounded-full" style={`background: ${accent}`}></span>
-              </div>
-              <h3 class="mt-6 font-bold text-[var(--site-heading)]">{title}</h3>
-              <p class="mt-2 leading-7 text-[var(--site-muted)]">{description}</p>
-            </li>
+        <div class="site-container mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" role="tablist" aria-label="OfferKit contract stages">
+          {steps.map((step, index) => (
+            <button
+              type="button"
+              class:list={["hotpath-tab", index === 0 && "is-active"]}
+              data-hotpath-tab={step.id}
+              id={`hotpath-tab-${step.id}`}
+              role="tab"
+              aria-controls={`hotpath-panel-${step.id}`}
+              aria-selected={index === 0 ? "true" : "false"}
+              tabindex={index === 0 ? 0 : -1}
+            >
+              <span class="hotpath-tab-title">{step.title}</span>
+              <span class="hotpath-tab-copy">{step.description}</span>
+              <span class="hotpath-progress" aria-hidden="true"><span></span></span>
+            </button>
           ))}
-        </ol>
+        </div>
       </section>
 
       <section class="site-container py-24 sm:py-32">
         <div class="cta-card site-card relative overflow-hidden px-6 py-16 text-center sm:px-12 sm:py-20">
           <div class="absolute -left-16 -top-16 size-44 rounded-full bg-[#2db99a]/10 blur-2xl"></div>
           <div class="absolute -bottom-20 -right-16 size-52 rounded-full bg-[#388df2]/10 blur-2xl"></div>
-          <img src="/icon.png" alt="" width="72" height="72" class="relative mx-auto size-[4.5rem] rounded-2xl shadow-[0_12px_28px_rgba(68,88,113,0.16)]" />
-          <p class="site-kicker relative mt-7">Deploy on your terms</p>
-          <h2 class="relative mx-auto mt-6 max-w-3xl text-4xl font-bold tracking-[-0.055em] text-[var(--site-heading)] sm:text-5xl">
+          <img src="/icon.webp" alt="" width="72" height="72" class="relative mx-auto size-[4.5rem] rounded-2xl shadow-[0_12px_28px_rgba(68,88,113,0.16)]" />
+          <h2 class="relative mx-auto mt-8 max-w-3xl text-4xl font-bold tracking-[-0.055em] text-[var(--site-heading)] sm:text-5xl">
             Your promotions. Your data. Your infrastructure.
           </h2>
           <p class="relative mx-auto mt-5 max-w-2xl text-lg leading-8 text-[var(--site-muted)]">
-            Start locally with Docker Compose, then run the same published image anywhere that
-            speaks containers.
+            Start locally, keep the contract stable, and deploy OfferKit wherever your stack runs.
           </p>
           <div class="relative mt-8 flex flex-wrap justify-center gap-3">
-            <a href="/docs/getting-started" class="site-button-primary">Get started</a>
-            <a href="/docs/self-host" class="site-button-secondary">Self-hosting guide</a>
+            <a href="/docs/getting-started/" class="site-button-primary">Get started</a>
+            <a href="/docs/self-host/" class="site-button-secondary">Self-hosting guide</a>
           </div>
         </div>
       </section>
@@ -241,24 +380,771 @@ const redemptionExample = `const result = await offerkit.vouchers.redeem({
   </div>
 </Layout>
 
+<script>
+  const HERO_ROTATION_MS = 2_600;
+  const HOTPATH_ROTATION_MS = 3_000;
+
+  function initializeHeroVisualization() {
+    const root = document.querySelector<HTMLElement>("[data-hero-system]");
+    if (!root || root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+
+    const scenarios = [
+      { code: "SUMMER10", order: "$129.00 order", target: "discounts", result: "− $12.90", event: "redemption.accepted", meta: "42 ms · order_1042" },
+      { code: "GIFT-84K", order: "$24.00 order", target: "gift-cards", result: "Balance checked", event: "gift_card.debited", meta: "38 ms · order_1043" },
+      { code: "GOLD-MEMBER", order: "$86.40 order", target: "loyalty", result: "+116 points", event: "points.credited", meta: "45 ms · order_1044" },
+      { code: "REFER-AK", order: "New customer", target: "referrals", result: "Reward queued", event: "referral.converted", meta: "40 ms · customer_882" },
+    ];
+    let scenarioIndex = 0;
+
+    const renderScenario = () => {
+      const scenario = scenarios[scenarioIndex];
+      root.querySelector<HTMLElement>("[data-hero-code]")!.textContent = scenario.code;
+      root.querySelector<HTMLElement>("[data-hero-order]")!.textContent = scenario.order;
+      root.querySelector<HTMLElement>("[data-hero-event]")!.textContent = scenario.event;
+      root.querySelector<HTMLElement>("[data-hero-meta]")!.textContent = scenario.meta;
+      root.querySelectorAll<HTMLElement>("[data-hero-outcome]").forEach((outcome) => {
+        const isActive = outcome.dataset.heroOutcome === scenario.target;
+        outcome.classList.toggle("is-active", isActive);
+        if (isActive) outcome.querySelector("small")!.textContent = scenario.result;
+      });
+    };
+
+    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const timer = window.setInterval(() => {
+        if (!root.isConnected) return window.clearInterval(timer);
+        scenarioIndex = (scenarioIndex + 1) % scenarios.length;
+        renderScenario();
+      }, HERO_ROTATION_MS);
+    }
+  }
+
+  function initializeHotpathSlideshow() {
+    const root = document.querySelector<HTMLElement>("[data-hotpath]");
+    if (!root || root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+
+    const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-hotpath-tab]"));
+    const panels = Array.from(root.querySelectorAll<HTMLElement>("[data-contract-panel]"));
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let activeIndex = 0;
+    let timer: number | undefined;
+
+    const showStep = (nextIndex: number, restart = true) => {
+      activeIndex = (nextIndex + tabs.length) % tabs.length;
+      tabs.forEach((tab, index) => {
+        const isActive = index === activeIndex;
+        tab.classList.toggle("is-active", isActive);
+        tab.setAttribute("aria-selected", String(isActive));
+        tab.tabIndex = isActive ? 0 : -1;
+      });
+      panels.forEach((panel, index) => {
+        const isActive = index === activeIndex;
+        panel.classList.toggle("is-active", isActive);
+        panel.hidden = !isActive;
+      });
+
+      if (restart && !reduceMotion) {
+        if (timer) window.clearInterval(timer);
+        timer = window.setInterval(() => {
+          if (!root.isConnected) return timer && window.clearInterval(timer);
+          showStep(activeIndex + 1, false);
+        }, HOTPATH_ROTATION_MS);
+      }
+    };
+
+    tabs.forEach((tab, index) => {
+      tab.addEventListener("click", () => showStep(index));
+      tab.addEventListener("keydown", (event) => {
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        event.preventDefault();
+        const direction = event.key === "ArrowRight" ? 1 : -1;
+        showStep(activeIndex + direction);
+        tabs[(activeIndex + tabs.length) % tabs.length].focus();
+      });
+    });
+
+    showStep(0);
+  }
+
+  function initializeLandingPage() {
+    initializeHeroVisualization();
+    initializeHotpathSlideshow();
+  }
+
+  initializeLandingPage();
+  document.addEventListener("astro:page-load", initializeLandingPage);
+</script>
+
 <style>
-  .hero-visual::after {
+  .cta-star-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.26rem;
+    margin-left: 0.65rem;
+    border-left: 1px solid rgba(255, 255, 255, 0.28);
+    padding-left: 0.65rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.68rem;
+  }
+
+  .cta-star-count-secondary {
+    border-left-color: var(--site-border);
+    color: var(--site-muted);
+  }
+
+  .hero-system {
+    position: relative;
+    min-height: 31rem;
+    overflow: hidden;
+    border: 1px solid var(--site-border);
+    border-radius: 1.75rem;
+    background:
+      linear-gradient(rgba(216, 225, 234, 0.38) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(216, 225, 234, 0.38) 1px, transparent 1px),
+      linear-gradient(150deg, #ffffff, #f5faf8);
+    background-size: 28px 28px, 28px 28px, auto;
+    box-shadow: var(--site-shadow-lg);
+  }
+
+  .hero-system::after {
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.82);
     pointer-events: none;
     content: "";
   }
 
+  .hero-system-header {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    min-height: 4.6rem;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--site-border);
+    background: rgba(255, 255, 255, 0.82);
+    padding: 0.9rem 1.15rem;
+    backdrop-filter: blur(12px);
+  }
+
+  .hero-system-header > div {
+    display: grid;
+    gap: 0.15rem;
+  }
+
+  .hero-system-header strong {
+    color: var(--site-heading);
+    font-size: 0.88rem;
+  }
+
+  .hero-system-eyebrow {
+    color: var(--site-muted-light);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .hero-system-status,
+  .contract-ready {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: var(--site-primary-strong);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .hero-system-status > span,
+  .contract-ready > span {
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 999px;
+    background: var(--site-teal);
+    box-shadow: 0 0 0 4px rgba(45, 185, 154, 0.12);
+  }
+
+  .hero-canvas {
+    position: relative;
+    min-height: 21rem;
+  }
+
+  .hero-flow-lines {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .hero-flow-lines path {
+    fill: none;
+    stroke: #c9d6df;
+    stroke-dasharray: 5 6;
+    stroke-width: 1.4;
+  }
+
+  .hero-request,
+  .hero-engine,
+  .hero-outcome {
+    position: absolute;
+    z-index: 2;
+    border: 1px solid var(--site-border);
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 9px 22px rgba(65, 84, 109, 0.1);
+  }
+
+  .hero-request {
+    top: 40%;
+    left: 3.5%;
+    display: grid;
+    width: 25%;
+    min-width: 7.5rem;
+    gap: 0.25rem;
+    border-radius: 0.9rem;
+    padding: 0.8rem;
+    transform: translateY(-50%);
+  }
+
+  .hero-request span,
+  .hero-request small,
+  .hero-engine small,
+  .hero-outcome small {
+    color: var(--site-muted-light);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.58rem;
+  }
+
+  .hero-request strong {
+    overflow: hidden;
+    color: var(--site-heading);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.7rem;
+    text-overflow: ellipsis;
+  }
+
+  .hero-engine {
+    top: 40%;
+    left: 42.5%;
+    display: grid;
+    width: 6.6rem;
+    place-items: center;
+    gap: 0.25rem;
+    border-color: rgba(45, 185, 154, 0.36);
+    border-radius: 1.2rem;
+    padding: 1rem 0.7rem;
+    transform: translate(-50%, -50%);
+  }
+
+  .hero-engine-mark {
+    display: grid;
+    width: 2.4rem;
+    height: 2.4rem;
+    place-items: center;
+    border-radius: 0.75rem;
+    background: linear-gradient(145deg, #25b58f, #0b8265);
+    box-shadow: 0 8px 18px rgba(22, 155, 120, 0.2);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 800;
+  }
+
+  .hero-engine strong {
+    color: var(--site-heading);
+    font-size: 0.78rem;
+  }
+
+  .hero-outcome {
+    right: 3.5%;
+    display: flex;
+    width: 26%;
+    min-width: 8rem;
+    align-items: center;
+    gap: 0.6rem;
+    border-radius: 0.85rem;
+    padding: 0.62rem 0.7rem;
+    color: var(--site-muted);
+    opacity: 0.64;
+    transition: border-color 220ms ease, box-shadow 220ms ease, color 220ms ease, opacity 220ms ease, transform 220ms ease;
+  }
+
+  .hero-outcome > span {
+    display: grid;
+    min-width: 0;
+    gap: 0.1rem;
+  }
+
+  .hero-outcome strong {
+    color: var(--site-heading);
+    font-size: 0.67rem;
+  }
+
+  .hero-outcome.is-active {
+    border-color: rgba(45, 185, 154, 0.52);
+    box-shadow: 0 10px 24px rgba(20, 135, 106, 0.14), 0 0 0 3px rgba(45, 185, 154, 0.08);
+    color: var(--site-primary-strong);
+    opacity: 1;
+    transform: translateX(-3px);
+  }
+
+  .hero-outcome-discounts { top: 7%; }
+  .hero-outcome-gift { top: 29%; }
+  .hero-outcome-loyalty { top: 51%; }
+  .hero-outcome-referrals { top: 73%; }
+
+  .hero-activity {
+    position: absolute;
+    z-index: 3;
+    right: 1rem;
+    bottom: 1rem;
+    left: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    border: 1px solid rgba(45, 185, 154, 0.2);
+    border-radius: 0.9rem;
+    background: rgba(235, 249, 245, 0.94);
+    padding: 0.7rem 0.85rem;
+    box-shadow: 0 7px 18px rgba(65, 84, 109, 0.07);
+  }
+
+  .hero-activity-check {
+    display: grid;
+    width: 1.5rem;
+    height: 1.5rem;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 999px;
+    background: var(--site-primary);
+    color: white;
+    font-size: 0.68rem;
+    font-weight: 800;
+  }
+
+  .hero-activity > span:nth-child(2) {
+    display: grid;
+    min-width: 0;
+    gap: 0.1rem;
+  }
+
+  .hero-activity strong,
+  .hero-activity small,
+  .hero-activity-status {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .hero-activity strong {
+    overflow: hidden;
+    color: var(--site-heading);
+    font-size: 0.64rem;
+    text-overflow: ellipsis;
+  }
+
+  .hero-activity small {
+    color: var(--site-muted-light);
+    font-size: 0.56rem;
+  }
+
+  .hero-activity-status {
+    margin-left: auto;
+    color: var(--site-primary-strong);
+    font-size: 0.62rem;
+    font-weight: 750;
+  }
+
+  .capability-bento {
+    display: grid;
+    grid-auto-rows: minmax(12rem, auto);
+    gap: 1rem;
+  }
+
   .capability-card {
+    position: relative;
+    display: flex;
+    min-height: 15rem;
+    overflow: hidden;
+    padding: 1.65rem;
     transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
   }
 
+  .capability-card::before {
+    position: absolute;
+    inset: auto -5rem -6rem auto;
+    width: 12rem;
+    height: 12rem;
+    border-radius: 999px;
+    background: rgba(45, 185, 154, 0.08);
+    content: "";
+  }
+
   .capability-card:hover {
-    border-color: color-mix(in srgb, var(--card-accent) 42%, white);
+    border-color: rgba(45, 185, 154, 0.42);
     box-shadow: 0 18px 38px rgba(75, 96, 123, 0.13), 0 2px 8px rgba(75, 96, 123, 0.06);
     transform: translateY(-2px);
+  }
+
+  .capability-copy {
+    position: relative;
+    z-index: 2;
+  }
+
+  .capability-icon {
+    display: grid;
+    width: 3rem;
+    height: 3rem;
+    place-items: center;
+    border: 1px solid rgba(45, 185, 154, 0.18);
+    border-radius: 0.9rem;
+    background: var(--site-primary-soft);
+    color: var(--site-primary-strong);
+    box-shadow: inset 0 1px white;
+  }
+
+  .capability-copy h3 {
+    margin-top: 1.4rem;
+    color: var(--site-heading);
+    font-size: 1.45rem;
+    font-weight: 750;
+    letter-spacing: -0.04em;
+  }
+
+  .capability-copy p {
+    max-width: 25rem;
+    margin-top: 0.7rem;
+    color: var(--site-muted);
+    line-height: 1.7;
+  }
+
+  .discount-visual,
+  .gift-card-visual,
+  .loyalty-visual,
+  .referral-visual {
+    position: relative;
+    z-index: 2;
+    color: var(--site-text);
+  }
+
+  .discount-visual {
+    display: grid;
+    width: 100%;
+    align-content: center;
+    gap: 0.65rem;
+    margin-top: 1.5rem;
+    border: 1px solid var(--site-border);
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.74);
+    padding: 1rem;
+    box-shadow: 0 12px 26px rgba(75, 96, 123, 0.08);
+  }
+
+  .discount-total,
+  .discount-rule,
+  .discount-final,
+  .gift-card-ledger,
+  .loyalty-visual > div:first-child {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .discount-total span,
+  .discount-rule span,
+  .discount-final span,
+  .gift-card-visual span,
+  .loyalty-visual span,
+  .loyalty-visual small {
+    color: var(--site-muted);
+    font-size: 0.73rem;
+  }
+
+  .discount-rule {
+    border-top: 1px solid var(--site-border);
+    padding-top: 0.65rem;
+  }
+
+  .discount-rule strong {
+    color: var(--site-primary-strong);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.72rem;
+  }
+
+  .discount-final {
+    border-top: 1px dashed var(--site-border-strong);
+    padding-top: 0.75rem;
+  }
+
+  .discount-final strong {
+    color: var(--site-heading);
+    font-size: 1rem;
+  }
+
+  .gift-card-visual,
+  .loyalty-visual {
+    align-self: end;
+    width: 100%;
+    margin-top: auto;
+    border-top: 1px solid var(--site-border);
+    padding-top: 1rem;
+  }
+
+  .gift-card-balance {
+    display: grid;
+    gap: 0.25rem;
+  }
+
+  .gift-card-balance strong {
+    color: var(--site-heading);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 1.55rem;
+  }
+
+  .gift-card-ledger {
+    margin-top: 0.75rem;
+  }
+
+  .gift-card-ledger strong {
+    color: var(--site-primary-strong);
+    font-size: 0.76rem;
+  }
+
+  .gift-card-line,
+  .loyalty-track {
+    height: 0.4rem;
+    margin-top: 0.9rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e8eef3;
+  }
+
+  .gift-card-line span,
+  .loyalty-track span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--site-primary), var(--site-teal));
+  }
+
+  .loyalty-visual strong {
+    color: var(--site-heading);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.82rem;
+  }
+
+  .loyalty-track span { width: 78%; }
+  .loyalty-visual small { display: block; margin-top: 0.6rem; }
+
+  .referral-visual {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin-top: 1.5rem;
+  }
+
+  .referral-person {
+    display: grid;
+    width: 3rem;
+    height: 3rem;
+    place-items: center;
+    border: 1px solid rgba(45, 185, 154, 0.28);
+    border-radius: 999px;
+    background: white;
+    box-shadow: 0 7px 16px rgba(65, 84, 109, 0.1);
+    color: var(--site-primary-strong);
+    font-size: 0.72rem;
+    font-weight: 800;
+  }
+
+  .referral-line {
+    width: min(8vw, 5.5rem);
+    height: 1px;
+    background: var(--site-border-strong);
+  }
+
+  .referral-reward {
+    margin-left: 1rem;
+    border-left: 2px solid var(--site-teal);
+    padding: 0.55rem 0 0.55rem 0.8rem;
+    color: var(--site-heading);
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .contract-window {
+    overflow: hidden;
+    padding: 0.75rem;
+  }
+
+  .contract-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--site-border);
+    padding: 0.55rem 0.65rem 0.8rem;
+    color: var(--site-muted-light);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .contract-stage {
+    min-height: 23.8rem;
+    padding: 1.25rem;
+  }
+
+  .contract-panel.is-active {
+    animation: contract-panel-in 240ms ease-out both;
+  }
+
+  .contract-endpoint {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.75rem;
+  }
+
+  .contract-endpoint span {
+    border-radius: 0.4rem;
+    background: var(--site-primary-soft);
+    padding: 0.35rem 0.5rem;
+    color: var(--site-primary-strong);
+    font-weight: 800;
+  }
+
+  .contract-endpoint code {
+    overflow: hidden;
+    color: var(--site-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .contract-panel pre {
+    min-height: 11.25rem;
+    overflow-x: auto;
+    margin-top: 1.15rem;
+    border: 1px solid var(--site-border);
+    border-radius: 0.85rem;
+    background: #f4f7fa;
+    padding: 1rem;
+    box-shadow: inset 0 1px 2px rgba(69, 91, 119, 0.04);
+    color: #425168;
+    font-size: 0.72rem;
+    line-height: 1.65;
+  }
+
+  .contract-response {
+    margin-top: 1rem;
+    border: 1px solid rgba(45, 185, 154, 0.2);
+    border-radius: 0.85rem;
+    background: var(--site-primary-soft);
+    padding: 0.9rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.7rem;
+  }
+
+  .contract-response > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    color: var(--site-text);
+  }
+
+  .contract-response strong {
+    color: var(--site-primary-strong);
+  }
+
+  .contract-response ul {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.6rem;
+    margin: 0.75rem 0 0;
+    border-top: 1px solid rgba(45, 185, 154, 0.16);
+    padding: 0.75rem 0 0;
+    color: var(--site-muted);
+    font-size: 0.61rem;
+    letter-spacing: 0.04em;
+    list-style: none;
+    text-transform: uppercase;
+  }
+
+  .hotpath-tab {
+    position: relative;
+    min-height: 9.75rem;
+    overflow: hidden;
+    border: 1px solid var(--site-border);
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.72);
+    padding: 1.25rem 1.25rem 1.45rem;
+    text-align: left;
+    box-shadow: var(--site-shadow-sm);
+    cursor: pointer;
+    transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+  }
+
+  .hotpath-tab:hover,
+  .hotpath-tab.is-active {
+    border-color: rgba(45, 185, 154, 0.4);
+    background: white;
+  }
+
+  .hotpath-tab.is-active {
+    box-shadow: 0 13px 30px rgba(65, 84, 109, 0.1);
+    transform: translateY(-2px);
+  }
+
+  .hotpath-tab:focus-visible {
+    outline: 2px solid var(--site-teal);
+    outline-offset: 3px;
+  }
+
+  .hotpath-tab-title,
+  .hotpath-tab-copy {
+    display: block;
+  }
+
+  .hotpath-tab-title {
+    color: var(--site-heading);
+    font-weight: 750;
+  }
+
+  .hotpath-tab-copy {
+    margin-top: 0.55rem;
+    color: var(--site-muted);
+    font-size: 0.88rem;
+    line-height: 1.55;
+  }
+
+  .hotpath-progress {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 0.2rem;
+    background: #e6edf2;
+  }
+
+  .hotpath-progress > span {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: var(--site-primary);
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+
+  .hotpath-tab.is-active .hotpath-progress > span {
+    animation: hotpath-progress 3s linear both;
   }
 
   .cta-card {
@@ -268,9 +1154,110 @@ const redemptionExample = `const result = await offerkit.vouchers.redeem({
       white;
   }
 
+  @keyframes hotpath-progress {
+    to { transform: scaleX(1); }
+  }
+
+  @keyframes contract-panel-in {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (min-width: 48rem) {
+    .capability-bento {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      grid-template-rows: repeat(3, minmax(12rem, auto));
+    }
+
+    .bento-discounts {
+      grid-row: span 2;
+      grid-column: span 7;
+      flex-direction: column;
+    }
+
+    .bento-gift-cards,
+    .bento-loyalty {
+      grid-column: span 5;
+      flex-direction: column;
+    }
+
+    .bento-referrals {
+      grid-column: span 12;
+      align-items: center;
+      gap: 2rem;
+    }
+
+    .bento-referrals .capability-copy {
+      width: 47%;
+    }
+
+    .bento-referrals .referral-visual {
+      width: 53%;
+      margin-top: 0;
+    }
+
+    .discount-visual {
+      margin-top: auto;
+    }
+  }
+
+  @media (max-width: 32rem) {
+    .hero-system { min-height: 33rem; }
+    .hero-canvas { min-height: 23rem; }
+    .hero-flow-lines { display: none; }
+
+    .hero-request {
+      top: 1rem;
+      left: 1rem;
+      width: calc(50% - 1.4rem);
+      min-width: 0;
+      transform: none;
+    }
+
+    .hero-engine {
+      top: 1rem;
+      right: 1rem;
+      left: auto;
+      width: calc(50% - 1.4rem);
+      transform: none;
+    }
+
+    .hero-outcome {
+      right: auto;
+      width: calc(50% - 1.4rem);
+      min-width: 0;
+    }
+
+    .hero-outcome-discounts,
+    .hero-outcome-loyalty { left: 1rem; }
+    .hero-outcome-gift,
+    .hero-outcome-referrals { right: 1rem; }
+    .hero-outcome-discounts,
+    .hero-outcome-gift { top: 9.5rem; }
+    .hero-outcome-loyalty,
+    .hero-outcome-referrals { top: 13.5rem; }
+
+    .hero-outcome.is-active { transform: translateY(-2px); }
+    .hero-activity-status { display: none; }
+    .contract-stage { min-height: 25rem; padding: 1rem 0.25rem 0.25rem; }
+    .contract-response ul { grid-template-columns: 1fr; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .capability-card {
+    .capability-card,
+    .hero-outcome,
+    .hotpath-tab {
       transition: none;
+    }
+
+    .hero-flow-lines circle,
+    .hotpath-tab.is-active .hotpath-progress > span,
+    .contract-panel.is-active {
+      animation: none;
+    }
+
+    .hotpath-tab.is-active .hotpath-progress > span {
+      transform: scaleX(1);
     }
   }
 </style>

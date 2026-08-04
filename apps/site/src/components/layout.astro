@@ -12,7 +12,7 @@ interface Props {
 
 const {
   title,
-  description = "Open-source promotion infrastructure for vouchers, gift cards, loyalty, and referrals.",
+  description = "Open-source promotion infrastructure for running discounts, gift cards, loyalty programs, and referrals through one typed, self-hosted API.",
   noIndex = false,
   type = "website",
   publishedAt,
@@ -21,7 +21,7 @@ const {
 const pageTitle =
   title === "OfferKit" ? "OfferKit — Open-source promotion infrastructure" : `${title} — OfferKit`;
 const canonical = new URL(Astro.url.pathname, Astro.site);
-const socialImage = new URL("/og.png", Astro.site);
+const socialImage = new URL("/og.jpg", Astro.site);
 ---
 
 <!doctype html>

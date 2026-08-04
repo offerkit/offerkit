@@ -158,6 +158,39 @@ html > body[data-scroll-locked] {
   transform: translateY(-1px);
 }
 
+.github-icon-link {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.48rem;
+  border: 1px solid var(--site-border-strong);
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 3px 10px rgba(65, 84, 109, 0.06), inset 0 1px white;
+  padding: 0.45rem 0.6rem;
+  color: var(--site-heading);
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.github-icon-link:hover {
+  border-color: #aebdcd;
+  background: white;
+  box-shadow: 0 7px 16px rgba(65, 84, 109, 0.1), inset 0 1px white;
+  transform: translateY(-1px);
+}
+
+.github-star-count {
+  align-items: center;
+  gap: 0.28rem;
+  border-left: 1px solid var(--site-border);
+  padding-left: 0.48rem;
+  color: var(--site-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
 .site-prose {
   color: var(--site-text);
   font-size: 1.0625rem;
@@ -243,7 +276,8 @@ html > body[data-scroll-locked] {
   }
 
   .site-button-primary,
-  .site-button-secondary {
+  .site-button-secondary,
+  .github-icon-link {
     transition: none;
   }
 }

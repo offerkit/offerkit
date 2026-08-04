@@ -1,17 +1,36 @@
+---
+import { GithubLogoIcon, StarIcon } from "@phosphor-icons/react/ssr";
+import { formatGitHubStars, getGitHubStars } from "@/lib/github";
+
+const githubStars = await getGitHubStars();
+const githubStarsLabel = formatGitHubStars(githubStars);
+---
+
 <footer class="border-t border-[var(--site-border)] bg-white/55 py-10">
   <div class="site-container flex flex-col gap-5 text-sm text-[var(--site-muted)] sm:flex-row sm:items-center sm:justify-between">
     <div class="flex items-center gap-3">
-      <img src="/icon.png" alt="" width="40" height="40" class="size-10 rounded-xl shadow-[0_4px_14px_rgba(65,84,109,0.1)]" />
+      <img src="/icon.webp" alt="" width="40" height="40" class="size-10 rounded-xl shadow-[0_4px_14px_rgba(65,84,109,0.1)]" />
       <div>
         <p class="font-bold tracking-[-0.025em] text-[var(--site-heading)]">OfferKit</p>
         <p class="mt-0.5">Open-source promotion infrastructure.</p>
       </div>
     </div>
-    <nav class="flex flex-wrap gap-x-5 gap-y-2" aria-label="Footer navigation">
-      <a class="transition hover:text-[var(--site-heading)]" href="/docs">Documentation</a>
-      <a class="transition hover:text-[var(--site-heading)]" href="/blog">Blog</a>
-      <a class="transition hover:text-[var(--site-heading)]" href="https://github.com/offerkit/offerkit">GitHub</a>
-      <a class="transition hover:text-[var(--site-heading)]" href="https://github.com/offerkit/offerkit/blob/main/LICENSE">MIT license</a>
+    <nav class="flex flex-wrap items-center gap-x-5 gap-y-2" aria-label="Footer navigation">
+      <a class="transition hover:text-[var(--site-heading)]" href="/docs/">Documentation</a>
+      <a class="transition hover:text-[var(--site-heading)]" href="/blog/">Blog</a>
+      <a
+        class="github-icon-link"
+        href="https://github.com/offerkit/offerkit"
+        target="_blank"
+        rel="noreferrer"
+        aria-label={`OfferKit on GitHub${githubStars === null ? "" : `, ${githubStars.toLocaleString("en")} stars`}`}
+      >
+        <GithubLogoIcon size={19} weight="bold" aria-hidden="true" />
+        <span class="github-star-count" aria-hidden="true">
+          <StarIcon size={13} weight="fill" />
+          {githubStarsLabel}
+        </span>
+      </a>
     </nav>
   </div>
 </footer>

@@ -47,7 +47,7 @@ export function Docs({
           title: (
             <span className="flex items-center gap-2.5 font-bold tracking-[-0.035em] text-fd-foreground">
               <img
-                src="/icon.png"
+                src="/icon.webp"
                 alt=""
                 width={32}
                 height={32}
@@ -59,7 +59,7 @@ export function Docs({
               </span>
             </span>
           ),
-          url: "/docs",
+          url: "/docs/",
         }}
         links={[
           {
@@ -77,7 +77,7 @@ export function Docs({
           },
           {
             text: "Blog",
-            url: "/blog",
+            url: "/blog/",
           },
         ]}
       >

@@ -37,7 +37,7 @@ const formattedDate = new Intl.DateTimeFormat("en", {
   <SiteHeader active="blog" />
   <main class="site-container py-16 sm:py-24">
     <article class="mx-auto max-w-3xl">
-      <a href="/blog" class="font-mono text-xs font-semibold uppercase tracking-[0.1em] text-[var(--site-primary-strong)] transition hover:text-[var(--site-primary)]">← All posts</a>
+      <a href="/blog/" class="font-mono text-xs font-semibold uppercase tracking-[0.1em] text-[var(--site-primary-strong)] transition hover:text-[var(--site-primary)]">← All posts</a>
       <header class="mt-10 border-b border-[var(--site-border)] pb-10">
         <div class="flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-xs uppercase tracking-[0.09em] text-[var(--site-muted-light)]">
           <time datetime={post.data.publishedAt.toISOString()}>{formattedDate}</time>

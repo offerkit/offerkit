@@ -1,6 +1,6 @@
 ---
 title: Referrals
-description: Integrate refer-a-friend, list a customer's codes, and apply codes at checkout.
+description: Integrate refer-a-friend into checkout, list each customer's referral codes, convert successful referrals idempotently, and issue rewards safely.
 ---
 
 OfferKit's referral model is **one stable code per referrer, many conversions per code**. A customer's code is fetched-or-created idempotently the first time you call `referrals.issue`. Every friend who checks out with that code creates a separate `referral_conversion` row and issues fresh rewards to both sides.

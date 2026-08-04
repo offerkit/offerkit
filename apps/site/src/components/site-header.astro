@@ -1,12 +1,17 @@
 ---
+import { GithubLogoIcon, StarIcon } from "@phosphor-icons/react/ssr";
+import { formatGitHubStars, getGitHubStars } from "@/lib/github";
+
 interface Props {
   active?: "blog" | "docs" | "home";
 }
 
 const { active = "home" } = Astro.props;
+const githubStars = await getGitHubStars();
+const githubStarsLabel = formatGitHubStars(githubStars);
 const navItems = [
-  { label: "Docs", href: "/docs", id: "docs" },
-  { label: "Blog", href: "/blog", id: "blog" },
+  { label: "Docs", href: "/docs/", id: "docs" },
+  { label: "Blog", href: "/blog/", id: "blog" },
 ];
 ---
 
@@ -14,7 +19,7 @@ const navItems = [
   <div class="site-container flex h-16 items-center justify-between gap-2 sm:gap-6">
     <a href="/" class="group flex items-center gap-2.5" aria-label="OfferKit home">
       <img
-        src="/icon.png"
+        src="/icon.webp"
         alt=""
         width="34"
         height="34"
@@ -42,15 +47,14 @@ const navItems = [
         href="https://github.com/offerkit/offerkit"
         target="_blank"
         rel="noreferrer"
-        class="hidden rounded-lg px-3 py-2 text-[var(--site-muted)] transition hover:bg-[var(--site-bg-subtle)] hover:text-[var(--site-heading)] sm:block"
+        class="github-icon-link ml-1"
+        aria-label={`OfferKit on GitHub${githubStars === null ? "" : `, ${githubStars.toLocaleString("en")} stars`}`}
       >
-        GitHub
-      </a>
-      <a
-        href="/docs/getting-started"
-        class="ml-1 rounded-lg border border-[#2db99a]/30 bg-[#e6f7f2] px-3 py-2 font-semibold text-[var(--site-primary-strong)] transition hover:border-[#2db99a]/45 hover:bg-[#dff4ee]"
-      >
-        <span class="sm:hidden">Start</span><span class="hidden sm:inline">Get started</span>
+        <GithubLogoIcon size={20} weight="bold" aria-hidden="true" />
+        <span class="github-star-count hidden md:inline-flex" aria-hidden="true">
+          <StarIcon size={13} weight="fill" />
+          {githubStarsLabel}
+        </span>
       </a>
     </nav>
   </div>

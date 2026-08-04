@@ -24,6 +24,7 @@ const remarkPlugins = [
 export default defineConfig({
   site: "https://offerkit.dev",
   output: "static",
+  trailingSlash: "always",
   markdown: {
     processor: unified({
       syntaxHighlight: false,
@@ -36,7 +37,12 @@ export default defineConfig({
     sitemap({
       filter(page) {
         const pathname = new URL(page).pathname;
-        return !pathname.startsWith("/docs/next") && !pathname.startsWith("/docs/v/");
+        return (
+          !pathname.startsWith("/docs/next/") &&
+          !pathname.startsWith("/docs/v/") &&
+          pathname !== "/docs/integrations/" &&
+          pathname !== "/docs/webhooks/"
+        );
       },
     }),
     mdx({

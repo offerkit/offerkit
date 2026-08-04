@@ -23,7 +23,7 @@ function formatDate(date: Date) {
 }
 ---
 
-<Layout title="Blog" description="Notes on building reliable, self-hosted promotion infrastructure.">
+<Layout title="Blog" description="Engineering notes from the OfferKit team on building reliable discounts, gift cards, loyalty, referrals, and self-hosted promotion infrastructure.">
   <SiteHeader active="blog" />
   <main class="relative min-h-[70vh] overflow-hidden">
     <div class="site-grid pointer-events-none absolute inset-x-0 top-0 h-[34rem]"></div>
@@ -45,7 +45,7 @@ function formatDate(date: Date) {
             </time>
             <div>
               <h2 class="text-2xl font-bold tracking-[-0.04em] text-[var(--site-heading)] transition group-hover:text-[var(--site-primary-strong)]">
-                <a href={`/blog/${slugFor(post.id)}`}>{post.data.title}</a>
+                <a href={`/blog/${slugFor(post.id)}/`}>{post.data.title}</a>
               </h2>
               <p class="mt-3 max-w-2xl leading-7 text-[var(--site-muted)]">{post.data.description}</p>
               <div class="mt-4 flex flex-wrap gap-2">

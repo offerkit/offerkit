@@ -20,7 +20,7 @@ export async function GET() {
 
   const items = posts
     .map((post) => {
-      const url = `https://offerkit.dev/blog/${slugFor(post.id)}`;
+      const url = `https://offerkit.dev/blog/${slugFor(post.id)}/`;
       return `<item><title>${escapeXml(post.data.title)}</title><link>${url}</link><guid>${url}</guid><pubDate>${post.data.publishedAt.toUTCString()}</pubDate><description>${escapeXml(post.data.description)}</description></item>`;
     })
     .join("");

@@ -22,7 +22,10 @@ export async function getStaticPaths() {
   return docsVariants.flatMap((variant) =>
     variant.source.getPages().map((page) => ({
       params: {
-        slug: page.url === "/docs" ? undefined : page.url.replace(/^\/docs\/?/, ""),
+        slug:
+          page.url === "/docs/"
+            ? undefined
+            : page.url.replace(/^\/docs\/?/, "").replace(/\/$/, ""),
       },
       props: {
         page: page.data._raw,
@@ -41,7 +44,7 @@ const toc: TOCItemType[] = headings.map((heading) => ({
   title: heading.text,
   url: `#${heading.slug}`,
 }));
-const latestUrl = getDocsVariant("stable").source.getPage(slugs)?.url ?? "/docs";
+const latestUrl = getDocsVariant("stable").source.getPage(slugs)?.url ?? "/docs/";
 const noIndex = variant.kind !== "stable";
 ---
 

@@ -24,7 +24,19 @@ function createSource(contentDirectory: string, baseUrl: string) {
   return loader({
     source: createStaticSource(contentDirectory),
     baseUrl,
+    plugins: [
+      {
+        name: "canonical-page-urls",
+        config(config) {
+          config.url = (slugs) => pageUrl(baseUrl, slugs);
+        },
+      },
+    ],
   });
+}
+
+function pageUrl(baseUrl: string, slugs: string[]) {
+  return `${[baseUrl, ...slugs].filter(Boolean).join("/").replaceAll("//", "/")}/`;
 }
 
 function createStaticSource(contentDirectory: string) {
@@ -93,7 +105,7 @@ const archivedVariants: DocsVariant[] = manifest.versions.map((version) => ({
   label: `v${version}`,
   version,
   baseUrl: `/docs/v/${version}`,
-  searchIndexUrl: `/docs/v/${version}/api/search`,
+    searchIndexUrl: `/docs/v/${version}/api/search/`,
   source: createSource(`versions/${version}`, `/docs/v/${version}`),
 }));
 
@@ -148,7 +160,7 @@ export function getVersionOptions(slugs: string[]) {
         : variant.kind === "next"
           ? "Unreleased documentation"
           : "Previous release",
-    url: variant.source.getPage(slugs)?.url ?? variant.baseUrl,
+    url: variant.source.getPage(slugs)?.url ?? `${variant.baseUrl}/`,
   }));
 }
 
