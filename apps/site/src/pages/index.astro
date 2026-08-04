@@ -4,49 +4,49 @@ import SiteFooter from "@/components/site-footer.astro";
 import SiteHeader from "@/components/site-header.astro";
 import "@/styles/global.css";
 
+const surfaces = [
+  ["REST API", "OpenAPI 3.1 contract"],
+  ["TypeScript SDK", "Typed without codegen"],
+  ["CLI", "Back-office operations"],
+  ["MCP server", "Risk-aware agent tools"],
+];
+
 const capabilities = [
   {
     index: "01",
     title: "Discounts",
-    description: "Fixed and percentage offers with targeting, usage limits, priority, exclusivity, and atomic stacking.",
-    detail: "Codes, automatic offers, and cart rules",
+    detail: "Codes and automatic offers",
+    description: "Fixed or percentage incentives with targeting, limits, priority, exclusivity, and atomic redemption.",
     href: "/docs/solutions/public-promo-code",
   },
   {
     index: "02",
     title: "Gift cards",
+    detail: "Balances that reconcile",
     description: "Stored value with partial spend, expiration, rollback safety, and an immutable transaction ledger.",
-    detail: "Balances that reconcile cleanly",
     href: "/docs/solutions/gift-cards",
   },
   {
     index: "03",
     title: "Loyalty",
+    detail: "Every point explained",
     description: "Programs, tiers, earning rules, member balances, reward redemption, and points expiration.",
-    detail: "Every point movement explained",
     href: "/docs/solutions/loyalty",
   },
   {
     index: "04",
     title: "Referrals",
+    detail: "Issue, attribute, reward",
     description: "Stable referral codes, idempotent conversion, and configurable rewards for both participants.",
-    detail: "Issue, attribute, convert, reward",
     href: "/docs/solutions/referrals",
   },
 ];
 
-const surfaces = [
-  ["REST API", "OpenAPI 3.1", "/docs/reference/api-reference"],
-  ["TypeScript SDK", "No codegen step", "/docs/reference/developer-tools"],
-  ["CLI", "Back-office operations", "/docs/reference/developer-tools"],
-  ["MCP server", "Tools with risk metadata", "/docs/reference/developer-tools"],
-];
-
 const steps = [
-  ["Validate", "Preview the exact outcome while the cart changes. No counters or balances move."],
-  ["Redeem", "Commit against a stable order ID. Retries return the original result."],
-  ["Explain", "Receive typed, support-safe reasons when a rule rejects the request."],
-  ["Observe", "Follow the decision through audit entries, events, signed webhooks, and telemetry."],
+  ["Validate", "Preview the outcome without moving counters or balances."],
+  ["Redeem", "Commit once against a stable order identifier."],
+  ["Explain", "Return typed reasons when a rule rejects a request."],
+  ["Observe", "Trace the result through audits, events, and webhooks."],
 ];
 
 const validationExample = `const decision = await offerkit.vouchers.validate({
@@ -58,163 +58,152 @@ const validationExample = `const decision = await offerkit.vouchers.validate({
 ---
 
 <Layout title="OfferKit">
-  <div class="landing-shell">
+  <div class="landing-page">
     <SiteHeader active="home" />
 
     <main>
-      <section class="landing-hero site-container">
+      <section class="hero site-container">
         <div class="hero-copy">
-          <p class="landing-label">Open-source promotion infrastructure</p>
+          <p class="eyebrow">Open-source promotion infrastructure</p>
           <h1>
             Promotions are infrastructure.
-            <span>Run them like it.</span>
+            <span>Treat them like it.</span>
           </h1>
           <p class="hero-summary">
-            One typed API for vouchers, gift cards, loyalty, and referrals. Keep the
-            decision layer close to checkout, keep the data on your infrastructure, and
-            keep every outcome explainable.
+            Run vouchers, gift cards, loyalty, and referrals behind one typed API.
+            Keep the data on your infrastructure and every decision explainable.
           </p>
           <div class="hero-actions">
-            <a href="/docs/getting-started" class="landing-button-primary">Run OfferKit</a>
-            <a href="https://github.com/offerkit/offerkit" class="landing-text-link">
-              Read the source <span aria-hidden="true">↗</span>
+            <a href="/docs/getting-started" class="site-button-primary">
+              Run OfferKit <span aria-hidden="true">→</span>
+            </a>
+            <a href="https://github.com/offerkit/offerkit" class="site-button-secondary">
+              View on GitHub
             </a>
           </div>
-          <dl class="hero-facts" aria-label="Project attributes">
-            <div>
-              <dt>License</dt>
-              <dd>MIT</dd>
-            </div>
-            <div>
-              <dt>Deploy</dt>
-              <dd>One image</dd>
-            </div>
-            <div>
-              <dt>Control</dt>
-              <dd>Self-hosted</dd>
-            </div>
-          </dl>
+          <ul class="hero-facts" aria-label="Project attributes">
+            <li><strong>MIT</strong><span>licensed</span></li>
+            <li><strong>Self-hosted</strong><span>by default</span></li>
+            <li><strong>One image</strong><span>to deploy</span></li>
+          </ul>
         </div>
 
-        <figure class="decision-example" aria-labelledby="decision-example-title">
-          <figcaption class="decision-example-heading">
-            <span id="decision-example-title">Voucher validation</span>
-            <span>checkout.ts</span>
+        <figure class="product-visual">
+          <img
+            src="/offerkit-banner.png"
+            alt="OfferKit promotion dashboard connected to application infrastructure"
+            width="2172"
+            height="724"
+            fetchpriority="high"
+          />
+          <figcaption>
+            <span>Promotion operations, in one place</span>
+            <span>Dashboard · API · Worker</span>
           </figcaption>
-          <pre><code>{validationExample}</code></pre>
-          <div class="decision-output">
-            <p>Decision</p>
-            <dl>
-              <div>
-                <dt>valid</dt>
-                <dd>true</dd>
-              </div>
-              <div>
-                <dt>discount</dt>
-                <dd>USD 10.00</dd>
-              </div>
-              <div>
-                <dt>order total</dt>
-                <dd>USD 89.99</dd>
-              </div>
-            </dl>
-          </div>
-          <p class="decision-footnote">Read-only preview · zero state changes</p>
         </figure>
       </section>
 
-      <section class="surface-index" aria-labelledby="surface-index-title">
+      <section class="surface-strip" aria-labelledby="surface-title">
         <div class="site-container">
-          <h2 id="surface-index-title" class="sr-only">Developer surfaces</h2>
+          <h2 id="surface-title" class="sr-only">Developer surfaces</h2>
           <ul>
-            {surfaces.map(([title, description, href], index) => (
+            {surfaces.map(([title, description]) => (
               <li>
-                <a href={href}>
-                  <span class="surface-number">0{index + 1}</span>
-                  <span class="surface-title">{title}</span>
-                  <span class="surface-description">{description}</span>
-                  <span class="surface-arrow" aria-hidden="true">→</span>
-                </a>
+                <strong>{title}</strong>
+                <span>{description}</span>
               </li>
             ))}
           </ul>
         </div>
       </section>
 
-      <section class="capability-section site-container">
-        <header class="section-intro">
-          <p class="section-index">01 / Incentives</p>
+      <section class="capabilities site-container">
+        <header class="section-heading">
+          <p class="eyebrow">The promotion layer</p>
           <div>
-            <h2>One decision layer.<br />Four incentive types.</h2>
+            <h2>One operational model.<br />Four incentive types.</h2>
             <p>
-              Stop rebuilding promotion rules inside checkout handlers and admin tools.
-              OfferKit gives each incentive the same operational foundation.
+              Replace scattered checkout rules and one-off admin tools with a system
+              your team can inspect, test, and operate.
             </p>
           </div>
         </header>
 
-        <div class="capability-list">
+        <div class="capability-grid">
           {capabilities.map((capability) => (
-            <a class="capability-row" href={capability.href}>
-              <span class="capability-index">{capability.index}</span>
-              <div>
-                <h3>{capability.title}</h3>
-                <p class="capability-detail">{capability.detail}</p>
+            <a href={capability.href} class="capability-card">
+              <div class="capability-meta">
+                <span>{capability.index}</span>
+                <span>{capability.detail}</span>
               </div>
-              <p class="capability-description">{capability.description}</p>
-              <span class="capability-arrow" aria-hidden="true">↗</span>
+              <h3>{capability.title}</h3>
+              <p>{capability.description}</p>
+              <span class="capability-link">Explore the workflow <span aria-hidden="true">→</span></span>
             </a>
           ))}
         </div>
       </section>
 
-      <section class="contract-section">
-        <div class="site-container contract-layout">
-          <header class="contract-intro">
-            <p class="section-index">02 / Checkout contract</p>
-            <h2>Preview freely.<br />Commit once.</h2>
-            <p>
-              Promotion logic sits on a failure-sensitive path. OfferKit makes retries,
-              concurrency, and rejection reasons part of the contract instead of leaving
-              them to application code.
-            </p>
-            <a href="/docs/integrate/checkout" class="contract-link">
-              Follow the checkout integration <span aria-hidden="true">→</span>
-            </a>
-          </header>
+      <section class="checkout-section">
+        <div class="site-container">
+          <div class="checkout-layout">
+            <header class="checkout-copy">
+              <p class="eyebrow">Predictable by design</p>
+              <h2>Preview freely.<br />Commit once.</h2>
+              <p>
+                Promotion logic sits on a failure-sensitive path. OfferKit makes
+                retries, concurrency, and rejection reasons part of the contract.
+              </p>
+              <a href="/docs/integrate/checkout">
+                Follow the checkout integration <span aria-hidden="true">→</span>
+              </a>
+            </header>
 
-          <ol class="contract-steps">
+            <figure class="code-sample">
+              <figcaption>
+                <span>Voucher validation</span>
+                <span>checkout.ts</span>
+              </figcaption>
+              <pre><code>{validationExample}</code></pre>
+              <dl>
+                <div><dt>valid</dt><dd>true</dd></div>
+                <div><dt>discount</dt><dd>USD 10.00</dd></div>
+                <div><dt>order total</dt><dd>USD 89.99</dd></div>
+              </dl>
+            </figure>
+          </div>
+
+          <ol class="checkout-steps">
             {steps.map(([title, description], index) => (
               <li>
                 <span>0{index + 1}</span>
-                <div>
-                  <h3>{title}</h3>
-                  <p>{description}</p>
-                </div>
+                <h3>{title}</h3>
+                <p>{description}</p>
               </li>
             ))}
           </ol>
         </div>
       </section>
 
-      <section class="install-section site-container">
-        <div class="install-copy">
-          <p class="section-index">03 / Deploy</p>
-          <h2>Your promotion data stays yours.</h2>
-          <p>
-            Start with Docker Compose. Move the same published image to any container
-            platform when you are ready.
-          </p>
-          <div class="install-actions">
-            <a href="/docs/getting-started" class="landing-button-primary">Get started</a>
-            <a href="/docs/self-host" class="landing-text-link">Self-hosting guide →</a>
+      <section class="deploy-section">
+        <div class="site-container deploy-layout">
+          <div>
+            <p class="eyebrow">Deploy on your terms</p>
+            <h2>Your promotions.<br />Your infrastructure.</h2>
+            <p>
+              Start with Docker Compose, then move the same published image to any
+              container platform when you are ready.
+            </p>
+            <div class="deploy-actions">
+              <a href="/docs/getting-started" class="deploy-primary">Get started</a>
+              <a href="/docs/self-host" class="deploy-secondary">Self-hosting guide</a>
+            </div>
           </div>
-        </div>
-
-        <div class="install-command" aria-label="OfferKit installation command">
-          <p>Terminal</p>
-          <code><span aria-hidden="true">$</span> docker compose up --build</code>
-          <span class="install-note">API · dashboard · worker</span>
+          <div class="terminal-line" aria-label="Docker Compose command">
+            <span>terminal</span>
+            <code><b>$</b> docker compose up --build</code>
+            <small>API · DASHBOARD · WORKER</small>
+          </div>
         </div>
       </section>
     </main>
@@ -224,635 +213,618 @@ const validationExample = `const decision = await offerkit.vouchers.validate({
 </Layout>
 
 <style>
-  .landing-shell {
-    --landing-ink: #101828;
-    --landing-green: #08775d;
-    --landing-green-bright: #19a780;
-    --landing-line: #d6dee8;
-    min-height: 100vh;
-    background: #f8fafc;
+  .landing-page {
+    overflow: hidden;
   }
 
-  .landing-hero {
-    display: grid;
-    gap: 4rem;
-    align-items: center;
-    padding-block: 5.5rem 6rem;
-  }
-
-  .hero-copy {
-    max-width: 42rem;
-  }
-
-  .landing-label,
-  .section-index {
-    color: var(--landing-green);
+  .eyebrow {
+    color: var(--site-primary-strong);
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     font-size: 0.72rem;
     font-weight: 700;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
   }
 
-  .landing-hero h1 {
-    margin-top: 1.5rem;
-    color: var(--landing-ink);
-    font-size: clamp(3.65rem, 7.2vw, 6.8rem);
-    font-weight: 760;
-    letter-spacing: -0.075em;
-    line-height: 0.91;
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+    align-items: center;
+    gap: clamp(3rem, 6vw, 5.5rem);
+    padding-block: clamp(4.5rem, 8vw, 7.5rem);
   }
 
-  .landing-hero h1 span {
+  .hero h1 {
+    max-width: 42rem;
+    margin-top: 1.45rem;
+    color: var(--site-heading);
+    font-size: clamp(3.3rem, 5.5vw, 4.7rem);
+    font-weight: 760;
+    letter-spacing: -0.062em;
+    line-height: 0.99;
+  }
+
+  .hero h1 span {
     display: block;
-    color: var(--landing-green);
+    color: var(--site-primary);
   }
 
   .hero-summary {
     max-width: 39rem;
-    margin-top: 2rem;
-    color: #58677c;
-    font-size: 1.1rem;
+    margin-top: 1.65rem;
+    color: var(--site-muted);
+    font-size: 1.08rem;
     line-height: 1.75;
   }
 
-  .hero-actions,
-  .install-actions {
+  .hero-actions {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
-    gap: 1.25rem;
-    margin-top: 2.25rem;
-  }
-
-  .landing-button-primary {
-    display: inline-flex;
-    min-height: 2.9rem;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid var(--landing-ink);
-    border-radius: 0.35rem;
-    background: var(--landing-ink);
-    padding: 0.75rem 1.15rem;
-    color: white;
-    font-size: 0.875rem;
-    font-weight: 700;
-    transition: background 140ms ease, border-color 140ms ease;
-  }
-
-  .landing-button-primary:hover {
-    border-color: var(--landing-green);
-    background: var(--landing-green);
-  }
-
-  .landing-text-link {
-    color: var(--landing-ink);
-    font-size: 0.875rem;
-    font-weight: 700;
-    text-decoration: underline;
-    text-decoration-color: #aab7c7;
-    text-underline-offset: 0.3rem;
-    transition: color 140ms ease, text-decoration-color 140ms ease;
-  }
-
-  .landing-text-link:hover {
-    color: var(--landing-green);
-    text-decoration-color: var(--landing-green);
+    gap: 0.75rem;
+    margin-top: 2rem;
   }
 
   .hero-facts {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1.75rem;
-    margin-top: 2.75rem;
-    padding-top: 1.25rem;
-    border-top: 1px solid var(--landing-line);
-  }
-
-  .hero-facts div {
     display: grid;
-    grid-template-columns: auto auto;
-    gap: 0.45rem;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 0.7rem;
+    grid-template-columns: repeat(3, 1fr);
+    max-width: 34rem;
+    margin-top: 2.3rem;
+    border-top: 1px solid var(--site-border);
+    padding-top: 1.1rem;
   }
 
-  .hero-facts dt {
-    color: #8a97a9;
-    text-transform: uppercase;
+  .hero-facts li {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    border-left: 1px solid var(--site-border);
+    padding-left: 1rem;
   }
 
-  .hero-facts dd {
-    color: #35445a;
-    font-weight: 700;
+  .hero-facts li:first-child {
+    border-left: 0;
+    padding-left: 0;
   }
 
-  .decision-example {
+  .hero-facts strong {
+    color: var(--site-heading);
+    font-size: 0.82rem;
+  }
+
+  .hero-facts span {
+    color: var(--site-muted-light);
+    font-size: 0.76rem;
+  }
+
+  .product-visual {
     overflow: hidden;
-    border: 1px solid #172033;
-    border-radius: 0.4rem;
-    background: #111827;
-    box-shadow: 10px 10px 0 #d9eee8;
-    color: #d7e0ed;
+    border: 1px solid var(--site-border-strong);
+    border-radius: 1.1rem;
+    background: white;
+    box-shadow: 0 1.4rem 3.5rem rgba(64, 83, 108, 0.14);
   }
 
-  .decision-example-heading {
+  .product-visual img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1.15;
+    object-fit: cover;
+    object-position: 74% center;
+  }
+
+  .product-visual figcaption {
     display: flex;
     justify-content: space-between;
     gap: 1rem;
-    border-bottom: 1px solid #2a3549;
-    padding: 0.9rem 1.1rem;
-    color: #aebbd0;
+    border-top: 1px solid var(--site-border);
+    padding: 0.95rem 1.1rem;
+    color: var(--site-heading);
+    font-size: 0.75rem;
+    font-weight: 650;
+  }
+
+  .product-visual figcaption span:last-child {
+    color: var(--site-muted-light);
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 0.68rem;
+    font-size: 0.66rem;
     letter-spacing: 0.06em;
-    text-transform: uppercase;
   }
 
-  .decision-example-heading span:first-child {
-    color: #72d2b8;
-    font-weight: 700;
+  .surface-strip {
+    border-block: 1px solid var(--site-border);
+    background: rgba(255, 255, 255, 0.72);
   }
 
-  .decision-example pre {
-    overflow-x: auto;
-    padding: 1.5rem 1.25rem 1.75rem;
-    color: #e5eaf2;
-    font-size: clamp(0.7rem, 1.15vw, 0.78rem);
-    line-height: 1.9;
-  }
-
-  .decision-output {
-    margin-inline: 1.1rem;
-    border: 1px solid #344158;
-    background: #172033;
-  }
-
-  .decision-output > p {
-    border-bottom: 1px solid #344158;
-    padding: 0.65rem 0.85rem;
-    color: #8391a7;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 0.65rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .decision-output dl {
+  .surface-strip ul {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
 
-  .decision-output dl div {
-    padding: 0.9rem 0.85rem;
-    border-right: 1px solid #344158;
+  .surface-strip li {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    border-left: 1px solid var(--site-border);
+    padding: 1.35rem 1.5rem;
   }
 
-  .decision-output dl div:last-child {
-    border-right: 0;
+  .surface-strip li:first-child {
+    border-left: 0;
+    padding-left: 0;
   }
 
-  .decision-output dt,
-  .decision-output dd,
-  .decision-footnote {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  .surface-strip strong {
+    color: var(--site-heading);
+    font-size: 0.88rem;
   }
 
-  .decision-output dt {
-    color: #8391a7;
-    font-size: 0.62rem;
-    text-transform: uppercase;
+  .surface-strip span {
+    color: var(--site-muted);
+    font-size: 0.8rem;
   }
 
-  .decision-output dd {
-    margin-top: 0.3rem;
-    color: #f6f8fb;
-    font-size: 0.76rem;
-    font-weight: 700;
+  .capabilities {
+    padding-block: clamp(5rem, 9vw, 8rem);
   }
 
-  .decision-output dl div:first-child dd {
-    color: #72d2b8;
-  }
-
-  .decision-footnote {
-    padding: 1rem 1.1rem 1.2rem;
-    color: #7f8da3;
-    font-size: 0.63rem;
-    text-transform: uppercase;
-  }
-
-  .surface-index {
-    border-block: 1px solid var(--landing-line);
-    background: #fff;
-  }
-
-  .surface-index ul {
+  .section-heading {
     display: grid;
+    grid-template-columns: 0.72fr 1.28fr;
+    gap: 3rem;
+    align-items: start;
   }
 
-  .surface-index li {
-    border-bottom: 1px solid var(--landing-line);
+  .section-heading h2,
+  .checkout-copy h2,
+  .deploy-section h2 {
+    color: var(--site-heading);
+    font-size: clamp(2.45rem, 4vw, 3.65rem);
+    font-weight: 740;
+    letter-spacing: -0.052em;
+    line-height: 1.03;
   }
 
-  .surface-index li:last-child {
-    border-bottom: 0;
-  }
-
-  .surface-index a {
-    display: grid;
-    grid-template-columns: 2rem minmax(7.5rem, 0.75fr) 1fr auto;
-    gap: 1rem;
-    align-items: center;
-    padding-block: 1rem;
-    transition: color 140ms ease;
-  }
-
-  .surface-number,
-  .surface-description {
-    color: #8794a6;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 0.68rem;
-  }
-
-  .surface-title {
-    color: var(--landing-ink);
-    font-size: 0.86rem;
-    font-weight: 750;
-  }
-
-  .surface-description {
-    text-transform: uppercase;
-  }
-
-  .surface-arrow {
-    color: #8794a6;
-    transition: transform 140ms ease, color 140ms ease;
-  }
-
-  .surface-index a:hover .surface-title,
-  .surface-index a:hover .surface-arrow {
-    color: var(--landing-green);
-  }
-
-  .surface-index a:hover .surface-arrow {
-    transform: translateX(0.2rem);
-  }
-
-  .capability-section {
-    padding-block: 8rem;
-  }
-
-  .section-intro {
-    display: grid;
-    gap: 2rem;
-    margin-bottom: 4.5rem;
-  }
-
-  .section-intro h2,
-  .contract-intro h2,
-  .install-copy h2 {
-    color: var(--landing-ink);
-    font-size: clamp(2.7rem, 5vw, 4.9rem);
-    font-weight: 750;
-    letter-spacing: -0.065em;
-    line-height: 0.98;
-  }
-
-  .section-intro p:last-child,
-  .contract-intro > p:nth-of-type(2),
-  .install-copy > p:last-of-type {
-    max-width: 36rem;
-    margin-top: 1.5rem;
-    color: #627086;
-    font-size: 1.05rem;
+  .section-heading > div > p,
+  .checkout-copy > p,
+  .deploy-section > .site-container > div > p {
+    max-width: 37rem;
+    margin-top: 1.25rem;
+    color: var(--site-muted);
+    font-size: 1.02rem;
     line-height: 1.75;
   }
 
-  .capability-list {
-    border-top: 1px solid #aeb9c7;
-  }
-
-  .capability-row {
+  .capability-grid {
     display: grid;
-    grid-template-columns: 3rem minmax(10rem, 0.65fr) minmax(18rem, 1fr) auto;
-    gap: 2rem;
-    align-items: start;
-    border-bottom: 1px solid var(--landing-line);
-    padding-block: 2rem;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    overflow: hidden;
+    margin-top: 3.5rem;
+    border: 1px solid var(--site-border);
+    border-radius: 1rem;
+    background: var(--site-border);
   }
 
-  .capability-index,
-  .capability-detail {
+  .capability-card {
+    min-height: 17rem;
+    background: white;
+    padding: clamp(1.6rem, 3vw, 2.3rem);
+    transition: background 160ms ease;
+  }
+
+  .capability-card:hover {
+    background: #f6fbf9;
+  }
+
+  .capability-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    color: var(--site-muted-light);
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  }
-
-  .capability-index {
-    color: #8b97a8;
-    font-size: 0.72rem;
-  }
-
-  .capability-row h3 {
-    color: var(--landing-ink);
-    font-size: 1.45rem;
-    font-weight: 750;
-    letter-spacing: -0.035em;
-    transition: color 140ms ease;
-  }
-
-  .capability-detail {
-    margin-top: 0.45rem;
-    color: #8390a2;
     font-size: 0.67rem;
+    letter-spacing: 0.07em;
     text-transform: uppercase;
   }
 
-  .capability-description {
-    max-width: 38rem;
-    color: #58677c;
-    line-height: 1.7;
-  }
-
-  .capability-arrow {
-    color: #8390a2;
-    transition: color 140ms ease, transform 140ms ease;
-  }
-
-  .capability-row:hover h3,
-  .capability-row:hover .capability-arrow {
-    color: var(--landing-green);
-  }
-
-  .capability-row:hover .capability-arrow {
-    transform: translate(0.15rem, -0.15rem);
-  }
-
-  .contract-section {
-    background: #111827;
-    color: #d8e0eb;
-  }
-
-  .contract-layout {
-    display: grid;
-    gap: 5rem;
-    padding-block: 8rem;
-  }
-
-  .contract-intro .section-index {
-    color: #72d2b8;
-  }
-
-  .contract-intro h2 {
-    margin-top: 1.5rem;
-    color: #f8fafc;
-  }
-
-  .contract-intro > p:nth-of-type(2) {
-    color: #a9b5c7;
-  }
-
-  .contract-link {
-    display: inline-flex;
-    gap: 0.6rem;
-    margin-top: 2rem;
-    color: #91dfca;
-    font-size: 0.875rem;
+  .capability-card h3 {
+    margin-top: 2.4rem;
+    color: var(--site-heading);
+    font-size: 1.65rem;
     font-weight: 700;
-    text-decoration: underline;
-    text-decoration-color: #46685f;
-    text-underline-offset: 0.3rem;
+    letter-spacing: -0.035em;
   }
 
-  .contract-steps {
-    border-top: 1px solid #3a465a;
-  }
-
-  .contract-steps li {
-    display: grid;
-    grid-template-columns: 3rem 1fr;
-    gap: 1.5rem;
-    border-bottom: 1px solid #3a465a;
-    padding-block: 1.8rem;
-  }
-
-  .contract-steps li > span {
-    color: #738198;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 0.7rem;
-  }
-
-  .contract-steps h3 {
-    color: #f8fafc;
-    font-size: 1.2rem;
-    font-weight: 750;
-  }
-
-  .contract-steps p {
-    max-width: 35rem;
-    margin-top: 0.55rem;
-    color: #a9b5c7;
+  .capability-card > p {
+    max-width: 29rem;
+    margin-top: 0.75rem;
+    color: var(--site-muted);
     line-height: 1.7;
   }
 
-  .install-section {
+  .capability-link {
+    display: inline-flex;
+    gap: 0.5rem;
+    margin-top: 2rem;
+    color: var(--site-primary-strong);
+    font-size: 0.82rem;
+    font-weight: 650;
+  }
+
+  .checkout-section {
+    border-block: 1px solid #d8e8e2;
+    background: #eff8f5;
+    padding-block: clamp(5rem, 9vw, 8rem);
+  }
+
+  .checkout-layout {
     display: grid;
-    gap: 4.5rem;
+    grid-template-columns: 0.78fr 1.22fr;
     align-items: center;
-    padding-block: 8rem;
+    gap: clamp(3rem, 8vw, 7rem);
   }
 
-  .install-copy h2 {
-    max-width: 39rem;
-    margin-top: 1.5rem;
+  .checkout-copy h2 {
+    margin-top: 1.35rem;
   }
 
-  .install-command {
-    border: 1px solid #bac4d1;
-    border-radius: 0.35rem;
-    background: #fff;
+  .checkout-copy a {
+    display: inline-flex;
+    gap: 0.55rem;
+    margin-top: 1.65rem;
+    color: var(--site-primary-strong);
+    font-size: 0.86rem;
+    font-weight: 700;
   }
 
-  .install-command > p {
-    border-bottom: 1px solid var(--landing-line);
-    padding: 0.7rem 1rem;
-    color: #7a8799;
+  .code-sample {
+    overflow: hidden;
+    border: 1px solid #1f2b3b;
+    border-radius: 0.9rem;
+    background: #111a27;
+    box-shadow: 0 1rem 2.5rem rgba(43, 60, 79, 0.16);
+    color: #d8e4ef;
+  }
+
+  .code-sample figcaption {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+    padding: 0.85rem 1.1rem;
+    color: #92a6b9;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 0.65rem;
+    font-size: 0.66rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
 
-  .install-command code {
-    display: block;
+  .code-sample pre {
     overflow-x: auto;
-    padding: 1.5rem 1rem 0.75rem;
-    color: var(--landing-ink);
-    font-size: clamp(0.78rem, 1.6vw, 0.95rem);
-    white-space: nowrap;
+    padding: 1.5rem 1.35rem;
+    color: #c5d4e3;
+    font-size: 0.75rem;
+    line-height: 1.8;
   }
 
-  .install-command code span {
-    margin-right: 0.65rem;
-    color: var(--landing-green);
-    font-weight: 800;
+  .code-sample dl {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-top: 1px solid rgba(255, 255, 255, 0.09);
   }
 
-  .install-note {
-    display: block;
-    padding: 0.5rem 1rem 1.35rem;
-    color: #8a97a9;
+  .code-sample dl div {
+    border-left: 1px solid rgba(255, 255, 255, 0.09);
+    padding: 0.95rem 1.1rem;
+  }
+
+  .code-sample dl div:first-child {
+    border-left: 0;
+  }
+
+  .code-sample dt {
+    color: #70869b;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 0.65rem;
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
   }
 
-  @media (min-width: 48rem) {
-    .surface-index ul {
-      grid-template-columns: repeat(2, 1fr);
-    }
-
-    .surface-index li:nth-child(odd) {
-      border-right: 1px solid var(--landing-line);
-    }
-
-    .surface-index li:nth-last-child(-n + 2) {
-      border-bottom: 0;
-    }
-
-    .surface-index a {
-      padding-inline: 1.25rem;
-    }
-
-    .surface-index li:nth-child(odd) a {
-      padding-left: 0;
-    }
-
-    .section-intro {
-      grid-template-columns: minmax(10rem, 0.34fr) 1fr;
-    }
+  .code-sample dd {
+    margin-top: 0.28rem;
+    color: #8ee8c0;
+    font-size: 0.8rem;
+    font-weight: 700;
   }
 
-  @media (min-width: 64rem) {
-    .landing-hero {
-      grid-template-columns: minmax(0, 1.08fr) minmax(27rem, 0.92fr);
+  .checkout-steps {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    margin-top: 4rem;
+    border-top: 1px solid #cddfd8;
+  }
+
+  .checkout-steps li {
+    border-left: 1px solid #cddfd8;
+    padding: 1.5rem 1.4rem 0;
+  }
+
+  .checkout-steps li:first-child {
+    border-left: 0;
+    padding-left: 0;
+  }
+
+  .checkout-steps > li > span {
+    color: var(--site-muted-light);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.68rem;
+  }
+
+  .checkout-steps h3 {
+    margin-top: 1rem;
+    color: var(--site-heading);
+    font-weight: 700;
+  }
+
+  .checkout-steps p {
+    margin-top: 0.45rem;
+    color: var(--site-muted);
+    font-size: 0.88rem;
+    line-height: 1.65;
+  }
+
+  .deploy-section {
+    background: #111827;
+    color: white;
+  }
+
+  .deploy-layout {
+    display: grid;
+    grid-template-columns: 1fr 0.9fr;
+    align-items: center;
+    gap: clamp(3rem, 8vw, 8rem);
+    padding-block: clamp(4.5rem, 8vw, 7rem);
+  }
+
+  .deploy-section .eyebrow {
+    color: #75dab6;
+  }
+
+  .deploy-section h2 {
+    margin-top: 1.3rem;
+    color: white;
+  }
+
+  .deploy-section > .site-container > div > p {
+    color: #aab7c6;
+  }
+
+  .deploy-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 2rem;
+  }
+
+  .deploy-primary,
+  .deploy-secondary {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.8rem;
+    border-radius: 0.7rem;
+    padding: 0.72rem 1.15rem;
+    font-size: 0.86rem;
+    font-weight: 700;
+  }
+
+  .deploy-primary {
+    background: #70deb5;
+    color: #0b2b20;
+  }
+
+  .deploy-secondary {
+    border: 1px solid #405063;
+    color: #dce5ed;
+  }
+
+  .terminal-line {
+    overflow: hidden;
+    border: 1px solid #344256;
+    border-radius: 0.85rem;
+    background: #0b111b;
+  }
+
+  .terminal-line > span {
+    display: block;
+    border-bottom: 1px solid #283547;
+    padding: 0.75rem 1rem;
+    color: #718198;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+
+  .terminal-line code {
+    display: block;
+    overflow-x: auto;
+    padding: 1.5rem 1.25rem 0.85rem;
+    color: #f2f6f9;
+    font-size: clamp(0.82rem, 1.5vw, 1rem);
+  }
+
+  .terminal-line code b {
+    color: #70deb5;
+  }
+
+  .terminal-line small {
+    display: block;
+    padding: 0 1.25rem 1.4rem;
+    color: #718198;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+  }
+
+  @media (max-width: 63.99rem) {
+    .hero,
+    .checkout-layout,
+    .deploy-layout {
+      grid-template-columns: 1fr;
     }
 
-    .surface-index ul {
-      grid-template-columns: repeat(4, 1fr);
+    .hero {
+      gap: 3.25rem;
     }
 
-    .surface-index li,
-    .surface-index li:nth-child(odd) {
-      border-right: 1px solid var(--landing-line);
-      border-bottom: 0;
+    .product-visual img {
+      aspect-ratio: 1.75;
+      object-position: 61% center;
     }
 
-    .surface-index li:last-child {
-      border-right: 0;
-    }
-
-    .surface-index a {
-      grid-template-columns: 1.6rem 1fr auto;
-      gap: 0.7rem;
-      padding-inline: 1.25rem;
-    }
-
-    .surface-index li:first-child a {
-      padding-left: 0;
-    }
-
-    .surface-description {
-      grid-column: 2 / -1;
-    }
-
-    .surface-arrow {
-      grid-column: 3;
-      grid-row: 1;
-    }
-
-    .contract-layout {
-      grid-template-columns: minmax(0, 0.9fr) minmax(28rem, 1.1fr);
-      gap: 7rem;
-    }
-
-    .install-section {
-      grid-template-columns: minmax(0, 1fr) minmax(26rem, 0.72fr);
-      gap: 7rem;
+    .checkout-copy {
+      max-width: 42rem;
     }
   }
 
   @media (max-width: 47.99rem) {
-    .landing-hero {
-      gap: 3.25rem;
+    .hero {
       padding-block: 4rem 4.5rem;
     }
 
-		.landing-hero h1 {
-			font-size: clamp(3rem, 13.4vw, 3.5rem);
-		}
-
-    .decision-example {
-      box-shadow: 6px 6px 0 #d9eee8;
+    .hero h1 {
+      font-size: clamp(3rem, 13.5vw, 3.9rem);
     }
 
-    .decision-output dl {
+    .hero-summary {
+      font-size: 1rem;
+    }
+
+    .surface-strip ul,
+    .capability-grid,
+    .checkout-steps {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .surface-strip li:nth-child(3) {
+      border-left: 0;
+    }
+
+    .surface-strip li:nth-child(n + 3) {
+      border-top: 1px solid var(--site-border);
+    }
+
+    .section-heading {
+      grid-template-columns: 1fr;
+      gap: 1.4rem;
+    }
+
+    .capability-card {
+      min-height: 15rem;
+    }
+
+    .checkout-steps li:nth-child(3) {
+      border-left: 0;
+    }
+
+    .checkout-steps li:nth-child(n + 3) {
+      margin-top: 1.5rem;
+      border-top: 1px solid #cddfd8;
+      padding-top: 1.5rem;
+    }
+  }
+
+  @media (max-width: 35rem) {
+    .capability-grid {
       grid-template-columns: 1fr;
     }
 
-    .decision-output dl div {
-      border-right: 0;
-      border-bottom: 1px solid #344158;
+    .capability-card {
+      padding: 1.4rem;
     }
 
-    .decision-output dl div:last-child {
-      border-bottom: 0;
+    .capability-card h3 {
+      margin-top: 1.6rem;
     }
 
-    .surface-index a {
-      grid-template-columns: 2rem 1fr auto;
+    .capability-link {
+      margin-top: 1.3rem;
+    }
+  }
+
+  @media (max-width: 22rem) {
+    .hero-facts {
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
     }
 
-    .surface-description {
-      grid-column: 2;
+    .hero-facts li,
+    .hero-facts li:first-child {
+      border-left: 0;
+      padding-left: 0;
     }
 
-    .surface-arrow {
-      grid-column: 3;
-      grid-row: 1 / span 2;
+    .product-visual img {
+      aspect-ratio: 1.2;
+      object-position: 72% center;
     }
 
-    .capability-section,
-    .contract-layout,
-    .install-section {
-      padding-block: 5.5rem;
+    .product-visual figcaption {
+      flex-direction: column;
+      gap: 0.35rem;
     }
 
-    .section-intro {
-      margin-bottom: 3rem;
+    .surface-strip ul,
+    .capability-grid,
+    .checkout-steps {
+      grid-template-columns: 1fr;
     }
 
-    .capability-row {
-      grid-template-columns: 2rem 1fr auto;
-      gap: 1rem;
-      padding-block: 1.6rem;
+    .surface-strip li,
+    .surface-strip li:first-child,
+    .surface-strip li:nth-child(3) {
+      border-top: 1px solid var(--site-border);
+      border-left: 0;
+      padding-inline: 0;
     }
 
-    .capability-description {
-      grid-column: 2 / -1;
+    .surface-strip li:first-child {
+      border-top: 0;
     }
 
-    .capability-arrow {
-      grid-column: 3;
-      grid-row: 1;
+    .capability-card {
+      min-height: auto;
+    }
+
+    .checkout-steps li,
+    .checkout-steps li:first-child,
+    .checkout-steps li:nth-child(3) {
+      margin-top: 0;
+      border-top: 1px solid #cddfd8;
+      border-left: 0;
+      padding: 1.35rem 0;
+    }
+
+    .checkout-steps li:first-child {
+      border-top: 0;
+    }
+
+    .code-sample dl {
+      grid-template-columns: 1fr;
+    }
+
+    .code-sample dl div,
+    .code-sample dl div:first-child {
+      border-top: 1px solid rgba(255, 255, 255, 0.09);
+      border-left: 0;
+    }
+
+    .code-sample dl div:first-child {
+      border-top: 0;
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .landing-button-primary,
-    .landing-text-link,
-    .surface-arrow,
-    .capability-row h3,
-    .capability-arrow {
+    .capability-card {
       transition: none;
     }
   }

@@ -10,7 +10,7 @@ const navItems = [
 ];
 ---
 
-<header class="relative z-20 border-b border-[var(--site-border)] bg-[var(--site-bg)]">
+<header class="relative z-20 border-b border-[var(--site-border)] bg-white">
   <div class="site-container flex h-16 items-center justify-between gap-2 sm:gap-6">
     <a href="/" class="group flex items-center gap-2.5" aria-label="OfferKit home">
       <img
@@ -18,7 +18,7 @@ const navItems = [
         alt=""
         width="34"
         height="34"
-        class="size-8 rounded-[0.35rem]"
+        class="size-8 rounded-[0.65rem]"
       />
       <span class="hidden text-[1.02rem] font-bold tracking-[-0.035em] text-[var(--site-heading)] min-[25rem]:inline">OfferKit</span>
     </a>
@@ -29,7 +29,7 @@ const navItems = [
           href={item.href}
           aria-current={active === item.id ? "page" : undefined}
           class:list={[
-            "rounded-[0.35rem] px-3 py-2 transition hover:bg-white hover:text-[var(--site-heading)]",
+            "rounded-lg px-3 py-2 transition hover:bg-[var(--site-bg-subtle)] hover:text-[var(--site-heading)]",
             active === item.id
               ? "bg-[var(--site-bg-subtle)] text-[var(--site-heading)]"
               : "text-[var(--site-muted)]",
@@ -42,13 +42,13 @@ const navItems = [
         href="https://github.com/offerkit/offerkit"
         target="_blank"
         rel="noreferrer"
-        class="hidden rounded-[0.35rem] px-3 py-2 text-[var(--site-muted)] transition hover:bg-white hover:text-[var(--site-heading)] sm:block"
+        class="hidden rounded-lg px-3 py-2 text-[var(--site-muted)] transition hover:bg-[var(--site-bg-subtle)] hover:text-[var(--site-heading)] sm:block"
       >
         GitHub
       </a>
       <a
         href="/docs/getting-started"
-        class="ml-1 rounded-[0.35rem] border border-[var(--site-heading)] bg-[var(--site-heading)] px-3 py-2 font-semibold text-white transition hover:border-[var(--site-primary-strong)] hover:bg-[var(--site-primary-strong)]"
+        class="ml-1 rounded-lg border border-[#2db99a]/30 bg-[#e6f7f2] px-3 py-2 font-semibold text-[var(--site-primary-strong)] transition hover:border-[#2db99a]/45 hover:bg-[#dff4ee]"
       >
         <span class="sm:hidden">Start</span><span class="hidden sm:inline">Get started</span>
       </a>
