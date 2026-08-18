@@ -1,0 +1,4 @@
+interface:
+  display_name: "OfferKit Package Release"
+  short_description: "Publish and verify OfferKit npm packages"
+  default_prompt: "Use $offerkit-package-release to publish and verify the pending OfferKit package releases."
