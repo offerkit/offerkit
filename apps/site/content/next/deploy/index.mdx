@@ -28,13 +28,14 @@ Set at least:
 DATABASE_URL=postgres://offerkit:dev@postgres:5432/offerkit
 REDIS_URL=redis://redis:6379
 BETTER_AUTH_SECRET=replace-me
-WEBHOOK_SECRET_ENCRYPTION_KEY=replace-me
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=replace-me
 ```
 
-Generate a webhook encryption key with `openssl rand -base64 32`. Replace every example
-secret before exposing the deployment beyond local development.
+If you use webhooks, set `WEBHOOK_SECRET_ENCRYPTION_KEY` to the same stable value on the
+web and worker services. It must be at least 32 characters; generate one with
+`openssl rand -base64 32`. Deployments without webhooks can omit it. Replace every
+example secret before exposing the deployment beyond local development.
 
 The web service runs database migrations on startup. Sign in at `http://localhost:3000`
 or the server's LAN address and change the seeded administrator password when prompted.
@@ -60,7 +61,7 @@ its configured health port.
 Use `latest` for evaluation and a version tag for production, for example:
 
 ```text
-ghcr.io/offerkit/offerkit:v0.1.0
+ghcr.io/offerkit/offerkit:v0.2.0
 ```
 
 Use the same image version for web and worker. `edge` follows the latest main-branch
@@ -82,6 +83,10 @@ backups and test restoration. Before upgrading:
 3. deploy and verify the version in staging;
 4. upgrade web and worker together;
 5. verify readiness, worker health, sign-in, a safe validation call, and webhook delivery.
+
+When upgrading from `v0.1.x`, recreate existing webhook subscriptions after configuring
+`WEBHOOK_SECRET_ENCRYPTION_KEY`. Legacy subscriptions stored only a hash of the signing
+secret and cannot be delivered by `v0.2.0`. Deployments without webhooks are unaffected.
 
 ## Observability
 

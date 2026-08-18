@@ -5,69 +5,69 @@ description: Plain-language definitions for OfferKit objects, decisions, identif
 
 ## Product terms
 
-**Offer**  
+**Offer**<br />
 The plain-language umbrella used in these docs for any customer benefit. It is not an API resource.
 
-**Campaign**  
+**Campaign**<br />
 The common lifecycle and configuration container for a discount, gift-voucher,
 automatic-promotion, loyalty, or referral initiative.
 
-**Voucher**  
+**Voucher**<br />
 A human-entered or distributed code. It represents either a discount or gift-card balance.
 
-**Promotion tier**  
+**Promotion tier**<br />
 A code-free discount effect with its own eligibility, dates, priority, and exclusivity.
 It belongs to a promotion campaign.
 
-**Loyalty program**  
+**Loyalty program**<br />
 The type-specific configuration attached to a loyalty campaign: tiers, earning rules,
 rewards, members, and point ledgers.
 
-**Referral program**  
+**Referral program**<br />
 The type-specific configuration attached to a referral campaign: rewards for each side,
 advocate codes, and conversions.
 
-**Customer**  
+**Customer**<br />
 The OfferKit representation of a user who can hold vouchers, redeem, join loyalty, refer,
 or be referred. `externalId` should usually contain the application's stable user ID.
 
-**Order**  
+**Order**<br />
 An optional stored transaction record that can be connected to customer and redemption
 history. Runtime decision calls can also use inline order context without storing an order.
 
-**Segment**  
+**Segment**<br />
 A reusable audience rule with preview count and sample. A segment preview does not by
 itself attach membership to a live campaign decision.
 
-**Validation rule**  
+**Validation rule**<br />
 A JSON Logic condition evaluated against available customer, order, voucher, date, and
 metadata context.
 
-**Reward type**  
+**Reward type**<br />
 A schema for a custom benefit that the integrating application fulfills.
 
 ## Decision terms
 
-**Qualification**  
+**Qualification**<br />
 Read-only discovery of which customer-held vouchers or automatic promotions apply to the
 current context.
 
-**Validation**  
+**Validation**<br />
 A read-only check of a known voucher code that returns a preview or explanations.
 
-**Redemption**  
+**Redemption**<br />
 A committed voucher use that updates counters or gift balance and records activity.
 
-**Stack redemption**  
+**Stack redemption**<br />
 An atomic redemption of several discount vouchers against one order.
 
-**Referral conversion**  
+**Referral conversion**<br />
 A committed successful referral event that records the friend and issues both rewards.
 
-**Loyalty earning**  
+**Loyalty earning**<br />
 A committed positive point-ledger entry initiated by the integrating application.
 
-**Ledger**  
+**Ledger**<br />
 An append-oriented history used to explain gift-card balance or loyalty points. The
 current balance is authoritative; ledger entries explain how it changed.
 

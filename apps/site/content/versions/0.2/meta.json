@@ -1,0 +1,13 @@
+{
+  "title": "OfferKit",
+  "pages": [
+    "index",
+    "getting-started",
+    "how-offerkit-works",
+    "solutions",
+    "integrate",
+    "operate",
+    "deploy",
+    "reference"
+  ]
+}

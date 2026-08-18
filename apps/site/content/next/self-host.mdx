@@ -17,11 +17,14 @@ cp .env.example .env
 # Required:
 #   DATABASE_URL=postgres://offerkit:dev@postgres:5432/offerkit
 #   BETTER_AUTH_SECRET=…
-#   WEBHOOK_SECRET_ENCRYPTION_KEY=… # openssl rand -base64 32
 #   ADMIN_EMAIL=…
 #   ADMIN_PASSWORD=…
 docker compose up -d
 ```
+
+If you use webhooks, set `WEBHOOK_SECRET_ENCRYPTION_KEY` to a stable value of at least
+32 characters before starting web and worker. Generate one with `openssl rand -base64 32`.
+Deployments without webhooks can omit it.
 
 `web` runs migrations before starting Next.js, so a fresh DB is fully migrated on first boot. The `worker` reclaims orphaned jobs on startup and re-seeds the recurring `loyalty.points.expire` sweep if it's missing.
 
@@ -60,10 +63,10 @@ Agent connections**.
 Pin a release by setting `OFFERKIT_IMAGE_TAG`, for example:
 
 ```bash
-OFFERKIT_IMAGE_TAG=v0.1.0 docker compose up -d
+OFFERKIT_IMAGE_TAG=v0.2.0 docker compose up -d
 ```
 
-Image channels are intentionally narrow: `edge` follows the latest `main` commit, `latest` follows the newest stable version, and stable versions are published as both `v0.1.0` and `0.1.0`.
+Image channels are intentionally narrow: `edge` follows the latest `main` commit, `latest` follows the newest stable version, and stable versions are published as both `v0.2.0` and `0.2.0`.
 
 Contributors who need to test local source changes can build the same image shape:
 
@@ -82,7 +85,7 @@ In one Railway project, create:
 - `web` Docker Image service using `ghcr.io/offerkit/offerkit:latest`
 - `worker` Docker Image service using `ghcr.io/offerkit/offerkit:latest`
 
-For production, pin both image services to a version tag such as `ghcr.io/offerkit/offerkit:v0.1.0` instead of `latest`.
+For production, pin both image services to a version tag such as `ghcr.io/offerkit/offerkit:v0.2.0` instead of `latest`.
 
 Set these variables on `web`:
 
@@ -92,7 +95,6 @@ REDIS_URL=redis://...
 ADMIN_EMAIL=…
 ADMIN_PASSWORD=…
 BETTER_AUTH_SECRET=…
-WEBHOOK_SECRET_ENCRYPTION_KEY=…
 OFFERKIT_PUBLIC_URL=https://your-domain
 ```
 
@@ -103,8 +105,10 @@ Set these variables on `worker`:
 ```
 DATABASE_URL=postgres://...
 REDIS_URL=redis://...
-WEBHOOK_SECRET_ENCRYPTION_KEY=…
 ```
+
+If you use webhooks, also set `WEBHOOK_SECRET_ENCRYPTION_KEY` to the same stable value of
+at least 32 characters on both services.
 
 Override the `worker` start command:
 
@@ -129,7 +133,6 @@ Required `web` environment variables:
 DATABASE_URL=postgres://...
 REDIS_URL=redis://...
 BETTER_AUTH_SECRET=…
-WEBHOOK_SECRET_ENCRYPTION_KEY=…
 OFFERKIT_PUBLIC_URL=https://your-diploi-domain
 ADMIN_EMAIL=…
 ADMIN_PASSWORD=…
@@ -140,9 +143,11 @@ Required `worker` environment variables:
 ```
 DATABASE_URL=postgres://...
 REDIS_URL=redis://...
-WEBHOOK_SECRET_ENCRYPTION_KEY=…
 WORKER_HEALTH_PORT=9091
 ```
+
+If you use webhooks, also set `WEBHOOK_SECRET_ENCRYPTION_KEY` to the same stable value of
+at least 32 characters on both components.
 
 Use the README's **Launch with Diploi** button if you want to start from Diploi's project wizard. After the first deploy, verify `/api/v1/ready` on `web`, `:9091/health` on `worker`, and sign in with the seeded admin account.
 
