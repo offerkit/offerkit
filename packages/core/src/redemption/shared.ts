@@ -14,6 +14,14 @@ import type {
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
+export async function getWorkspaceCurrency(db: Db | Tx): Promise<string> {
+  const workspace = await db.query.workspaceSetting.findFirst({
+    where: eq(schema.workspaceSetting.id, schema.WORKSPACE_SETTING_ID),
+    columns: { defaultCurrency: true },
+  });
+  return workspace?.defaultCurrency ?? schema.DEFAULT_WORKSPACE_CURRENCY;
+}
+
 export function checkActivation(v: VoucherRow, now: Date): RedemptionFailureCode | null {
   if (!v.active) return "voucher_disabled";
   if (v.startDate && v.startDate > now) return "voucher_expired";
@@ -284,13 +292,14 @@ export interface GiftPreview {
 export function previewGiftCard(
   v: VoucherRow,
   order: DiscountOrder | undefined,
+  responseCurrency: string,
 ): GiftPreview | null {
   const balance = v.giftBalance ?? 0;
   if (!order) {
     return {
       spend: 0,
       remainingBalance: balance,
-      finalOrder: { amount: 0, currency: "USD" },
+      finalOrder: { amount: 0, currency: responseCurrency },
       breakdown: [],
     };
   }
@@ -313,12 +322,13 @@ export function previewGiftCard(
 export function previewDiscount(
   v: VoucherRow,
   order: DiscountOrder | undefined,
+  responseCurrency: string,
 ): DiscountResult {
   if (!order) {
     return {
       appliedDiscounts: [],
       breakdown: [],
-      finalOrder: { amount: 0, currency: "USD" },
+      finalOrder: { amount: 0, currency: responseCurrency },
     };
   }
   return calculateDiscount({
@@ -344,15 +354,16 @@ export function previewDiscount(
 export async function validateVoucher(
   voucher: VoucherRow | undefined,
   order: DiscountOrder | undefined,
-  campaign?: RedemptionCampaignRow | null,
+  campaign: RedemptionCampaignRow | null | undefined,
   options: {
     db?: Db | Tx;
     validationRule?: RedemptionValidationRuleRow | null;
     customer?: RedemptionCustomerRow | null;
     customerId?: string;
     customerRefProvided?: boolean;
+    responseCurrency: string;
     now?: Date;
-  } = {},
+  },
 ): Promise<ValidateResult> {
   if (!voucher) {
     return {
@@ -429,7 +440,7 @@ export async function validateVoucher(
   if (ruleFailure) return ruleFailure;
 
   if (voucher.type === "GIFT_CARD") {
-    const gp = previewGiftCard(voucher, order);
+    const gp = previewGiftCard(voucher, order, options.responseCurrency);
     if (!gp) {
       return {
         valid: false,
@@ -444,7 +455,7 @@ export async function validateVoucher(
     };
   }
 
-  const preview = previewDiscount(voucher, order);
+  const preview = previewDiscount(voucher, order, options.responseCurrency);
   const amount = preview.appliedDiscounts.reduce((s, a) => s + a.amount, 0);
   if (order && amount <= 0 && (voucher.customRewards?.length ?? 0) === 0) {
     return {
