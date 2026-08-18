@@ -15,6 +15,10 @@
 - Do not validate or report against a stale checkout without identifying it as stale.
 - Inspect the workflow, package, deployment, or external configuration that actually controls the requested behavior.
 
+## GitHub operations
+
+- Only use the authenticated GitHub CLI (`gh`) for all GitHub repository operations, including reading or creating issues, pull requests, reviews, checks, workflow runs, releases, and repository settings.
+
 ## Feature completeness
 
 For contract or product behavior changes, audit every affected surface:
