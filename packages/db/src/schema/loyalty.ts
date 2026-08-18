@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   index,
   integer,
@@ -6,6 +7,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { campaign } from "./campaign.ts";
@@ -20,7 +22,6 @@ export const loyaltyProgram = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     campaignId: uuid("campaign_id")
       .notNull()
-      .unique()
       .references(() => campaign.id, { onDelete: "cascade" }),
     pointsExpiryDays: integer("points_expiry_days"),
     metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
@@ -28,7 +29,12 @@ export const loyaltyProgram = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("loyalty_program_deleted_at_idx").on(t.deletedAt)],
+  (t) => [
+    index("loyalty_program_deleted_at_idx").on(t.deletedAt),
+    uniqueIndex("loyalty_program_active_campaign_id_unique")
+      .on(t.campaignId)
+      .where(sql`${t.deletedAt} IS NULL`),
+  ],
 );
 
 // Tier earnMultiplier is basis points (10000 = 1.0x). Threshold is the

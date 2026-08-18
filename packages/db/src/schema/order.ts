@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   index,
   integer,
@@ -41,7 +42,9 @@ export const order = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex("order_external_id_idx").on(t.externalId),
+    uniqueIndex("order_external_id_idx")
+      .on(t.externalId)
+      .where(sql`${t.externalId} IS NOT NULL AND ${t.deletedAt} IS NULL`),
     index("order_customer_id_idx").on(t.customerId),
     index("order_created_at_idx").on(t.createdAt),
     index("order_status_idx").on(t.status),

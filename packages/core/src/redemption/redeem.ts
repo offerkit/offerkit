@@ -105,7 +105,12 @@ function redeemImpl(db: Db, input: RedeemInput): Promise<RedeemResult> {
           where: and(eq(schema.campaign.id, voucher.campaignId), isNull(schema.campaign.deletedAt)),
         })) as RedemptionCampaignRow | undefined)
       : undefined;
-    const campaignFailure = checkCampaignActivation(campaign, input.order?.currency, now);
+    const campaignFailure = checkCampaignActivation(
+      campaign,
+      voucher.campaignId,
+      input.order?.currency,
+      now,
+    );
     if (campaignFailure) {
       await tx.insert(schema.redemption).values({
         voucherId: voucher.id,

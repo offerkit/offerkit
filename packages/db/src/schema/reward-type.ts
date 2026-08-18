@@ -1,4 +1,5 @@
-import { index, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { index, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 // Admin-defined reward kinds (FREE_SHIPPING, FREE_BUYER_PROTECTION, etc).
 // The engine emits {type: key, payload: ...} in redemption responses; the
@@ -8,7 +9,7 @@ export const rewardType = pgTable(
   "reward_type",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    key: text("key").notNull().unique(),
+    key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description"),
     activeRevisionId: uuid("active_revision_id"),
@@ -16,7 +17,12 @@ export const rewardType = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("reward_type_deleted_at_idx").on(t.deletedAt)],
+  (t) => [
+    index("reward_type_deleted_at_idx").on(t.deletedAt),
+    uniqueIndex("reward_type_active_key_unique")
+      .on(t.key)
+      .where(sql`${t.deletedAt} IS NULL`),
+  ],
 );
 
 // Append-only history so admin edits don't break running redemptions.
