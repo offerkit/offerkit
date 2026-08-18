@@ -20,11 +20,16 @@ cp .env.example .env
 #   WEBHOOK_SECRET_ENCRYPTION_KEY=… # openssl rand -base64 32
 #   ADMIN_EMAIL=…
 #   ADMIN_PASSWORD=…
-#   OFFERKIT_PUBLIC_URL=http://localhost:3000
 docker compose up -d
 ```
 
 `web` runs migrations before starting Next.js, so a fresh DB is fully migrated on first boot. The `worker` reclaims orphaned jobs on startup and re-seeds the recurring `loyalty.points.expire` sweep if it's missing.
+
+### Access from another device
+
+With `OFFERKIT_PUBLIC_URL` unset, OfferKit derives the exact origin of each authentication request. Open the server's LAN address directly—for example, `http://192.168.1.108:3000`. No origin configuration is needed for direct localhost or LAN access, and cross-site origins remain blocked.
+
+Set `OFFERKIT_PUBLIC_URL` for production deployments, reverse proxies, OAuth clients, or hosted MCP. If a configured deployment should accept authentication from additional browser origins, list their exact origins in the comma-separated `BETTER_AUTH_TRUSTED_ORIGINS` variable. Do not use a broad wildcard or disable Better Auth's origin check.
 
 Pin a release by setting `OFFERKIT_IMAGE_TAG`, for example:
 

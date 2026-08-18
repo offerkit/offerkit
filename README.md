@@ -63,7 +63,7 @@ docker compose up
 
 Visit <http://localhost:3000> and sign in with the `ADMIN_EMAIL` / `ADMIN_PASSWORD` in `.env`. The example defaults work locally; edit them before deploying. The first sign-in forces a password change.
 
-To open OfferKit from another device, set `OFFERKIT_PUBLIC_URL` to the exact origin that device uses before starting Compose—for example, `http://192.168.1.108:3000`. If the same instance must also accept sign-ins through other URLs, add their exact origins to the comma-separated `BETTER_AUTH_TRUSTED_ORIGINS` variable. Run `docker compose up -d --force-recreate web` after changing either value.
+To open OfferKit from another device, browse directly to the server's LAN address—for example, `http://192.168.1.108:3000`. No origin configuration is needed for direct localhost or LAN access. Set `OFFERKIT_PUBLIC_URL` when the deployment has a canonical external URL, reverse proxy, OAuth clients, or hosted MCP. If that configured deployment must also accept authentication from other browser origins, add their exact origins to `BETTER_AUTH_TRUSTED_ORIGINS`.
 
 ## 🏠 Self-Host
 
