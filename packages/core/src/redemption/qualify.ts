@@ -76,6 +76,7 @@ async function qualifyImpl(db: Db, input: QualifyInput): Promise<VoucherQualific
       : undefined;
     const result = await validateVoucher(voucher, input.order, campaign, {
       db,
+      responseCurrency: input.order.currency,
       validationRule,
       customer,
       customerId: resolvedCustomer.customerId,

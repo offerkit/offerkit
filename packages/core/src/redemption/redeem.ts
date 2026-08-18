@@ -10,6 +10,7 @@ import {
   checkCampaignValidationRule,
   checkCustomerBinding,
   checkPerUserRedemptionLimit,
+  getWorkspaceCurrency,
   lockCustomerForPerUserLimits,
   messageFor,
   previewDiscount,
@@ -59,7 +60,12 @@ function redeemImpl(db: Db, input: RedeemInput): Promise<RedeemResult> {
     }
 
     if (input.idempotencyKey) {
-      const replay = await replayRedemption(tx, voucher.id, input.idempotencyKey);
+      const replay = await replayRedemption(
+        tx,
+        voucher.id,
+        input.idempotencyKey,
+        input.order?.currency ?? (await getWorkspaceCurrency(tx)),
+      );
       if (replay) return replay;
     }
 
@@ -222,7 +228,13 @@ function redeemImpl(db: Db, input: RedeemInput): Promise<RedeemResult> {
       return redeemGiftCard(tx, voucher, resolvedInput, now);
     }
 
-    return redeemDiscount(tx, voucher, resolvedInput, now);
+    return redeemDiscount(
+      tx,
+      voucher,
+      resolvedInput,
+      now,
+      input.order?.currency ?? campaign?.currency ?? (await getWorkspaceCurrency(tx)),
+    );
   });
 }
 
@@ -232,6 +244,7 @@ async function replayRedemption(
   tx: Tx,
   voucherId: string,
   idempotencyKey: string,
+  responseCurrency: string,
 ): Promise<RedeemResult | null> {
   const prior = await tx
     .select()
@@ -257,7 +270,7 @@ async function replayRedemption(
       finalOrder:
         (existing.breakdown as { finalOrder?: DiscountResult["finalOrder"] })?.finalOrder ?? {
           amount: 0,
-          currency: "USD",
+          currency: responseCurrency,
         },
       idempotent: true,
     };
@@ -280,7 +293,7 @@ async function redeemGiftCard(
       explanations: [failureExplanation("order_required", voucher)],
     };
   }
-  const gp = previewGiftCard(voucher, input.order);
+  const gp = previewGiftCard(voucher, input.order, input.order.currency);
   if (!gp || gp.spend === 0) {
     return {
       ok: false,
@@ -336,8 +349,9 @@ async function redeemDiscount(
   voucher: VoucherRow,
   input: RedeemInput,
   now: Date,
+  responseCurrency: string,
 ): Promise<RedeemResult> {
-  const preview = previewDiscount(voucher, input.order);
+  const preview = previewDiscount(voucher, input.order, responseCurrency);
   const amount = preview.appliedDiscounts.reduce((s, a) => s + a.amount, 0);
   if (input.order && amount <= 0 && (voucher.customRewards?.length ?? 0) === 0) {
     await tx.insert(schema.redemption).values({

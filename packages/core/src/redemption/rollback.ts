@@ -1,6 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { schema, type Db } from "@offerkit/db";
 import { emitEvent } from "../events/index.ts";
+import { getWorkspaceCurrency } from "./shared.ts";
 import type { RedeemResult, VoucherRow } from "./types.ts";
 
 export async function rollback(db: Db, redemptionId: string): Promise<RedeemResult> {
@@ -74,12 +75,18 @@ export async function rollback(db: Db, redemptionId: string): Promise<RedeemResu
       },
     });
 
+    const storedCurrency = (
+      original.breakdown as { finalOrder?: { currency?: unknown } } | null
+    )?.finalOrder?.currency;
+    const responseCurrency =
+      typeof storedCurrency === "string" ? storedCurrency : await getWorkspaceCurrency(tx);
+
     return {
       ok: true,
       redemptionId: row.id,
       amount: original.amount ?? 0,
       breakdown: [],
-      finalOrder: { amount: 0, currency: "USD" },
+      finalOrder: { amount: 0, currency: responseCurrency },
     };
   });
 }
