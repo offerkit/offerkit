@@ -1,5 +1,16 @@
 # @offerkit/mcp
 
+## 0.3.0
+
+### Minor Changes
+
+- fb9e1b7: Export a transport-independent MCP server builder for the OAuth-protected hosted endpoint.
+
+### Patch Changes
+
+- Updated dependencies [a6f516a]
+  - @offerkit/sdk@0.3.0
+
 ## 0.2.3
 
 ### Patch Changes

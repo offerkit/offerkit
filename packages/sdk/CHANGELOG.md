@@ -1,5 +1,11 @@
 # @offerkit/sdk
 
+## 0.3.0
+
+### Minor Changes
+
+- a6f516a: Expose `customerExternalId` in voucher validation, redemption, qualification, and stacked-redemption inputs, and make `customerId` optional for qualification.
+
 ## 0.2.6
 
 ### Patch Changes
