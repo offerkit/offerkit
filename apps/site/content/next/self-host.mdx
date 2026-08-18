@@ -20,7 +20,6 @@ cp .env.example .env
 #   WEBHOOK_SECRET_ENCRYPTION_KEY=… # openssl rand -base64 32
 #   ADMIN_EMAIL=…
 #   ADMIN_PASSWORD=…
-#   OFFERKIT_PUBLIC_URL=http://localhost:3000
 docker compose up -d
 ```
 
@@ -28,13 +27,15 @@ docker compose up -d
 
 ### Access from another device
 
-Authentication requests must come from the exact origin configured in `OFFERKIT_PUBLIC_URL`. To open OfferKit from another computer on your network, set the public URL in `.env` to the address used in that computer's browser:
+With `OFFERKIT_PUBLIC_URL` unset, OfferKit derives the exact origin of each authentication request. To open OfferKit from another computer on your network, browse directly to the server's address:
 
-```bash
-OFFERKIT_PUBLIC_URL=http://192.168.1.108:3000
+```text
+http://192.168.1.108:3000
 ```
 
-If the same instance should accept sign-ins through additional URLs, list those exact origins as a comma-separated allowlist:
+This is still same-origin validation: a page on another origin cannot authenticate against the server. No broad LAN allowlist or disabled CSRF check is used.
+
+Set `OFFERKIT_PUBLIC_URL` for production deployments, reverse proxies, OAuth clients, or hosted MCP, where OfferKit needs one canonical external origin. If a configured deployment should accept authentication from additional browser origins, list them explicitly:
 
 ```bash
 BETTER_AUTH_TRUSTED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000

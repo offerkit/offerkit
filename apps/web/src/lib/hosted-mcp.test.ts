@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  configuredOfferKitPublicUrl,
   hostedMcpAuthorizationServerUrl,
   hostedMcpResourceMetadataUrl,
   hostedMcpResourceUrl,
@@ -38,5 +39,12 @@ describe("hosted MCP configuration", () => {
       "https://offerkit.example.com/.well-known/oauth-protected-resource/mcp",
     );
     expect(hostedMcpAuthorizationServerUrl()).toBe("https://offerkit.example.com");
+  });
+
+  it("treats a blank public URL as unconfigured", () => {
+    process.env["OFFERKIT_PUBLIC_URL"] = "  ";
+
+    expect(configuredOfferKitPublicUrl()).toBeUndefined();
+    expect(offerKitPublicUrl()).toBe("http://localhost:3000");
   });
 });

@@ -5,6 +5,7 @@ import { oauthProvider } from "@better-auth/oauth-provider";
 import { schema } from "@offerkit/db";
 import { sendEmail } from "@offerkit/core/email";
 import { db } from "./db.ts";
+import { inferredRequestOrigin } from "./auth-origin.ts";
 import {
   HOSTED_MCP_SCOPE,
   hostedMcpResourceUrl,
@@ -23,6 +24,10 @@ function build() {
   return betterAuth({
     baseURL,
     secret,
+    // With no explicit canonical URL, trust only the exact origin serving this
+    // auth request. Cross-site origins remain blocked, while direct localhost
+    // and LAN access work without pre-configuring the machine's IP address.
+    trustedOrigins: inferredRequestOrigin,
     disabledPaths: isHostedMcpEnabled() ? ["/token"] : [],
     database: drizzleAdapter(db(), {
       provider: "pg",

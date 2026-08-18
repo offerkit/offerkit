@@ -5,8 +5,13 @@ export function isHostedMcpEnabled(value = process.env["OFFERKIT_MCP_ENABLED"]):
   return ["1", "true", "yes", "on"].includes(value?.trim().toLowerCase() ?? "");
 }
 
+export function configuredOfferKitPublicUrl(): string | undefined {
+  const value = process.env["OFFERKIT_PUBLIC_URL"]?.trim();
+  return value ? value.replace(/\/$/, "") : undefined;
+}
+
 export function offerKitPublicUrl(): string {
-  return (process.env["OFFERKIT_PUBLIC_URL"] ?? "http://localhost:3000").replace(/\/$/, "");
+  return configuredOfferKitPublicUrl() ?? "http://localhost:3000";
 }
 
 export function hostedMcpResourceUrl(): string {

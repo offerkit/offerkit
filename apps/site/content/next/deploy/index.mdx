@@ -31,14 +31,14 @@ BETTER_AUTH_SECRET=replace-me
 WEBHOOK_SECRET_ENCRYPTION_KEY=replace-me
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=replace-me
-OFFERKIT_PUBLIC_URL=http://localhost:3000
 ```
 
 Generate a webhook encryption key with `openssl rand -base64 32`. Replace every example
 secret before exposing the deployment beyond local development.
 
-The web service runs database migrations on startup. Sign in at the configured public
-URL and change the seeded administrator password when prompted.
+The web service runs database migrations on startup. Sign in at `http://localhost:3000`
+or the server's LAN address and change the seeded administrator password when prompted.
+Set `OFFERKIT_PUBLIC_URL` when the deployment has a canonical external URL.
 
 ## Production topology
 
