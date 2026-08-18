@@ -168,7 +168,7 @@ stdio connection backed by an API key, use the published package instead:
 
 ## 🏗️ Development
 
-Requires Node 26.5.1, pnpm 11.20.0, running Postgres, and Redis.
+Requires Node 26.7.0, pnpm 11.20.0, running Postgres, and Redis.
 
 ```bash
 pnpm install
