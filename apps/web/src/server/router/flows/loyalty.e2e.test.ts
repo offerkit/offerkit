@@ -238,5 +238,11 @@ describe.skipIf(!E2E_ENABLED)("loyalty: enroll → earn → tier → redeem → 
     await expect(client.loyalty.programs.get({ params: { id: program.id } })).rejects.toThrow(
       /not found/i,
     );
+    const recreatedProgram = await client.loyalty.programs.create({
+      campaignId: campaign.id,
+      pointsExpiryDays: 60,
+    });
+    expect(recreatedProgram.id).not.toBe(program.id);
+    expect(recreatedProgram.campaignId).toBe(campaign.id);
   });
 });

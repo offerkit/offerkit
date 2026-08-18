@@ -168,7 +168,12 @@ async function stackRedeemImpl(
         };
       }
       const campaign = v.campaignId ? campaignById.get(v.campaignId) : undefined;
-      const campaignFailure = checkCampaignActivation(campaign, input.order.currency, now);
+      const campaignFailure = checkCampaignActivation(
+        campaign,
+        v.campaignId,
+        input.order.currency,
+        now,
+      );
       if (campaignFailure) {
         return {
           ok: false,

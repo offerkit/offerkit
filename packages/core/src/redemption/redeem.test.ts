@@ -179,6 +179,76 @@ describe.skipIf(!enabled)("redeem (live DB)", () => {
     await db.delete(schema.campaign).where(eq(schema.campaign.id, campaign.id));
   });
 
+  it("fails closed across validation, qualification, and redemption for soft-deleted campaigns", async () => {
+    if (!db) throw new Error("db not initialized");
+    const [customer] = await db
+      .insert(schema.customer)
+      .values({})
+      .returning({ id: schema.customer.id });
+    const [campaign] = await db
+      .insert(schema.campaign)
+      .values({
+        name: "Soft-deleted redemption campaign",
+        type: "DISCOUNT",
+        status: "active",
+        currency: "USD",
+      })
+      .returning({ id: schema.campaign.id });
+    if (!customer || !campaign) throw new Error("soft-delete fixture insert failed");
+
+    const voucherA = await makeVoucher(db, {
+      campaignId: campaign.id,
+      customerId: customer.id,
+    });
+    const voucherB = await makeVoucher(db, {
+      campaignId: campaign.id,
+      customerId: customer.id,
+    });
+    await db
+      .update(schema.campaign)
+      .set({ deletedAt: new Date() })
+      .where(eq(schema.campaign.id, campaign.id));
+
+    const validation = await validate(db, {
+      voucherCode: voucherA.code,
+      customerId: customer.id,
+      order: { amount: 5_000, currency: "USD" },
+    });
+    expect(validation).toMatchObject({ valid: false, code: "campaign_inactive" });
+
+    const qualification = await qualify(db, {
+      customerId: customer.id,
+      order: { amount: 5_000, currency: "USD" },
+      filters: { includeSkipped: true },
+    });
+    expect(qualification.eligible.map((voucher) => voucher.code)).not.toContain(voucherA.code);
+    expect(qualification.skipped).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: voucherA.code, reason: "campaign_inactive" }),
+        expect.objectContaining({ code: voucherB.code, reason: "campaign_inactive" }),
+      ]),
+    );
+
+    const single = await redeem(db, {
+      voucherCode: voucherA.code,
+      customerId: customer.id,
+      order: { amount: 5_000, currency: "USD" },
+    });
+    expect(single).toMatchObject({ ok: false, code: "campaign_inactive" });
+
+    const stacked = await stackRedeem(db, {
+      voucherCodes: [voucherA.code, voucherB.code],
+      customerId: customer.id,
+      order: { amount: 5_000, currency: "USD" },
+    });
+    expect(stacked).toMatchObject({ ok: false, code: "campaign_inactive" });
+
+    await cleanup(db, voucherA.id);
+    await cleanup(db, voucherB.id);
+    await db.delete(schema.campaign).where(eq(schema.campaign.id, campaign.id));
+    await db.delete(schema.customer).where(eq(schema.customer.id, customer.id));
+  });
+
   it("refuses redemption when a discount has no effect", async () => {
     if (!db) throw new Error("db not initialized");
     const v = await makeVoucher(db, { discount: { type: "AMOUNT", amount: 0 } });

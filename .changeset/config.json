@@ -12,7 +12,6 @@
     "@offerkit/contract",
     "@offerkit/core",
     "@offerkit/db",
-    "@offerkit/ui",
     "@offerkit/web",
     "@offerkit/worker"
   ]

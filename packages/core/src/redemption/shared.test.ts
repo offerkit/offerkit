@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { previewDiscount, previewGiftCard } from "./shared.ts";
+import { checkCampaignActivation, previewDiscount, previewGiftCard } from "./shared.ts";
 import type { VoucherRow } from "./types.ts";
 
 const voucher: VoucherRow = {
@@ -22,6 +22,23 @@ const voucher: VoucherRow = {
   deletedAt: null,
   createdAt: new Date("2025-01-01T00:00:00.000Z"),
 };
+
+describe("campaign activation", () => {
+  it("fails closed when a voucher references a campaign that was not loaded", () => {
+    expect(
+      checkCampaignActivation(
+        undefined,
+        "00000000-0000-4000-8000-000000000001",
+        "USD",
+        new Date(),
+      ),
+    ).toBe("campaign_inactive");
+  });
+
+  it("allows vouchers that do not belong to a campaign", () => {
+    expect(checkCampaignActivation(undefined, null, "USD", new Date())).toBeNull();
+  });
+});
 
 describe("orderless redemption previews", () => {
   it("uses the supplied workspace currency for discounts", () => {
