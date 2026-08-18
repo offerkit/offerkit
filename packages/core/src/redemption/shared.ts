@@ -192,10 +192,11 @@ async function countNetSuccessfulRedemptions(
 
 export function checkCampaignActivation(
   campaign: RedemptionCampaignRow | null | undefined,
+  campaignId: string | null,
   orderCurrency: string | undefined,
   now: Date,
 ): RedemptionFailureCode | null {
-  if (!campaign) return null;
+  if (!campaign) return campaignId ? "campaign_inactive" : null;
   if (campaign.deletedAt || campaign.status !== "active") return "campaign_inactive";
   if (campaign.startDate && campaign.startDate > now) return "campaign_inactive";
   if (campaign.endDate && campaign.endDate < now) return "campaign_inactive";
@@ -408,7 +409,12 @@ export async function validateVoucher(
     };
   }
 
-  const campaignFailure = checkCampaignActivation(campaign, order?.currency, now);
+  const campaignFailure = checkCampaignActivation(
+    campaign,
+    voucher.campaignId,
+    order?.currency,
+    now,
+  );
   if (campaignFailure) {
     return {
       valid: false,

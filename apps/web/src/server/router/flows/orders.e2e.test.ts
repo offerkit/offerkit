@@ -122,5 +122,14 @@ describe.skipIf(!E2E_ENABLED)("orders CRUD + lifecycle + redemption attachment",
     await expect(client.orders.get({ params: { id: order.id } })).rejects.toThrow(
       /not found/i,
     );
+
+    const recreated = await client.orders.create({
+      externalId,
+      items: [{ name: "replacement service", quantity: 1, unitPrice: 3_000 }],
+      amount: 3_000,
+      currency: "USD",
+    });
+    expect(recreated.id).not.toBe(order.id);
+    expect(recreated.externalId).toBe(externalId);
   });
 });
