@@ -1,0 +1,4 @@
+interface:
+  display_name: "OfferKit Image Release"
+  short_description: "Publish and verify OfferKit Docker images"
+  default_prompt: "Use $offerkit-image-release to publish and verify an OfferKit Docker image release."
