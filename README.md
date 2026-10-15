@@ -240,6 +240,16 @@ The public website is at <https://offerkit.dev>, with documentation at <https://
 
 No CLA required.
 
+## ⭐ Star History
+
+<a href="https://www.star-history.com/#offerkit/offerkit&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=offerkit/offerkit&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=offerkit/offerkit&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=offerkit/offerkit&type=Date" />
+  </picture>
+</a>
+
 ## 📄 License
 
 [MIT](./LICENSE)
