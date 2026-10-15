@@ -71,7 +71,7 @@ describe("createRedisJobQueue", () => {
   it("dedupes scheduled jobs by type", async () => {
     FakeQueue.calls = [];
     FakeQueue.jobs.clear();
-    FakeQueue.jobs.set("scheduled:loyalty.points.expire", { id: "scheduled:loyalty.points.expire" });
+    FakeQueue.jobs.set("scheduled-loyalty.points.expire", { id: "scheduled-loyalty.points.expire" });
 
     const queue = createRedisJobQueue({
       redisUrl: "redis://localhost:6379",
