@@ -30,13 +30,17 @@ Deployments without webhooks can omit it.
 
 ### Access from another device
 
-With `OFFERKIT_PUBLIC_URL` unset, OfferKit derives the exact origin of each authentication request. To open OfferKit from another computer on your network, browse directly to the server's address:
+With `OFFERKIT_PUBLIC_URL` unset, OfferKit trusts the exact origin the browser connected to, taken from the request's `Host` header. To open OfferKit from another computer on your network, browse directly to the server's address:
 
 ```text
 http://192.168.1.108:3000
 ```
 
 This is still same-origin validation: a page on another origin cannot authenticate against the server. No broad LAN allowlist or disabled CSRF check is used.
+
+Behind a TLS-terminating reverse proxy that preserves `Host`, OfferKit uses `X-Forwarded-Proto` for the scheme. `X-Forwarded-Host` is never trusted. If your proxy rewrites `Host`, set `OFFERKIT_PUBLIC_URL`.
+
+OfferKit `v0.2.0` images only trust `localhost` when `OFFERKIT_PUBLIC_URL` is unset, so LAN and `127.0.0.1` sign-ins fail with **Invalid origin**. On that release, list the address explicitly, for example `BETTER_AUTH_TRUSTED_ORIGINS=http://192.168.1.108:3000`.
 
 Set `OFFERKIT_PUBLIC_URL` for production deployments, reverse proxies, OAuth clients, or hosted MCP, where OfferKit needs one canonical external origin. If a configured deployment should accept authentication from additional browser origins, list them explicitly:
 
