@@ -1,11 +1,22 @@
+import { EventEmitter } from "node:events";
 import { Job, Queue } from "bullmq";
-import IORedis from "ioredis";
 import { afterEach, describe, expect, it } from "vitest";
 import { createRedisJobQueue, type JobQueueAdapter } from "./index.ts";
 
-// Real BullMQ Queue/Job classes with a lazy, never-connected Redis client, so
-// BullMQ's own queue name and custom job id validation runs without a server.
+// Real BullMQ Queue/Job classes with a connection double that never touches the
+// network, so BullMQ's own queue name and custom job id validation runs without
+// a Redis server.
 const added: Array<{ name: string; opts: Record<string, unknown> }> = [];
+
+class OfflineConnection extends EventEmitter {
+  readonly client = new Promise<never>(() => {});
+  close() {
+    return Promise.resolve();
+  }
+  disconnect() {
+    return Promise.resolve();
+  }
+}
 
 class ValidatingJob extends Job {
   validate(data: unknown) {
@@ -16,7 +27,7 @@ class ValidatingJob extends Job {
 class ValidatingQueue extends Queue {
   constructor(name: string, options: Record<string, unknown>) {
     (options.connection as { disconnect?: () => void }).disconnect?.();
-    super(name, { ...options, connection: new IORedis({ lazyConnect: true, maxRetriesPerRequest: null }) });
+    super(name, { connection: {} }, OfflineConnection as never);
   }
 
   override add(name: string, data: unknown, opts: Record<string, unknown> = {}) {
