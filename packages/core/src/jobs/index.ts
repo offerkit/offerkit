@@ -5,7 +5,7 @@ import { and, eq, isNull, lte, or, sql } from "drizzle-orm";
 import { logger } from "../observability/index.ts";
 
 const log = logger.child({ component: "jobs" });
-const DEFAULT_QUEUE_NAME = "offerkit:jobs";
+const DEFAULT_QUEUE_NAME = "offerkit-jobs";
 
 export interface JobContext {
   jobId: string;
@@ -105,7 +105,7 @@ export function createRedisJobQueue(options: RedisJobQueueOptions): JobQueueAdap
     },
 
     async ensureScheduled(type, runAt, payload = {}) {
-      const jobId = `scheduled:${type}`;
+      const jobId = `scheduled-${type}`;
       const existing = await queue.getJob(jobId);
       if (existing) return;
       await queue.add(type, payload, {
