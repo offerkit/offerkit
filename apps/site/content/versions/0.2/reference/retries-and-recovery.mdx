@@ -1,0 +1,126 @@
+---
+title: Retries, refunds, and recovery
+description: Know which calls prevent duplicates and how to handle an uncertain or partially completed purchase.
+---
+
+A timeout means your server did not receive an answer. It does not prove that OfferKit
+did nothing. Keep the original request and identifiers so you can find or replay its
+outcome without inventing a second purchase.
+
+## Choose the right identifier
+
+| Operation or mechanism | Identifier | Replay behavior |
+| --- | --- | --- |
+| Single voucher redemption | Body `idempotencyKey`, scoped to the voucher | Returns a recorded redemption outcome, including recorded failures; changing the body is not a reliable conflict check. |
+| Stack redemption | Body `idempotencyKey`, used to find the stored batch | Returns the recorded batch. Keep keys unique per logical stack and keep its original input. |
+| Referral conversion | `conversionEventId`, scoped to the advocate code | Returns the stored conversion and both recorded outcomes. The same friend cannot convert the same advocate code a second time. |
+| Loyalty earning | `eventId` | Records the source event for reconciliation. It does not deduplicate earning. |
+| Loyalty reward redemption or adjustment | No body replay key | Repeating the call can spend or adjust points again. |
+| HTTP mutation middleware | `Idempotency-Key` header, scoped to the SDK procedure path | Caches the result for 24 hours; a different request body with the same key returns HTTP 409. |
+| Webhook handler in your application | OfferKit event `id` | Your handler must store and deduplicate it. Manual replay uses the same event ID. |
+
+Use names such as `order-42:vouchers`, `order-42:gift`, and `order-42:loyalty` for separate
+actions on one order. Reuse each action's key on every attempt. Do not generate keys per
+button click or per delivery attempt.
+
+A recorded business rejection can be replayed too. Correcting a campaign does not
+necessarily change the result returned for the old key. Treat a deliberate attempt after
+correction as a new action only after confirming that the earlier attempt consumed no
+value. Keep the old request and its failure for reconciliation.
+
+The HTTP header and the operation's body field are different mechanisms. A body
+`idempotencyKey` does not enable the middleware's request-body comparison. The SDK can
+send a header through a custom fetch implementation:
+
+```ts
+import { createClient } from "@offerkit/sdk";
+
+const offerkit = createClient({
+  baseUrl: process.env.OFFERKIT_API_URL!,
+  apiKey: process.env.OFFERKIT_API_KEY!,
+  fetch: (input, init) => {
+    const request = new Request(input, init);
+    const headers = new Headers(request.headers);
+    headers.set("Idempotency-Key", "order-42:loyalty");
+    return fetch(new Request(request, { headers }));
+  },
+});
+
+// This client is scoped to this one logical earning operation.
+const earned = await offerkit.loyalty.members.earn({
+  memberId,
+  basePoints: 50,
+  eventId: "order-42",
+});
+```
+
+Do not reuse this fixed-key client for unrelated requests. Keep a durable record in your
+application for retries beyond the 24-hour header window. If a loyalty call times out
+and you have no protected replay available, inspect the member history before resending.
+Look for the original `eventId` or transaction and reconcile ambiguous matches manually.
+
+## One paid order, several actions
+
+Treat each action as a separate step in your order-processing record:
+
+| Step | Save with your order | If it fails |
+| --- | --- | --- |
+| Redeem discount voucher(s) | Original input, key, redemption or batch ID, applied amount | Retry the same operation with its original key after checking the outcome. |
+| Spend gift value | Voucher code, original amount, key, redemption ID | Reconcile remaining payment against the actual gift spend. |
+| Award loyalty points | Member ID, source event ID, transaction ID | Use a protected replay or inspect history before another earning call. |
+| Convert referral | Advocate code, source event ID, conversion ID, both outcomes | Check the failure and any issued rewards before retrying. |
+| Deliver rewards | Outcome IDs and delivery state | Retry delivery; do not rerun the purchase or mint a replacement blindly. |
+
+For example, voucher redemption may succeed while awarding points fails. Keep the order's
+voucher step complete and resume the loyalty step. Replaying every call from the start
+can duplicate actions that have no body-level deduplication.
+
+OfferKit does not wrap payment capture, voucher redemption, earning, conversion, and
+your messaging system in one transaction. Your application must record progress between
+them. A durable queue or outbox lets work resume after a process restart.
+
+## Referral failures need inspection
+
+The conversion implementation issues the advocate's reward before the friend's reward.
+If the second reward returns a business failure, the transaction callback returns an
+error result rather than throwing. The earlier reward can therefore remain without a
+completed conversion record. A missing loyalty membership is one possible trigger.
+
+Enroll recipients and check reward configuration before conversion. On a failed
+conversion, inspect the advocate's assigned vouchers or loyalty history before retrying.
+An event ID only replays a completed conversion; it cannot deduplicate an earlier reward
+that has no conversion row. Until that failure path is resolved, do not treat `ok: false`
+as proof that neither side received anything.
+
+## Refunds and canceled orders
+
+Canceling an OfferKit order changes its status. It does not refund a payment, restore a
+gift-card balance, reverse voucher use, remove referral rewards, or undo loyalty earning.
+
+The codebase has internal voucher and loyalty rollback functions, but the public API,
+SDK, CLI, MCP, and dashboard do not expose a rollback action. A rollback event or ledger
+reason describes an internal record; it is not an available command.
+
+For loyalty balance corrections, use the public adjustment operation with a clear note:
+
+```ts
+await offerkit.loyalty.members.adjust({
+  memberId,
+  delta: -50,
+  note: "Refund of order-42; reverse 50 spendable points",
+});
+```
+
+An adjustment does not reverse the original earning row or reduce lifetime points. It
+is not a substitute for a tier rollback. Reconcile future expiry of that earning entry
+as well; otherwise the balance can be reduced again when it expires.
+
+There is no public ledger-preserving gift-card adjustment or voucher-rollback endpoint.
+If a customer is owed value, record a support case and issue a separately tracked
+replacement voucher or refund through your commerce system. Disable a compromised or
+incorrect voucher when appropriate. Do not overwrite `giftBalance` and assume that the
+transaction ledger has been corrected.
+
+For a loyalty reward whose fulfillment failed, keep the original transaction ID and
+retry the fulfillment step. If you return points by adjustment instead, record that
+decision and ensure the original fulfillment cannot later run as well.

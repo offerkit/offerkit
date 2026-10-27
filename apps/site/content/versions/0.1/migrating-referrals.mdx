@@ -12,7 +12,7 @@ This guide walks the import end-to-end. It's intentionally explicit about *what 
 
 ## Decide what you're preserving
 
-OfferKit needs three things for each historical record:
+Map these fields for each historical record:
 
 | Your data | OfferKit field | Notes |
 | --- | --- | --- |
@@ -22,7 +22,7 @@ OfferKit needs three things for each historical record:
 | Original event id | `referral_conversion.conversion_event_id` | Optional but **strongly recommended** — your old order id is the cleanest dedupe key. |
 | Issued voucher code(s) | `referral_conversion.referrer_outcome.voucherCode` / `referee_outcome.voucherCode` | Only if you still want them to honor the original vouchers (see [Step 4](#step-4-decide-what-to-do-with-historical-vouchers)). |
 
-Things you **don't** need to import: original conversion timestamps (OfferKit uses `created_at = now()` unless you override), the running program total, or analytics aggregates (OfferKit derives those).
+Preserve original conversion and creation timestamps. Program totals and analytics aggregates do not need a separate import. Create the destination referral campaign and program first; `program_id` is the program UUID. Prepare the `legacy_referral` and `legacy_conversion` staging tables used below, back up the database, and rehearse the import.
 
 ## Step 1: import customers
 
@@ -126,7 +126,7 @@ JOIN referral_code rc    ON rc.referrer_customer_id = c_referrer.id
 ON CONFLICT (code_id, referee_customer_id) DO NOTHING;
 ```
 
-The `(code_id, referee_customer_id)` unique constraint blocks duplicate inserts; the partial unique on `(code_id, conversion_event_id) WHERE conversion_event_id IS NOT NULL` blocks duplicate event-id replays. Together they make the importer safely re-runnable.
+The `(code_id, referee_customer_id)` unique constraint blocks duplicate inserts; the partial unique on `(code_id, conversion_event_id) WHERE conversion_event_id IS NOT NULL` blocks duplicate event-id replays. The shown `ON CONFLICT` handles a repeated code/customer pair, not a different customer reusing an event ID. Validate those conflicts before importing.
 
 ## Step 4: decide what to do with historical vouchers
 

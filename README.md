@@ -37,18 +37,24 @@ OfferKit is open-source promotion infrastructure for coupons, gift cards, loyalt
 
 ## ✨ Features
 
-- 🎟️ Discount engine — fixed-amount, percentage, with optional caps, scoped to products or collections
+- 🎟️ Discount engine — fixed-amount, percentage, with optional caps, with product and collection eligibility rules; calculation uses the submitted order total
 - 🧾 Stackable redemptions — apply N codes to one order atomically, all-or-nothing
-- 💳 Gift cards — full ledger, partial spend, atomic rollback
-- 🏆 Loyalty — programs, tiers, earning rules, points ledger, expiration
-- 👥 Referrals — `{PREFIX}-{code}` codes, dual-reward conversions
-- 🧩 Customer segments — JSON Logic rules with live preview
-- ✅ Validation rules — debuggable, traceable; tested on every redemption
+- 💳 Gift cards — balance ledger and spend up to the order amount
+- 🏆 Loyalty — tiers, points ledger, per-earning expiry; earning rules are reporting labels
+- 👥 Referrals — stable advocate codes; rewards for both the advocate and the friend
+- 🧩 Customer segments — JSON Logic audience previews; runtime targeting uses attached rules
+- ✅ Validation rules — attach to campaigns or promotion tiers and check each decision
 - ⚙️ Background jobs — Redis/BullMQ by default, with a Postgres fallback when Redis is not configured
 - 🔭 Observability — OpenTelemetry traces, metrics, logs out of the box
-- 🔐 Audit log — every mutation with actor, before/after, IP, user agent
+- 🔐 Audit log — mutation requests with actor, submitted input, IP, and user agent
 - 🤖 MCP server — declaratively-exposed tools with risk-level metadata
 - 📜 MIT — first-party packages throughout the monorepo
+
+New to promotion engines? Start with [How OfferKit works](https://offerkit.dev/docs/how-offerkit-works/)
+and [How objects connect](https://offerkit.dev/docs/reference/relationships/). A campaign
+groups the offer, a voucher is a discount or gift-value code, loyalty tracks points, and
+referrals link an advocate to the friend they invite. The [glossary](https://offerkit.dev/docs/reference/glossary/)
+explains the terms used below.
 
 ## 🚀 Quick Start
 
@@ -63,7 +69,7 @@ docker compose up
 
 Visit <http://localhost:3000> and sign in with the `ADMIN_EMAIL` / `ADMIN_PASSWORD` in `.env`. The example defaults work locally; edit them before deploying. The first sign-in forces a password change.
 
-To open OfferKit from another device, browse directly to the server's LAN address—for example, `http://192.168.1.108:3000`. No origin configuration is needed for direct localhost or LAN access. Set `OFFERKIT_PUBLIC_URL` when the deployment has a canonical external URL, reverse proxy, OAuth clients, or hosted MCP. If that configured deployment must also accept authentication from other browser origins, add their exact origins to `BETTER_AUTH_TRUSTED_ORIGINS`.
+To open OfferKit from another device, browse directly to the server's LAN address—for example, `http://192.168.1.108:3000`. Current source needs no origin configuration for direct localhost or LAN access. The published `v0.2.0` image requires an explicit LAN origin in `BETTER_AUTH_TRUSTED_ORIGINS`; see the [version-specific setup note](https://offerkit.dev/docs/self-host/#access-from-another-device). Set `OFFERKIT_PUBLIC_URL` when the deployment has a canonical external URL, reverse proxy, OAuth clients, or hosted MCP. If that configured deployment must also accept authentication from other browser origins, add their exact origins to `BETTER_AUTH_TRUSTED_ORIGINS`.
 
 ## 🏠 Self-Host
 
@@ -75,19 +81,19 @@ Image channels:
 
 - `edge` follows the latest `main` commit.
 - `latest` follows the newest stable image version.
-- Version tags are published as both `v0.1.0` and `0.1.0`.
+- Version tags are published as both `v0.2.0` and `0.2.0`.
 
 ### Railway
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/offerkit?referralCode=IxSuAK)
 
-In one Railway project, create Postgres and Redis, then create two Docker Image services from `ghcr.io/offerkit/offerkit:latest`. `latest` is fine for evaluation; production deployments should pin a release tag such as `ghcr.io/offerkit/offerkit:v0.1.0`. The public `web` service uses the default command. The private `worker` service overrides the command to `node apps/worker/dist/index.js` and should not have a public domain. Reference Postgres's `DATABASE_URL` and Redis's `REDIS_URL` into both app services. Set `BETTER_AUTH_SECRET`, `OFFERKIT_PUBLIC_URL`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` on the `web` service. Set the same `WEBHOOK_SECRET_ENCRYPTION_KEY` (generate one with `openssl rand -base64 32`) on both services.
+In one Railway project, create Postgres and Redis, then create two Docker Image services from `ghcr.io/offerkit/offerkit:latest`. `latest` is fine for evaluation; production deployments should pin a release tag such as `ghcr.io/offerkit/offerkit:v0.2.0`. The public `web` service uses the default command. The private `worker` service overrides the command to `node apps/worker/dist/index.js` and should not have a public domain. Reference Postgres's `DATABASE_URL` and Redis's `REDIS_URL` into both app services. Set `BETTER_AUTH_SECRET`, `OFFERKIT_PUBLIC_URL`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` on the `web` service. Set the same `WEBHOOK_SECRET_ENCRYPTION_KEY` (generate one with `openssl rand -base64 32`) on both services.
 
 ### Diploi
 
 [![Launch with Diploi](https://diploi.com/launch-big.svg)](https://diploi.com/launch/akshitkrnagpal/offerkit)
 
-Create one Diploi project with a public `web` component, a private `worker` component, Postgres, and Redis. Use the same published image, `ghcr.io/offerkit/offerkit:latest`, for both components. `latest` is fine for evaluation; production deployments should pin a release tag such as `ghcr.io/offerkit/offerkit:v0.1.0`. The worker command is `node apps/worker/dist/index.js`. Wire Postgres's `DATABASE_URL` and Redis's `REDIS_URL` into both components. Set `BETTER_AUTH_SECRET`, `OFFERKIT_PUBLIC_URL`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` on `web`; set `WORKER_HEALTH_PORT=9091` on `worker`. Set the same `WEBHOOK_SECRET_ENCRYPTION_KEY` on both components.
+Create one Diploi project with a public `web` component, a private `worker` component, Postgres, and Redis. Use the same published image, `ghcr.io/offerkit/offerkit:latest`, for both components. `latest` is fine for evaluation; production deployments should pin a release tag such as `ghcr.io/offerkit/offerkit:v0.2.0`. The worker command is `node apps/worker/dist/index.js`. Wire Postgres's `DATABASE_URL` and Redis's `REDIS_URL` into both components. Set `BETTER_AUTH_SECRET`, `OFFERKIT_PUBLIC_URL`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` on `web`; set `WORKER_HEALTH_PORT=9091` on `worker`. Set the same `WEBHOOK_SECRET_ENCRYPTION_KEY` on both components.
 
 ## 📦 SDK, CLI, MCP
 
@@ -165,6 +171,12 @@ stdio connection backed by an API key, use the published package instead:
   }
 }
 ```
+
+SDK and CLI amounts use integer minor units: `9999` USD is USD 99.99. Percentages use
+basis points (`1000` means 10%). Dashboard discount fields accept display values instead.
+Check `validation.valid` and `redemption.ok` before using their success fields. Keep
+credentials on your server. See [retries and recovery](https://offerkit.dev/docs/reference/retries-and-recovery/)
+for the guarantees of each operation and the limits of refund/rollback support.
 
 ## 🏗️ Development
 

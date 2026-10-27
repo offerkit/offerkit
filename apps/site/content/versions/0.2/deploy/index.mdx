@@ -104,3 +104,38 @@ Set `OTEL_SDK_DISABLED=true` to disable telemetry.
 
 The detailed Docker Compose, Railway, and Diploi variable and service instructions are
 available in the [self-hosting reference](/self-host).
+
+## What runs where
+
+The web service receives browser and API requests. The worker consumes queued work such
+as webhook deliveries, large code batches, and daily point-expiry sweeps. Stopping the
+worker does not stop the API; it delays that work.
+
+Postgres stores customers, configuration, transactions, and ledgers. Redis holds the
+normal BullMQ job queue. Redis is optional in the job implementation: if `REDIS_URL` is
+unset on both web and worker, jobs use Postgres instead. This is a configuration choice,
+not automatic failover when a configured Redis server becomes unreachable. The supplied
+Compose file starts Redis and sets its URL explicitly.
+
+Inside Compose, `postgres` and `redis` are service hostnames. A Node process running on
+your laptop instead uses `localhost` and the published ports. The `.env.example` URLs
+are for that host process; Compose supplies its own internal database and Redis URLs.
+
+A **liveness** check asks whether a process is running. A **readiness** check asks whether
+it can serve traffic with its dependencies. Point web traffic health checks at
+`/api/v1/ready`, and check the worker separately at `:9091/health`.
+
+## Keep the secrets separate
+
+| Secret | Purpose | Where it belongs |
+| --- | --- | --- |
+| `BETTER_AUTH_SECRET` | Signs staff authentication sessions | Web service |
+| OfferKit API key | Authorizes your application or a local agent | Calling server or local MCP environment |
+| Webhook signing secret (`whsec_…`) | Lets your receiver verify one subscription's deliveries | Your webhook receiver |
+| `WEBHOOK_SECRET_ENCRYPTION_KEY` | Encrypts those signing secrets in the database | Same stable value on web and worker |
+| `ADMIN_PASSWORD` | Seeds the first staff account on an empty database | Initial web setup; changing it later does not reset an existing account |
+
+Back up the webhook encryption key with the database. Changing it does not rotate
+subscriptions; it makes existing ciphertext unreadable. To change a subscription's
+signing secret, create a replacement subscription and follow the
+[receiver rotation procedure](/integrate/webhooks#rotate-a-signing-secret).

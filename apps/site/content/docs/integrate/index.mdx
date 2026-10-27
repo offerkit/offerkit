@@ -107,7 +107,7 @@ operational incident.
 - Customer and order ID mappings are documented.
 - Money is sent as integer minor units and percentage values as basis points.
 - Validation and commit use equivalent customer and cart context.
-- Every mutation has a stable retry strategy.
+- Every mutation has a retry strategy matched to its guarantees; loyalty event IDs alone do not prevent duplicates.
 - Webhook signatures are verified against the raw request body.
 - Success, rejection, concurrency, and replay cases are tested.
 - Support can find a decision using customer, code, order, or event IDs.

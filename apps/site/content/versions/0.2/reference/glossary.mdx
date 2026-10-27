@@ -1,81 +1,158 @@
 ---
 title: Glossary and data conventions
-description: Plain-language definitions for OfferKit objects, decisions, identifiers, money, dates, and ledgers.
+description: Plain-language definitions for OfferKit objects, decisions, people, identifiers, money, dates, and ledgers, including words that mean different things in different places.
 ---
 
 ## Product terms
 
 **Offer**<br />
-The plain-language umbrella used in these docs for any customer benefit. It is not an API resource.
+The everyday word these docs use for any customer benefit. It is not an API resource.
 
 **Campaign**<br />
-The common lifecycle and configuration container for a discount, gift-voucher,
-automatic-promotion, loyalty, or referral initiative.
+The container for a discount, gift-voucher, promotion, loyalty, or referral initiative.
+It holds the name, currency, timezone, status, dates, code defaults, and optional
+validation rule. Vouchers and promotion tiers obey the campaign's status and dates.
+Loyalty and referral program operations do not. See
+[How OfferKit works](/how-offerkit-works#campaign).
 
 **Voucher**<br />
-A human-entered or distributed code. It represents either a discount or gift-card balance.
+A code a customer types in or receives. It holds either a discount or a gift-card balance.
 
 **Promotion tier**<br />
-A code-free discount effect with its own eligibility, dates, priority, and exclusivity.
-It belongs to a promotion campaign.
+A discount that applies without a code. It belongs to a promotion campaign and has its own
+conditions, dates, priority, and exclusivity.
 
 **Loyalty program**<br />
-The type-specific configuration attached to a loyalty campaign: tiers, earning rules,
-rewards, members, and point ledgers.
+The loyalty-specific configuration attached to a `LOYALTY_PROGRAM` campaign: tiers,
+earning rules, rewards, members, and the points ledger. A campaign can have at most one loyalty
+program that is not deleted.
 
 **Referral program**<br />
-The type-specific configuration attached to a referral campaign: rewards for each side,
-advocate codes, and conversions.
+The referral-specific configuration attached to a `REFERRAL_PROGRAM` campaign: the reward
+for each side, advocate codes, and conversions. A campaign can have at most one referral program
+that is not deleted.
+
+**Member**<br />
+A customer's enrollment in one loyalty program. It holds the spendable balance, lifetime
+points, and current tier. A customer has at most one membership per program.
 
 **Customer**<br />
-The OfferKit representation of a user who can hold vouchers, redeem, join loyalty, refer,
-or be referred. `externalId` should usually contain the application's stable user ID.
+OfferKit's record of one of your users. `externalId` should hold your application's stable
+user ID.
 
 **Order**<br />
-An optional stored transaction record that can be connected to customer and redemption
-history. Runtime decision calls can also use inline order context without storing an order.
+An optional stored transaction that links a customer to redemption history. Decision calls
+can use inline order details instead.
 
 **Segment**<br />
-A reusable audience rule with preview count and sample. A segment preview does not by
-itself attach membership to a live campaign decision.
+A saved customer rule with a preview count and sample. Segments are not linked to
+campaigns, and live decisions do not check segment membership.
 
 **Validation rule**<br />
-A JSON Logic condition evaluated against available customer, order, voucher, date, and
-metadata context.
+A JSON Logic condition OfferKit evaluates against the customer, order, date, and request
+details it has at decision time. Campaigns and promotion tiers use them. See
+[Rules reference](/reference/rules).
 
 **Reward type**<br />
-A schema for a custom benefit that the integrating application fulfills.
+A named kind of custom benefit, such as `FREE_SHIPPING`, that your application delivers.
+OfferKit stores its payload schema for your reference but does not validate payloads
+against it.
+
+## People in a referral
+
+**Advocate** and **referrer** mean the same person: the existing customer who owns a
+referral code and shares it. The dashboard and the API field names use *referrer*
+(`referrerCustomerId`, `referrerReward`).
+
+**Referee** and **friend** mean the same person: the customer who uses an advocate's code.
+The API uses *referee* (`refereeCustomerId`, `refereeReward`).
+
+## Words that mean more than one thing
+
+**Rule**<br />
+A *validation rule* is evaluated at decision time. A loyalty *earning rule* is a
+descriptive record (name, event, formula, optional validation rule ID) that you can attach
+to a points entry for reporting. OfferKit never evaluates an earning rule and never
+calculates points from its formula.
+
+**Reward**<br />
+- A *loyalty reward* is something a member buys with points. Buying it returns a payload
+  and deducts points. It does not create a voucher.
+- A *referral reward* is what each side receives on conversion. Discount and gift-card
+  referral rewards do create vouchers.
+- A *custom reward* is a `{ typeKey, payload }` entry on a voucher or promotion tier that
+  your application delivers.
+- A *reward type* is the named definition behind a custom reward.
+
+**Tier**<br />
+A *loyalty tier* is a status level based on lifetime points. A *promotion tier* is a
+code-free discount inside a promotion campaign. They are unrelated.
+
+**Redeem**<br />
+Redeeming a *voucher* commits a discount or gift-card spend against an order. Redeeming a
+*loyalty reward* spends points. These are separate endpoints with separate retry behavior.
+
+**Qualify**<br />
+*Voucher qualification* lists vouchers assigned to a customer that fit the cart. *Promotion
+qualification* lists automatic promotions that fit the cart. They accept different
+customer identifiers and see different data. See
+[Target customers with rules](/solutions/targeting#what-each-decision-can-see).
+
+**Metadata**<br />
+In a rule, `metadata.*` means request metadata sent with promotion qualification, and
+`customer.metadata.*` means metadata stored on the customer. Metadata stored on a
+campaign, voucher, tier, or program is for your own bookkeeping and is not visible to
+rules.
+
+**Active**<br />
+Campaigns have a `status` (`draft`, `active`, `paused`, `ended`). Vouchers and promotion
+tiers have a boolean `active`. Earning rules have `active: "yes" | "no"`, which is stored
+but has no effect on earning.
+
+**Balance and lifetime points**<br />
+`balance` is what a member can spend right now. `lifetimePoints` only goes up through
+earning and is what tiers are based on. Spending, expiry, and negative adjustments lower
+the balance but leave lifetime points alone.
 
 ## Decision terms
 
-**Qualification**<br />
-Read-only discovery of which customer-held vouchers or automatic promotions apply to the
-current context.
-
 **Validation**<br />
-A read-only check of a known voucher code that returns a preview or explanations.
+A check of one known voucher code that returns a preview or reasons it does not apply. It
+writes nothing.
+
+**Qualification**<br />
+Discovery of vouchers or promotions that fit the current cart. It consumes nothing.
+Voucher qualification does create a customer record for an unknown `customerExternalId`.
 
 **Redemption**<br />
-A committed voucher use that updates counters or gift balance and records activity.
+A committed voucher use that updates counters or gift-card balance and records the
+redemption.
 
 **Stack redemption**<br />
-An atomic redemption of several discount vouchers against one order.
+One all-or-nothing redemption of several vouchers against one order.
 
 **Referral conversion**<br />
-A committed successful referral event that records the friend and issues both rewards.
+The committed event that records a friend's successful referral and issues the reward for
+both sides.
 
 **Loyalty earning**<br />
-A committed positive point-ledger entry initiated by the integrating application.
+A positive points entry your application creates. Your application decides how many base
+points the event is worth.
+
+**Adjustment**<br />
+A manual points correction. Positive adjustments add to the balance without the tier
+multiplier and without touching lifetime points. Negative adjustments subtract from the
+balance.
 
 **Ledger**<br />
-An append-oriented history used to explain gift-card balance or loyalty points. The
-current balance is authoritative; ledger entries explain how it changed.
+The history that explains a gift-card balance or a loyalty balance. The balance stored on
+the voucher or member is what OfferKit checks; the ledger explains how it got there.
 
 ## Data conventions
 
 ### Money
 
-Money is an integer in the currency's minor unit. For currencies with two decimal places:
+Money is an integer in the currency's minor unit. For a currency with two decimal places:
 
 | Integer | Display value |
 | ---: | ---: |
@@ -83,7 +160,21 @@ Money is an integer in the currency's minor unit. For currencies with two decima
 | `100` | 1.00 |
 | `1000` | 10.00 |
 
-Use the currency's actual minor-unit rules rather than assuming every currency has two decimals.
+Some currencies have zero or three decimal places, so format amounts with the currency's
+real minor-unit rules. For example:
+
+| Currency | Integer | Display value |
+| --- | ---: | ---: |
+| JPY (zero decimals) | `1000` | JPY 1,000 |
+| USD (two decimals) | `1000` | USD 10.00 |
+| KWD (three decimals) | `1000` | KWD 1.000 |
+
+Fields named `creditCents` follow the same rule despite the name:
+the value is in the minor unit of the campaign's currency.
+
+A campaign has one currency. Orders in another currency fail with `currency_mismatch`.
+The dashboard fills in the workspace currency when you create a campaign; the API requires
+you to send `currency` explicitly.
 
 ### Percentages and multipliers
 
@@ -97,22 +188,24 @@ Percentages and loyalty multipliers use basis points:
 
 ### Dates and time zones
 
-API timestamps are ISO 8601. Campaigns store a timezone for operational interpretation;
-send explicit offsets or UTC timestamps at API boundaries. Both the campaign and its
-voucher or tier activation windows must permit use.
+API timestamps are ISO 8601. Send UTC or an explicit offset. A campaign stores a timezone
+as the business timezone; runtime comparisons use absolute timestamps. Changing the
+timezone does not shift stored start/end instants. An instant equal to a start or end is
+inside the activation window. A voucher or promotion tier is usable only when both its
+own dates and its campaign's dates allow it.
 
 ### IDs and codes
 
-OfferKit resource IDs are UUIDs. Voucher and referral codes are human-facing strings.
-Your application IDs belong in `externalId`, `externalOrderId`, idempotency keys, and
-source event IDs according to their purpose.
-
-### Metadata
-
-Metadata is arbitrary JSON attached to supported resources or decision context. Treat
-its field names and types as a versioned integration contract when rules depend on them.
+OfferKit resource IDs are UUIDs. Voucher and referral codes are human-facing strings. Your
+own IDs go in `externalId`, `externalOrderId`, idempotency keys, and event IDs, depending
+on what they identify.
 
 ### Soft deletion
 
-Most delete operations remove a resource from normal queries without immediately erasing
-historical database evidence. Use status or active controls for temporary pauses.
+Most deletes hide a record from normal queries but keep it for history. A deleted record
+does not block creating a new one with the same natural key: a new customer with the same
+`externalId`, a new voucher with the same code, or a new program on the same campaign.
+
+Some records are deleted outright rather than soft-deleted: loyalty tiers and earning
+rules. To pause something temporarily, use its status or `active` setting instead of
+deleting it.
