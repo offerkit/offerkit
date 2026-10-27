@@ -1,6 +1,6 @@
 ---
 title: Build your first working offer
-description: Run OfferKit, create a welcome discount, connect it to a checkout, and inspect the result.
+description: "Run OfferKit locally, create a welcome discount, validate and redeem it at checkout, then inspect the result before building your own integration."
 ---
 
 In this tutorial, a customer enters `WELCOME10` on a USD 50 order and receives USD 10
@@ -45,7 +45,8 @@ In the dashboard:
 2. Name it `Welcome offer`, choose **DISCOUNT**, set the currency to **USD**, and create it.
 3. Open the new campaign and change its status from **draft** to **active**.
 4. Create a voucher in the campaign.
-5. Use `WELCOME10` as the code, choose a fixed amount discount, and enter `1000`.
+5. Use `WELCOME10` as the code, choose a fixed amount discount, and enter `10.00`.
+   The dashboard converts this display amount to `1000` minor units for the API.
 
 OfferKit represents money in a currency's minor unit. `1000` USD means USD 10.00 and
 `5000` USD means USD 50.00. Keeping money as integers avoids floating-point rounding
@@ -88,9 +89,9 @@ A successful response includes a preview with a discount amount of `1000` and a 
 order amount of `4000`. Your checkout can show this preview while the customer reviews
 their cart.
 
-Try the same call with `"currency":"EUR"`. It should fail with a
-`currency_mismatch` explanation. Showing the returned explanation is much more useful
-to a customer or support agent than a generic “invalid code” message.
+Try the same call with `"currency":"EUR"`. It should fail with a `currency_mismatch`
+explanation. Use a short customer-facing message such as “This code is not available in
+EUR.” Keep the detailed explanation on your server for support.
 
 ## 5. Commit the redemption
 

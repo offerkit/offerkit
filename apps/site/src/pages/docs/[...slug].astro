@@ -4,6 +4,7 @@ import type { TOCItemType } from "fumadocs-core/toc";
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import { Docs } from "@/components/docs";
 import Layout from "@/components/layout.astro";
+import { canonicalDocsUrl } from "@/lib/docs-aliases.mjs";
 import {
   docsVariants,
   getDocsVariant,
@@ -44,11 +45,17 @@ const toc: TOCItemType[] = headings.map((heading) => ({
   title: heading.text,
   url: `#${heading.slug}`,
 }));
-const latestUrl = getDocsVariant("stable").source.getPage(slugs)?.url ?? "/docs/";
+const latestUrl = canonicalDocsUrl(getDocsVariant("stable").source.getPage(slugs)?.url ?? "/docs/");
 const noIndex = variant.kind !== "stable";
 ---
 
-<Layout title={page.data.title} description={page.data.description} noIndex={noIndex}>
+<Layout
+  title={page.data.title}
+  description={page.data.description}
+  noIndex={noIndex}
+  type={page.filePath?.endsWith("/index.mdx") ? "website" : "article"}
+  articleType="TechArticle"
+>
   <Docs
     tree={variant.source.getPageTree()}
     pathname={Astro.url.pathname}

@@ -6,6 +6,8 @@ interface Props {
   description?: string;
   noIndex?: boolean;
   type?: "website" | "article";
+  articleType?: "BlogPosting" | "TechArticle";
+  author?: string;
   publishedAt?: Date;
   updatedAt?: Date;
 }
@@ -15,6 +17,8 @@ const {
   description = "Open-source promotion infrastructure for running discounts, gift cards, loyalty programs, and referrals through one typed, self-hosted API.",
   noIndex = false,
   type = "website",
+  articleType = "BlogPosting",
+  author = "OfferKit team",
   publishedAt,
   updatedAt,
 } = Astro.props;
@@ -22,6 +26,57 @@ const pageTitle =
   title === "OfferKit" ? "OfferKit — Open-source promotion infrastructure" : `${title} — OfferKit`;
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const socialImage = new URL("/og.jpg", Astro.site);
+const organizationId = new URL("/#organization", Astro.site).href;
+const organization = {
+  "@type": "Organization",
+  "@id": organizationId,
+  name: "OfferKit",
+  url: new URL("/", Astro.site).href,
+  logo: new URL("/icon.png", Astro.site).href,
+  description: "Open-source, self-hostable promotion infrastructure for discounts, gift cards, loyalty, and referrals.",
+  sameAs: ["https://github.com/offerkit/offerkit"],
+};
+const structuredData = {
+  "@context": "https://schema.org",
+  "@graph": [
+    organization,
+    {
+      "@type": "WebSite",
+      "@id": new URL("/#website", Astro.site).href,
+      url: new URL("/", Astro.site).href,
+      name: "OfferKit",
+      publisher: { "@id": organizationId },
+      inLanguage: "en",
+    },
+    {
+      "@type": "WebPage",
+      "@id": `${canonical.href}#webpage`,
+      url: canonical.href,
+      name: title,
+      description,
+      isPartOf: { "@id": new URL("/#website", Astro.site).href },
+      inLanguage: "en",
+    },
+    ...(type === "article" ? [{
+      "@type": ["Article", articleType],
+      "@id": `${canonical.href}#article`,
+      headline: title,
+      description,
+      url: canonical.href,
+      mainEntityOfPage: { "@id": `${canonical.href}#webpage` },
+      image: [socialImage.href],
+      author: author === "OfferKit team"
+        ? { "@id": organizationId }
+        : { "@type": "Person", name: author },
+      publisher: { "@id": organizationId },
+      inLanguage: "en",
+      ...(publishedAt && { datePublished: publishedAt.toISOString() }),
+      ...(updatedAt && { dateModified: updatedAt.toISOString() }),
+    }] : []),
+  ],
+};
+// Prevent content from closing the script element while preserving valid JSON.
+const structuredDataJson = JSON.stringify(structuredData).replace(/</g, "\\u003c");
 ---
 
 <!doctype html>
@@ -49,11 +104,12 @@ const socialImage = new URL("/og.jpg", Astro.site);
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={socialImage} />
     <meta name="twitter:image:alt" content="OfferKit open-source promotion infrastructure" />
-    <link rel="canonical" href={canonical} />
+    {!noIndex && <link rel="canonical" href={canonical} />}
     <link rel="alternate" type="application/rss+xml" title="OfferKit blog" href="/blog/rss.xml" />
     <link rel="icon" href="/favicon.png" type="image/png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>{pageTitle}</title>
+    <script is:inline type="application/ld+json" set:html={structuredDataJson} />
     <ClientRouter />
   </head>
   <body class="min-h-screen" transition:persist>

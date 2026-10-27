@@ -1,6 +1,6 @@
 ---
 title: API conventions
-description: Authentication, pagination, idempotency, outcomes, and the live OpenAPI reference.
+description: "Use the OfferKit API with the right authentication, pagination, update shapes, and idempotency headers, and distinguish business outcomes from errors."
 ---
 
 OfferKit serves REST under `/api/v1` and publishes the exact OpenAPI 3.1 contract for the
@@ -27,6 +27,40 @@ Dashboard cookie sessions also authenticate the dashboard's own API calls.
 Authentication and scope failures use transport-level HTTP errors. Never place an API
 key in public client code.
 
+## Accounts, roles, and scopes
+
+A workspace is the deployment's shared configuration, including its default currency.
+It is not an environment selector. Use separate deployments for staging and production.
+Dashboard **users** are staff; **customers** are people in your application.
+
+Staff `member` accounts can operate offers. They are not read-only accounts. Staff-user
+administration and workspace changes require `admin`. Hosted MCP acts with the signed-in
+staff account's role. A local MCP process acts with its API key's scopes.
+
+Scopes use the SDK resource name and action, for example `vouchers:read`. `vouchers:*`
+grants all voucher actions, and `*` grants all resources. Omitting scopes when minting a
+key defaults to `*`, so choose them explicitly for a runtime integration.
+
+| Operation | Required API-key scope |
+| --- | --- |
+| `vouchers.list`, `vouchers.get` | `vouchers:read` |
+| `vouchers.transactions` | `vouchers:write` |
+| `vouchers.validate` | `vouchers:validate` |
+| `vouchers.redeem` | `vouchers:redeem` |
+| `vouchers.stackRedeem` | `vouchers:stackredeem` |
+| `vouchers.qualify` | `vouchers:write` |
+| `customers.upsert`, `customers.getByExternalId` | `customers:write` |
+| `promotions.qualify` | `promotions:write` |
+| Loyalty enrollment, earning, adjustment | `loyalty:write` |
+| Loyalty reward redemption | `loyalty:redeem` |
+| Referral issue, convert, code lookup | `referrals:write` |
+
+Scope classification follows procedure names, not just the HTTP method. In particular,
+`transactions`, `getByExternalId`, `getByCode`, and qualification do not use a `:read` scope. A 403
+response names the missing scope. For a checkout that upserts customers and validates
+and redeems one voucher, start with `customers:write`, `vouchers:validate`, and
+`vouchers:redeem`. Add wallet discovery or promotions only if the application uses them.
+
 ## Pagination
 
 List endpoints generally accept `limit` from 1 to 100 and an opaque `cursor`:
@@ -44,14 +78,15 @@ Do not parse or construct cursors. Store and send them unchanged. The presence o
 
 ## Idempotency
 
-Mutations that support safe replay accept an `idempotencyKey`; the HTTP middleware can
-also use its corresponding idempotency header where documented by the live contract.
+Keep the same request and stable key when retrying one logical action. The body
+`idempotencyKey` used by voucher redemption and the HTTP `Idempotency-Key` header have
+different scopes and guarantees. The header compares request bodies and caches a result
+for 24 hours. Body replay keys return recorded domain outcomes; do not assume they reject
+every changed body.
 
-One key identifies one logical request body. A replay returns the original result, often
-with `idempotent: true`. Reusing the key for different input produces a conflict.
-
-Use stable business identifiers such as an application order ID. Do not generate a new
-random key for every network attempt.
+Loyalty `eventId` records a source event but does not prevent duplicate earning. See
+[Retries, refunds, and recovery](/reference/retries-and-recovery) for the comparison table,
+header example, and payment-failure workflow.
 
 ## Business outcomes and HTTP errors
 
@@ -62,6 +97,99 @@ can distinguish ordinary ineligibility from a transport failure.
 Voucher validation returns `valid`; redemption returns `ok`. Failures can contain a
 machine-readable code, message, and `explanations` array. Preserve the code for support
 and map it to customer-safe language.
+
+## Decision reasons
+
+These codes describe voucher decisions. Keep the machine code in logs and translate the
+message for customers; do not expose raw rule traces or another person's data.
+
+| Code | Meaning |
+| --- | --- |
+| `voucher_not_found` | Unknown or deleted code |
+| `campaign_inactive` | Missing/deleted parent, non-active status, or campaign outside its date window |
+| `voucher_disabled` | Voucher's active flag is false |
+| `voucher_expired` | Voucher outside its own activation window, including a future start |
+| `redemption_limit_reached` | Voucher's total usage limit reached |
+| `per_user_redemption_limit_reached` | Voucher or campaign limit reached for this customer |
+| `customer_required` | Assignment or per-user policy needs customer identity |
+| `customer_mismatch` | Wrong assigned customer or conflicting internal/external IDs |
+| `validation_failed` | Campaign rule did not pass, is unavailable, or could not be evaluated |
+| `currency_mismatch` | Order and campaign currency differ |
+| `gift_balance_zero` | Gift voucher has no spendable balance |
+| `no_discount_effect` | No monetary discount or custom reward would apply |
+| `order_required` | This redemption needs inline order context |
+| `gift_card_stacking_unsupported` | A gift card was submitted in a discount stack |
+| `exclusivity_lost` | A different exclusive effect won; a calculation skip |
+| `zero_after_running_total` | No discount remains to apply; a calculation skip |
+
+Promotion qualification uses `rule_failed` for a false rule and `rule_error` for an
+unavailable or invalid rule. It distinguishes campaign status (`campaign_inactive`) from
+campaign dates (`campaign_not_active`), and tier status (`promotion_inactive`) from tier
+dates (`promotion_not_active`). It can also return `currency_mismatch`, `no_discount_effect`,
+`exclusivity_lost`, and `zero_after_running_total`.
+
+Referral failures use `errorCode` rather than `code`: `program_not_found`,
+`referrer_not_found`, `referral_not_found`, `self_referral`, `referee_already_converted`,
+`missing_loyalty_member`, and `validation_error`. Loyalty failures use `code`; common
+examples are `member_not_found`, `reward_not_found`, and `insufficient_points`.
+
+### Example responses
+
+A USD 10 preview on a USD 50 cart:
+
+```json
+{
+  "valid": true,
+  "preview": {
+    "amount": 1000,
+    "finalOrder": { "amount": 4000, "currency": "USD" },
+    "breakdown": [
+      {
+        "voucherId": "00000000-0000-4000-8000-000000000001",
+        "code": "WELCOME10",
+        "amount": 1000,
+        "type": "AMOUNT"
+      }
+    ]
+  }
+}
+```
+
+A business rejection can still have HTTP status 200:
+
+```json
+{
+  "valid": false,
+  "code": "currency_mismatch",
+  "message": "Order currency does not match campaign currency",
+  "explanations": [
+    { "code": "currency_mismatch", "message": "Order currency does not match campaign currency" }
+  ]
+}
+```
+
+After redemption, `ok: true` is accompanied by `redemptionId`, `amount`, `finalOrder`,
+and `breakdown`. A replay can add `idempotent: true`. Do not read optional success fields
+until checking the result flag.
+
+HTTP errors are separate: 400 for malformed input, 401 for missing authentication,
+403 for permissions, 404 for a missing fetched resource, 409 for a conflicting HTTP
+idempotency header, and 429 for rate limiting. SDK calls throw on transport-level errors;
+business rejections return normally. For example:
+
+```ts
+try {
+  const result = await offerkit.vouchers.validate({ params: { code }, body: context });
+  if (!result.valid) {
+    // Return customer-safe copy for result.code; keep explanations in server logs.
+    return { accepted: false, reason: result.code };
+  }
+  return { accepted: true, preview: result.preview };
+} catch (error) {
+  // Record the HTTP/transport failure and let the customer retry the request later.
+  throw error;
+}
+```
 
 ## Resource groups
 
@@ -90,3 +218,10 @@ own `/health` endpoint on its configured health port.
 Pin web, worker, SDK, CLI, and MCP versions deliberately. The OpenAPI document from the
 running deployment is authoritative for its server version; compile-time SDK types reflect
 the installed package version.
+
+The examples here follow the repository's current contract. `customerExternalId` on
+voucher decisions requires SDK 0.3.0 or later and a server that accepts the field. SDK,
+CLI, MCP, and Docker releases have separate version sequences; an SDK version does not
+identify a matching image. Hosted `/mcp` must be present and enabled on the server.
+Use the package changelogs and the running server's OpenAPI before adopting a new field.
+For older installations, use that release's documentation and inspect its own contract.

@@ -7,11 +7,27 @@ Thanks for helping improve OfferKit. This repo is a pnpm/Turbo monorepo with the
 ```bash
 pnpm install
 cp .env.example .env
-docker compose -f docker-compose.dev.yml up -d
+docker compose up -d postgres redis
 pnpm --filter @offerkit/db push
 pnpm --filter @offerkit/web dev
 pnpm --filter @offerkit/worker dev
 ```
+
+Run Node 26.7.0 and pnpm 11.20.0, as pinned in the root package. The commands above run
+web and worker from local source against the database and Redis containers. To test a
+complete image built from source, combine the Compose files:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+```
+
+## Documentation
+
+Write user-facing guides under `apps/site/content/next`. Backport corrections to stable
+and the applicable version directories when the behavior is shared. Keep examples
+consistent with the contract, state the minimum version for new fields, and distinguish
+configuration from actions the integrating application must perform. The site README
+explains documentation snapshots and validation.
 
 ## Quality Gates
 

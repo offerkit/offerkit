@@ -1,6 +1,6 @@
 ---
-title: Self-host
-description: Run the published Docker image locally or on Railway. No source build required.
+title: Docker and platform setup
+description: "Run the published OfferKit Docker image locally or on Railway, configure Postgres and Redis, and start the web and worker services without a source build."
 ---
 
 ## Local: Docker compose
@@ -169,3 +169,15 @@ OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer <AXIOM_TOKEN>,X-Axiom-Dataset=of
 ## Multi-environment
 
 The model is "run two deploys" — each environment is its own Railway project with its own Postgres. There's no concept of a logical environment within a single deployment. Staging and production roll forward independently.
+
+## Before choosing variables
+
+[Deploy OfferKit](/deploy) explains service roles, internal versus public URLs, secret
+ownership, backups, and the optional Postgres queue. The platform recipes above use Redis
+for both web producers and worker consumers. If you choose the Postgres queue, omit
+`REDIS_URL` from both services; removing Redis alone while leaving its URL configured
+will not enable the fallback.
+
+Instructions about inferred LAN origins describe the current source. For the pinned
+`v0.2.0` image, use the explicit-origin workaround above. Check the release notes before
+assuming a source-level correction is included in a published image.

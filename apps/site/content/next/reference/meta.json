@@ -1,4 +1,12 @@
 {
   "title": "Reference",
-  "pages": ["index", "developer-tools", "api-reference", "glossary"]
+  "pages": [
+    "index",
+    "relationships",
+    "developer-tools",
+    "api-reference",
+    "rules",
+    "retries-and-recovery",
+    "glossary"
+  ]
 }

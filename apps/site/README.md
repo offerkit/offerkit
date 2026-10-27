@@ -39,7 +39,9 @@ The site runs at `http://localhost:4321` by default.
 ```bash
 pnpm --filter @offerkit/site lint
 pnpm --filter @offerkit/site typecheck
+pnpm --filter @offerkit/site test
 pnpm --filter @offerkit/site build
+pnpm --filter @offerkit/site check:seo
 ```
 
 ## Deploy to Cloudflare
@@ -56,6 +58,23 @@ Connect the repository directly in Cloudflare Workers Builds and use these setti
 Keeping the root directory at the repository root lets Cloudflare install the pnpm workspace from the shared lockfile. The filtered deploy command runs Wrangler from `apps/site`.
 
 `wrangler.jsonc` attaches `offerkit.dev` and serves the generated Astro site as static assets. The hostname must be available in the connected Cloudflare zone without a conflicting DNS record.
+
+### HTTPS redirects
+
+In the `offerkit.dev` Cloudflare zone, enable **SSL/TLS → Edge Certificates → Always Use HTTPS**.
+This redirects HTTP requests before static assets are served, preserving the path and query.
+The setting belongs to the zone and is not applied by `wrangler deploy`.
+See [Cloudflare's Always Use HTTPS guide](https://developers.cloudflare.com/ssl/edge-certificates/additional-options/always-use-https/).
+
+Keep the site on static asset hosting. A Worker running before every asset would make those
+requests count toward Worker usage; it is unnecessary for a zone-level HTTPS redirect.
+After enabling the setting, verify that HTTP requests return a permanent redirect to the
+same HTTPS URL, including documentation pages and query strings:
+
+```bash
+curl --head 'http://offerkit.dev/'
+curl --head 'http://offerkit.dev/docs/reference/rules/?source=https-check'
+```
 
 Cloudflare owns the Git integration and deploy pipeline, so no site deployment workflow or GitHub Actions secrets are required.
 

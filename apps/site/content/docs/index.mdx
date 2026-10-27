@@ -1,6 +1,6 @@
 ---
 title: OfferKit documentation
-description: Build, integrate, and operate discounts, gift cards, loyalty, referrals, and automatic promotions.
+description: "Learn how to build discounts, gift cards, loyalty, and referrals with OfferKit, then connect your checkout, deploy the services, and operate live offers."
 ---
 
 OfferKit is the promotion engine behind the customer experience you design. Your team
@@ -31,7 +31,7 @@ discount, validate it against a cart, redeem it, and inspect the result. The tut
 introduces each OfferKit term only when it becomes useful.
 
 If you are evaluating the architecture first, read [How OfferKit works](/how-offerkit-works)
-and the [integration blueprint](/integrate).
+and [How objects connect](/reference/relationships), then the [integration blueprint](/integrate).
 
 ## Three parts of every implementation
 
@@ -53,7 +53,8 @@ you need exact resource fields, error codes, or interface conventions.
 - The **CLI** is useful for scripts and back-office work.
 - The **MCP server** lets an agent work with the same contract and explicit risk labels.
 
-All programmatic surfaces use the same API keys and the same underlying contract. Keep
+The SDK, CLI, REST API, and local MCP process accept API keys. Hosted MCP uses account
+login and OAuth. They use the same underlying contract. Keep
 API keys on your server; never ship one in browser or mobile application code.
 
 ## Self-hosting

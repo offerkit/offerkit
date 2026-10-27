@@ -1,31 +1,100 @@
 ---
 title: Target customers with rules
-description: Limit an offer by customer attributes, cart contents, dates, usage history, or metadata.
+description: "Target OfferKit vouchers and promotions with customer, cart, date, and request conditions, using only the data available to the decision being evaluated."
 ---
 
-Targeting turns a broad benefit into a controlled offer. A validation rule can require
-the right customer, order total, product, collection, date, redemption history, or custom
-metadata before OfferKit returns a successful decision.
+A validation rule turns a broad offer into a targeted one: VIP customers only, carts over
+a certain amount, a particular product in the cart, orders from the mobile app. OfferKit
+checks the rule at decision time and only returns a success when it passes.
+
+Rules are [JSON Logic](https://jsonlogic.com) expressions with a few OfferKit operators
+added. The dashboard has a visual builder for common conditions and a raw JSON editor for
+everything else.
+
+## Where rules are enforced
+
+You can attach a rule to a **campaign** and to a **promotion tier**.
+
+- A campaign rule applies to every voucher and every promotion tier in that campaign.
+- A promotion tier rule applies to that tier, in addition to its campaign's rule. Both
+  must pass.
+- Vouchers do not have a rule of their own. To target one voucher differently, put it in
+  its own campaign.
+
+Rules are not evaluated anywhere else. Loyalty earning rules can store a validation rule
+ID, but earning never checks it, and loyalty rewards and referral programs have no rule
+setting. Every rule has an **Applies to** field (voucher, promotion, earn, reward). It is a
+label for organizing your rules and does not control where the rule runs.
 
 ## Start from the business sentence
 
-Write the policy in plain language before opening the rule builder:
+Write the policy in plain words first:
 
-> Give USD 15 off when an identified VIP customer spends at least USD 100 on the web
-> channel before September 1.
+> Take 15.00 off automatically when a VIP customer spends at least 100.00 in the mobile app.
 
-Then separate it into facts your integration can actually provide:
+Then list the facts the rule needs and where each one comes from:
 
-- customer identity and `metadata.vip`;
-- order amount and currency;
-- request metadata such as `channel`;
-- the current date.
+| Fact | Where it comes from | Rule variable |
+| --- | --- | --- |
+| The customer is a VIP | Customer metadata you upsert | `customer.metadata.vip` |
+| The cart is at least 100.00 | The order you send | `order.amount` |
+| The order is from the app | Request metadata on promotion qualification | `metadata.channel` |
 
-A rule cannot evaluate data that is absent from the validation or qualification context.
+The resulting rule, attached to the promotion tier:
+
+```json
+{
+  "and": [
+    { "===": [{ "var": "customer.metadata.vip" }, true] },
+    { ">=": [{ "var": "order.amount" }, 10000] },
+    { "==": [{ "var": "metadata.channel" }, "app"] }
+  ]
+}
+```
+
+You don't need the currency or dates in the rule. The campaign already rejects orders in a
+different currency, and campaign and tier start and end dates handle the time window more
+clearly than a rule can.
+
+A rule can only use what the decision can see. Request metadata exists only in promotion
+qualification, so this exact rule would never pass on a voucher. The next section shows
+what each decision can see.
+
+## What each decision can see
+
+| Variable | Voucher validate, qualify, redeem | Promotion qualify | Segment preview |
+| --- | --- | --- | --- |
+| `customer.id`, `.email`, `.name`, `.phone` | Yes, when a customer is identified | Yes, when `customerId` is sent | Yes |
+| `customer.address.*` | Yes | Yes | Yes |
+| `customer.metadata.*` | Yes | Yes | Yes |
+| `order.amount`, `order.currency` | When you send `order` | Yes | No |
+| `order.items[]` (`productId`, `collectionId`, `quantity`, `unitPrice`) | When you send `order.items` | When you send `order.items` | No |
+| `metadata.*` (request metadata) | No, always empty | Yes, from the request's `metadata` | No, always empty |
+| `voucher.id`, `voucher.code` | Yes | No | No |
+| `now` (current time, ISO 8601 UTC) | Yes | Yes | Yes |
+| `customer.summary.*` | Always empty | Always empty | Always empty |
+| `customer.segments`, `customer.loyalty.*` | Not set | Not set | Not set |
+
+Some notes on the table:
+
+- **Identifying the customer.** Voucher calls accept `customerId` or
+  `customerExternalId`. Promotion qualification accepts only `customerId`, the internal
+  UUID, so look it up or upsert the customer first. If the ID matches no customer,
+  promotion rules are evaluated with no customer at all.
+- **Two kinds of metadata.** `customer.metadata.region` is metadata stored on the customer.
+  `metadata.channel` is request metadata sent with promotion qualification. Metadata on
+  campaigns, vouchers, tiers, and orders is not visible to rules.
+- **Customer summary.** Customers have a `summary` object with `totalSpent`,
+  `redemptionCount`, and `lastRedeemedAt`, but OfferKit does not fill it in today and the
+  customer API does not let you set it. Rules on `customer.summary.*` see nothing. If you
+  need lifetime spend in a rule, keep it in customer metadata, for example
+  `customer.metadata.lifetimeSpend`, and update it from your order system.
+- **Stored orders.** Rules see the inline `order` you send with the request. Passing an
+  `orderId` does not load a stored order into the rule.
 
 ## Prepare customer data
 
-Use stable external IDs and place targeting attributes in consistent metadata fields:
+Use your stable user ID as `externalId` and keep targeting fields in predictable metadata:
 
 ```ts
 await offerkit.customers.upsert({
@@ -33,34 +102,89 @@ await offerkit.customers.upsert({
   email: user.email,
   metadata: {
     vip: user.plan === "vip",
-    region: user.region,
-    acquisitionChannel: user.acquisitionChannel,
+    region: user.region,          // "AE", "DE", ...
+    lifetimeSpend: user.spendCents,
   },
 });
 ```
 
-Document field names and value types as part of the integration contract. Changing
-`region: "AE"` to `region: { code: "AE" }` can silently change a rule's outcome.
+Treat these field names and types as a contract. Changing `region: "AE"` to
+`region: { code: "AE" }` quietly changes what your rules match. So does sending
+`vip: "true"` instead of `vip: true`: a rule comparing with `true` no longer passes.
 
-## Build a reusable rule
+## OfferKit operators
 
-Open **Validation rules**, create a rule, and choose where it applies: voucher,
-promotion, earning, or reward. The visual builder supports common conditions; raw JSON
-supports more complex JSON Logic expressions and OfferKit operators.
+| Operator | Passes when | Notes |
+| --- | --- | --- |
+| `{ "order.total_above": [10000, "USD"] }` | `order.amount` is **greater than** 10000 | Strictly greater. A 100.00 order does not pass `total_above 10000`. The currency is optional and, when given, must match the order |
+| `{ "order.contains_product": ["prod_123"] }` | Some item has that `productId` | Exact match |
+| `{ "order.contains_collection": ["summer"] }` | Some item has that `collectionId` | Exact match |
+| `{ "date.between": ["2026-11-01T00:00:00Z", "2026-11-30T23:59:59Z"] }` | `now` is within the range | Both ends included |
+| `{ "customer.in_segment": ["…"] }` | Never, in live decisions | See [Segments](#segments) |
+| `{ "redemption.count_for_customer_above": [2] }` | Never, today | The redemption count is not provided to rules, so it is treated as 0 |
 
-Common conditions include:
+The visual builder's **Order total above** condition uses `order.total_above`, so it is
+strict too. For "at least 100.00", write it in raw JSON:
 
-- order total above an amount and currency;
-- order contains a product or collection;
-- customer redemption count above a threshold;
-- current date between two timestamps;
-- metadata field equals a value;
-- direct customer fields such as email, address, summary, or customer metadata.
+```json
+{ ">=": [{ "var": "order.amount" }, 10000] }
+```
 
-Attach the rule to the campaign or promotion tier that should enforce it. Campaign-level
-rules affect every contained voucher or tier.
+The builder also offers **Customer is in segment** and **Customer redemptions above**.
+Neither works in live decisions today, as the table shows. For "a customer can only use
+this offer N times", use the per-customer redemption limit on the campaign or voucher
+instead of a rule.
 
-## Send complete decision context
+The builder's **Metadata field equals** condition compares *request* metadata
+(`metadata.<field>`), which only promotion qualification has. To compare customer
+metadata, write the rule in JSON with `customer.metadata.<field>`.
+
+## Recipes
+
+Customer metadata flag:
+
+```json
+{ "===": [{ "var": "customer.metadata.vip" }, true] }
+```
+
+Region list:
+
+```json
+{ "in": [{ "var": "customer.address.country" }, ["AE", "SA", "QA"]] }
+```
+
+Cart of at least 50.00 that contains a product:
+
+```json
+{
+  "and": [
+    { ">=": [{ "var": "order.amount" }, 5000] },
+    { "order.contains_product": ["prod_espresso_beans"] }
+  ]
+}
+```
+
+Staff email domain:
+
+```json
+{ "===": [{ "substr": [{ "var": "customer.email" }, -12] }, "@example.com"] }
+```
+
+Lifetime spend over 500.00, kept in customer metadata by your application:
+
+```json
+{ ">": [{ "var": "customer.metadata.lifetimeSpend" }, 50000] }
+```
+
+App-only automatic promotion (promotion qualification only):
+
+```json
+{ "==": [{ "var": "metadata.channel" }, "app"] }
+```
+
+## Send complete context
+
+Voucher validation:
 
 ```ts
 const result = await offerkit.vouchers.validate({
@@ -68,48 +192,89 @@ const result = await offerkit.vouchers.validate({
   body: {
     customerExternalId: user.id,
     order: {
-      amount: cart.totalCents,
+      amount: cart.totalMinor,
       currency: cart.currency,
-      items: cart.items,
+      items: cart.items.map((item) => ({
+        productId: item.productId,
+        collectionId: item.collectionId,
+        quantity: item.quantity,
+        unitPrice: item.unitPriceMinor,
+      })),
     },
   },
 });
 ```
 
-Promotion qualification additionally accepts request metadata. Voucher validation uses
-the stored customer metadata and the supplied order context.
+Promotion qualification, with request metadata:
 
-If a rule needs a customer, make identification mandatory in your checkout flow. A
-missing customer should fail closed rather than accidentally making a targeted offer public.
+```ts
+const promotions = await offerkit.promotions.qualify({
+  customerId: customer.id,
+  order: { amount: cart.totalMinor, currency: cart.currency, items },
+  metadata: { channel: "app" },
+});
+```
 
-## Use segments to design an audience
+If an offer is meant for specific customers, make identifying the customer mandatory in
+that checkout flow.
 
-A segment stores a reusable rule over customer data. Use **Preview** to see the total
-match count and a sample before launch. Segments are valuable for validating that your
-customer data expresses the intended audience.
+## Missing values fail quietly
 
-In the current product, creating a segment does not automatically attach its membership
-to a campaign decision. Enforce the corresponding customer conditions in the campaign's
-validation rule. This keeps runtime behavior explicit and prevents a dashboard preview
-from being mistaken for a live eligibility link.
+A variable that is not there reads as `null`. A strict comparison with boolean `true`
+returns false, so a rule like `{ "===": [{ "var": "customer.metadata.vip" }, true] }`
+simply fails when there is no customer or no `vip` field. That is the safe direction.
 
-## Test the boundary, not only the happy path
+"Less than" does not fail safe. `null` counts as 0 in `<` and `<=`, so
+`{ "<": [{ "var": "customer.metadata.riskScore" }, 50] }` passes when `riskScore` is
+missing. Pair it with a check that the field exists.
 
-For every condition, test:
+Negations also pass on missing data. `{ "!": { "var": "customer.metadata.blocked" } }` passes when
+`blocked` is missing, including when no customer was identified at all. When you exclude
+people, also require that the customer exists:
 
-- a value that passes;
-- a value that fails;
-- a missing value;
-- an unexpected type;
-- the exact numeric or date boundary;
-- multiple conditions combined with both “all” and “any.”
+```json
+{
+  "and": [
+    { "!!": { "var": "customer.id" } },
+    { "!": { "var": "customer.metadata.blocked" } }
+  ]
+}
+```
 
-Preview the segment, validate a voucher, and qualify a promotion with known fixtures.
-Keep these fixtures as regression cases when editing live rules.
+## Segments
+
+A segment is a saved customer rule. **Preview** runs it against up to the 10,000 most
+recently created customers and shows how many match, with a sample. Use it to check that
+your customer data says what you think it says before you launch.
+
+Segments are not linked to campaigns, and live decisions never look up segment
+membership. `customer.in_segment` therefore never passes in a voucher or promotion
+decision. To target the audience a segment describes, copy its conditions into the
+campaign or tier rule.
+
+Segment previews have no order, no request metadata, and no voucher, so a segment rule
+that uses `order.*` or `metadata.*` will not match anyone.
+
+## Test the boundary, not just the happy path
+
+For every condition, try:
+
+- a value that passes and one that fails;
+- a missing value and a missing customer;
+- a value of the wrong type, such as `"true"` instead of `true`;
+- the exact boundary: an order of exactly 100.00 against both `>=` and `total_above`;
+- combined conditions with both `and` and `or`.
+
+Keep these fixtures and rerun them whenever you edit a live rule.
+[Rules reference](/reference/rules) lists every variable and operator.
 
 ## Diagnose failures
 
-A failed voucher rule returns `validation_failed` with rule details appropriate for
-support. Promotion qualification distinguishes `rule_failed` from `rule_error`. A rule
-error means the expression could not be evaluated and should be treated as a configuration
-incident, not as an ineligible customer.
+A failed campaign rule on a voucher returns `validation_failed`. If the rule could not be
+evaluated, for example because it uses an operator that does not exist or the rule has
+been deleted, the explanation includes that detail.
+
+Promotion qualification reports `rule_failed` when the rule evaluated to false and
+`rule_error` when it could not be evaluated or the rule is missing. Treat `rule_error` as
+a configuration problem to fix, not as an ineligible customer. In both cases the offer is
+not applied.

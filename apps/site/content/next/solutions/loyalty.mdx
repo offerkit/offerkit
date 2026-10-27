@@ -1,41 +1,90 @@
 ---
 title: Launch a loyalty program
-description: Enroll customers, award points, move members through tiers, and exchange points for rewards.
+description: "Build an OfferKit loyalty program with enrollment, points, and tiers, then deliver rewards from your application and handle expiry or failed fulfillment."
 ---
 
-A loyalty program turns customer activity into a points ledger. OfferKit stores each
-member's available balance, lifetime points, current tier, reward redemptions, manual
-adjustments, and expiration entries. Your application decides which real-world events
-award points and presents the program to the customer.
+A loyalty program is a points ledger with tiers on top. OfferKit stores each member's
+spendable balance, lifetime points, current tier, and every change to the balance. Your
+application decides what earns points, how many, and what a reward actually gives the
+customer.
 
-## Design the program first
+OfferKit does not watch your orders, calculate points from an earning formula, or create
+a voucher when a member buys a reward. Your integration supplies the points and fulfills
+the purchased benefit.
 
-Write down four decisions before configuring OfferKit:
+## How the pieces fit
 
-1. **Enrollment** — automatic for every account or explicit opt-in?
-2. **Earning** — how many base points does each event award?
-3. **Status** — which lifetime-point thresholds define tiers, and do tiers multiply earning?
-4. **Spending** — what can members receive, and how many available points does each reward cost?
+```text
+LOYALTY_PROGRAM campaign
+└── Loyalty program (at most one that is not deleted)
+    ├── Tiers           status levels by lifetime points, each with a multiplier
+    ├── Earning rules   descriptive records you can attach to points entries
+    ├── Rewards         things members buy with points
+    └── Members         one per customer in this program
+        └── Ledger      EARN, REDEEM, ADJUSTMENT, EXPIRY entries
+```
 
-Also decide whether earned points expire. OfferKit can record per-entry expiration and
-run a background expiration sweep.
+The campaign gives the program a name and a place in the dashboard. Loyalty calls do not
+check the campaign's status or dates: enrolling, earning, adjusting, and buying rewards
+behave the same on a draft campaign as on an active one. Deleting the program does not stop
+calls for existing members either. To close a program, stop calling it from your
+application.
+
+## Decide the policy first
+
+Before you configure anything, write down:
+
+1. **Enrollment.** Is every account a member, or do customers opt in?
+2. **Earning.** Which events earn points, and how many? For example: "1 point per 1.00
+   spent, counted after the payment is captured, excluding tax and shipping."
+3. **Status.** Which lifetime-point totals unlock each tier, and does any tier earn faster?
+4. **Spending.** What can members buy, what does each reward cost, and who delivers it?
+5. **Expiry.** Do points expire, and after how long?
+
+Your answers to 2, 4, and 5 end up in your code, not in OfferKit configuration.
 
 ## Configure the program
 
 1. Create a campaign with type **LOYALTY_PROGRAM**.
-2. Open **Loyalty**, create a program, and select that campaign.
-3. Set the point-expiration period if points should not live forever.
-4. Add tiers in increasing threshold order.
-5. Add the rewards customers can buy with points.
-6. Optionally create earning-rule records to describe and attribute earning behavior.
+2. Open **Loyalty**, create a program, and pick that campaign.
+3. Add tiers. Give the lowest one a threshold of `0`.
+4. Add the rewards members can buy.
+5. Optionally add earning rules to name the ways members earn, for reporting.
 
-An earning multiplier uses basis points. `10000` means 1×, `15000` means 1.5×, and
-`20000` means 2×.
+Multipliers are in basis points: `10000` is 1×, `15000` is 1.5×, `20000` is 2×.
 
-Rewards can return a discount, gift-card credit, or a custom payload. Your application
-must fulfill the returned reward in the customer experience.
+### What is configuration and what is enforced
 
-## Upsert and enroll a customer
+| Setting | What OfferKit does with it |
+| --- | --- |
+| Tier threshold and multiplier | Used when points are earned. See [Tiers](#tiers) |
+| Reward cost | Checked and deducted when a member buys the reward |
+| Reward payload | Returned to you when a member buys the reward |
+| Program `pointsExpiryDays` | Stored only. Earning does not use it |
+| Earning rule `event`, `formula`, `validationRuleId`, `active` | Stored only. Never evaluated |
+
+Earning rules are labels. Passing an `earningRuleId` when you earn puts that ID on the
+ledger entry so you can report on it later. OfferKit does not check that the rule is active
+or belongs to the program, and it never computes points from the formula. Deleting an
+earning rule clears its ID from past ledger entries, so keep the rule if you need that
+reporting link.
+
+The stored formula describes your policy:
+
+| Formula | Intended calculation in your application |
+| --- | --- |
+| `{ "kind": "fixed", "value": 50 }` | Award 50 base points for the event. |
+| `{ "kind": "per_cents", "divisor": 100 }` | Award `Math.floor(order.amount / 100)` base points. Despite the name, the divisor operates on the currency's minor units. |
+| `{ "kind": "custom" }` | Compute base points from your own policy. |
+
+Read the rule record if you want configuration to drive your calculation, then send the
+computed result as `basePoints`. Passing its ID alone does not apply the formula.
+
+Rewards have no eligibility rule. Any member with enough points can buy any reward in the
+program that has not been deleted. If some rewards are only for Gold members, check the
+member's tier in your application before you call `redeem`.
+
+## Enroll a customer
 
 ```ts
 const { customer } = await offerkit.customers.upsert({
@@ -50,84 +99,255 @@ const member = await offerkit.loyalty.members.enroll({
 });
 ```
 
-Both operations are safe to repeat for the same identity and program. Store the member
-ID with your integration data or retrieve it from your server-side mapping.
+Calling `enroll` again for the same customer and program returns the existing member. If
+two first-time enrollments for the same customer run at the same moment, one of them can
+fail; retrying it returns the member the other one created.
 
-## Award points at the right event
+Store `member.id` next to your user. There is no lookup from customer to member other than
+paging through the program's member list.
 
-OfferKit does not infer purchases from your commerce database. Call `earn` when your
-chosen business event occurs—for example, after payment capture or order fulfillment.
+## Award points
+
+Call `earn` when the event you chose actually happens, such as a captured payment or a
+shipped order. Work out the points in your code:
 
 ```ts
+// Policy: 1 point per 1.00 spent on merchandise, in a two-decimal currency.
+const basePoints = Math.floor(order.merchandiseTotal / 100);
+if (basePoints < 1) return; // earn requires at least 1 point
+
 const earned = await offerkit.loyalty.members.earn({
-  memberId: member.id,
-  basePoints: order.loyaltyPoints,
-  eventId: order.id,
+  memberId,
+  basePoints,
+  eventId: `order:${order.id}`,
+  earningRuleId: purchaseRuleId, // optional, for reporting
+  expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
   note: `Order ${order.number}`,
-  applyMultiplier: true,
 });
+
+if (!earned.ok) throw new Error(earned.message);
 ```
 
-Calculate `basePoints` in your integration according to the program policy. Supplying
-an `earningRuleId` attributes the ledger entry to that configured rule; the rule record
-does not subscribe to your application events by itself.
+The response gives you the points actually credited (`delta`), the new `balance` and
+`lifetimePoints`, and the member's `tierId` afterwards.
 
-Pass a stable `eventId` so you can reconcile an earning entry to the source event. Your
-event handler should also deduplicate on your side before calling `earn`.
+### Avoid earning twice
 
-When the member crosses a lifetime-point threshold, OfferKit selects the highest
-qualifying tier. The member's current tier multiplier affects later earning calls when
-`applyMultiplier` is enabled.
+`eventId` is saved on the ledger entry, but OfferKit does not reject a second `earn` with
+the same `eventId`. A webhook delivered twice will credit points twice unless you stop it.
+
+Keep a durable record of each earning step in your own database, and use the [HTTP replay
+header](/reference/retries-and-recovery) during its retry window. A local processed-event
+flag alone cannot make a remote API call atomic with your database. If an `earn` call
+fails in a way that leaves you unsure whether it went through, such as a timeout, read the
+member's history and look for your `eventId` before trying again.
+
+## Tiers
+
+A member's tier is the highest tier whose threshold is at or below their
+**lifetime points**. Lifetime points go up only when points are earned. Spending points,
+expiry, and adjustments do not change them. A member who spends everything keeps their
+tier.
+
+A few details catch people out:
+
+- **New members start with no tier.** Even with a `0` threshold tier, a member is placed in
+  it on their first earning or positive adjustment, not at enrollment.
+- **The multiplier is the one the member had before the earning.** If a member at 900
+  lifetime points earns 200 base points and crosses into Gold at 1,000, that earning is
+  multiplied at their old tier's rate. Gold's multiplier applies from the next earning.
+  New members' first earning is always at 1×, even if the base tier has a different
+  multiplier.
+- **Multiplied points round down.** 15 base points at 1.5× credits 22.
+- **Tier edits are not applied to existing members right away.** Changing a threshold or
+  multiplier, or adding a tier, does not move anyone. Each member's tier is recalculated
+  against the current thresholds at their next earning or positive adjustment. That can
+  move them down as well as up.
+- **Deleting a tier** removes it from every member on it. Those members have no tier until
+  their next earning or positive adjustment.
+
+To skip the multiplier for an earning, pass `applyMultiplier: false`. The multiplier is on
+by default.
+
+## Expiry
+
+Setting `pointsExpiryDays` on a program does not make points expire. To expire points, pass
+`expiresAt` on each `earn` call yourself, for example "now plus 365 days".
+
+A background job runs once a day and processes up to 1,000 overdue earning entries per
+run. Points disappear when the sweep reaches the entry, not at the exact expiry instant.
+A backlog can delay removal beyond the next daily run.
+
+When an earning expires, OfferKit subtracts the **full** amount credited by that earning,
+whether or not the member already spent those points. For example:
+
+| Step | Balance |
+| --- | ---: |
+| Earn 500 points, expiring in 30 days | 500 |
+| Spend 400 on a reward | 100 |
+| The 500-point earning expires | −400 |
+
+A negative balance blocks further reward purchases until the member earns enough to get
+back above the reward's cost. If you would rather not take back spent points, make a
+positive adjustment after the expiry with a note explaining why. Expiry does not change
+lifetime points or tier.
+
+Only `earn` entries can expire. Positive adjustments and referral points never expire.
 
 ## Let a member spend points
 
-List rewards for the program, show the point cost, and submit the selected reward from
-your server:
+`redeem` checks the balance, deducts the reward's cost, and returns the reward's payload.
+That is all it does. For a reward configured as "10.00 off", OfferKit returns
+`{ kind: "discount", discount: { type: "AMOUNT", amount: 1000 } }`. It does not create a
+voucher, apply a discount, or load a gift card. Delivering the reward is up to you.
+
+`redeem` has no body idempotency key. Every successful call deducts points again. Use a
+stable application request ID and the HTTP replay header for bounded retries. Record
+point spending and fulfillment separately so a failed delivery does not spend points again.
+
+### A reward fulfillment recipe
+
+This example turns discount and gift-card rewards into OfferKit vouchers the member can use
+at checkout. You need a `DISCOUNT` campaign and a `GIFT_VOUCHERS` campaign of your own to
+hold those vouchers. Make sure both are active and in the currency you want, because the
+vouchers follow their campaign's status, dates, and currency.
+
+First create a durable reward request in your own database. Reuse that request ID when
+the customer retries; do not create a fresh ID on every attempt. Call `members.redeem`
+with `note: "reward-request:<requestId>"`, using the replay header described in
+[Retries and recovery](/reference/retries-and-recovery). Save the returned transaction ID,
+point cost, and payload before starting fulfillment.
+
+The code below is the voucher-fulfillment step, after a successful point spend. The
+application loads the saved result as `purchase` when it retries this step:
 
 ```ts
-const result = await offerkit.loyalty.members.redeem({
-  memberId: member.id,
-  rewardId: selectedRewardId,
-  note: `Requested from account page`,
-});
-
-if (!result.ok) {
-  return showRewardError(result.code, result.message);
+const payload = purchase.payload;
+if (payload.kind !== "discount" && payload.kind !== "gift_card") {
+  throw new Error("This fulfillment step requires a voucher reward");
 }
 
-await fulfillReward(result.payload);
+const code = `LOY-${purchase.transactionId.replaceAll("-", "").toUpperCase()}`;
+const campaignId = payload.kind === "discount"
+  ? loyaltyDiscountCampaignId
+  : loyaltyGiftCampaignId;
+const type = payload.kind === "discount" ? "DISCOUNT" : "GIFT_CARD";
+
+if (payload.kind === "discount" && !payload.discount) {
+  throw new Error("Discount reward has no discount configuration");
+}
+if (payload.kind === "gift_card" && !(payload.creditCents > 0)) {
+  throw new Error("Gift reward must have a positive value");
+}
+
+try {
+  await offerkit.vouchers.create({
+    code,
+    campaignId,
+    type,
+    customerId: member.customerId,
+    ...(type === "DISCOUNT"
+      ? { discount: payload.discount, redemptionLimit: 1 }
+      : { giftBalance: payload.creditCents }),
+    metadata: { loyaltyTransactionId: purchase.transactionId },
+  });
+} catch (error) {
+  if (!error || typeof error !== "object" || !("code" in error) || error.code !== "CONFLICT") {
+    throw error;
+  }
+  // A duplicate code alone does not prove this purchase was fulfilled.
+  const existing = await offerkit.vouchers.get({ params: { code } });
+  if (existing.campaignId !== campaignId || existing.customerId !== member.customerId ||
+      existing.type !== type ||
+      existing.metadata.loyaltyTransactionId !== purchase.transactionId) {
+    throw new Error("Reward voucher code belongs to another operation");
+  }
+}
+
+// Save code as delivered in your own reward-request record.
 ```
 
-OfferKit checks the balance and deducts the cost in one transaction. The returned payload
-describes what was purchased. Treat custom fulfillment as its own reliable workflow:
-record the OfferKit transaction ID, make your fulfillment idempotent, and surface failures
-to operations.
+Using the full transaction ID gives each purchase a stable voucher code. Custom rewards
+need the same property: pass the saved request or transaction ID to a fulfillment system
+that deduplicates it.
+
+If point spending times out, a protected replay within the header's 24-hour window can
+recover the cached result. Otherwise inspect history for the note marker. History returns
+only the 100 most recent entries, and an in-flight request may not have committed yet.
+Absence from that list is not proof that the points were never spent. Keep uncertain
+requests pending for reconciliation rather than spending again blindly. A ledger entry
+records `rewardId` and the transaction ID, but not a historical reward-payload snapshot;
+save that configuration with the request before a later edit can change it.
+
+If voucher creation fails after points were spent, retry only voucher creation with the
+same code. If you decide to refund the points instead, stop further fulfillment and make
+one recorded positive adjustment:
+
+```ts
+await offerkit.loyalty.members.adjust({
+  memberId,
+  delta: purchase.cost,
+  note: `refund reward-request:${purchase.requestId}`,
+});
+```
+
+This restores spendable points without a multiplier or lifetime-point increase. The
+adjustment is not linked to the original entry and has no body replay key. Record its
+transaction ID and protect its retries just as you protect earning.
+
+OfferKit does not check that a reward's payload makes sense. A `discount` reward with no
+`discount` object, or a `custom` reward with a `typeKey` you never defined as a reward type,
+is saved without complaint. Check each reward once by hand before launch.
+
+[Retries and recovery](/reference/retries-and-recovery) has the same guidance for every
+OfferKit commit call.
+
+## Manual adjustments
+
+Use `adjust` to correct a balance, and always include a note.
+
+- **Positive adjustments** add to the balance at 1×, do not count toward lifetime points,
+  and never expire. They do recalculate the member's tier against the current thresholds,
+  just like an earning.
+- **Negative adjustments** subtract from the balance and leave lifetime points and tier
+  alone. They can take the balance below zero.
+
+There is no API to reverse a single earning. If you need to take back points from a
+refunded order, use a negative adjustment that references the order. Lifetime points and
+tier will not go down.
 
 ## Show balance and history
 
 ```ts
-const current = await offerkit.loyalty.members.get({ params: { id: member.id } });
-const history = await offerkit.loyalty.members.history({ params: { id: member.id } });
+const current = await offerkit.loyalty.members.get({ params: { id: memberId } });
+const history = await offerkit.loyalty.members.history({ params: { id: memberId } });
 ```
 
-Use `current.balance` for spendable points, `current.lifetimePoints` for tier progress,
-and the ledger to explain earning, reward redemption, adjustment, expiration, and rollback.
+Use `current.balance` for spendable points, `current.lifetimePoints` for progress to the
+next tier, and `current.currentTierId` for the member's tier. `history.data` lists the 100
+most recent entries, newest first, each with its `reason`, `delta`, `balanceAfter`,
+`eventId`, `rewardId`, `note`, and `expiresAt`.
+
+Loyalty calls do not send webhooks. If other systems need to know about points, use the
+response of each call.
 
 ## Test before launch
 
-Test:
+- Enroll the same customer twice.
+- Earn for a new member, and confirm they land in the base tier at 1×.
+- Earn below, exactly at, and above each tier threshold, and check that the new multiplier
+  applies from the next earning.
+- Deliver the same order event twice and confirm your deduplication catches it.
+- Buy a reward with exactly enough points and with one point too few.
+- Kill your fulfillment worker after `redeem` returns and confirm recovery delivers once.
+- Expire an earning after some of it was spent.
+- Make positive and negative adjustments.
+- Edit a tier threshold and confirm when existing members move.
 
-- repeat enrollment;
-- earning below, at, and above every tier threshold;
-- earning with and without a tier multiplier;
-- duplicate application events;
-- a reward with exactly enough points and one point too few;
-- custom reward fulfillment failure and retry;
-- expiration of several earning entries;
-- positive and negative manual adjustments.
+## Changing a live program
 
-## Operate the program
-
-Use manual adjustment only with an explanatory note. The ledger should remain the audit
-trail for every balance change. When changing tier thresholds or reward costs, decide
-how the change should affect existing members before editing a live program.
+- **Reward cost changes** apply from the next purchase.
+- **Tier changes** reach each member only at their next earning or positive adjustment.
+  There is no public recalculate-only operation. Tell members when their status will
+  update; do not add a point solely to force recalculation.
+- **Removing a reward** stops new purchases. Past purchases stay in the ledger.

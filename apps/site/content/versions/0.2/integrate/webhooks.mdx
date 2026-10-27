@@ -1,6 +1,6 @@
 ---
 title: Webhooks
-description: Receive signed OfferKit events, make handlers idempotent, and recover failed deliveries.
+description: "Receive and verify signed OfferKit webhooks, handle duplicate deliveries safely, and recover failed events while accounting for operations with no event."
 ---
 
 Webhooks notify your server after OfferKit records an event. Use them for downstream
@@ -24,9 +24,14 @@ Each delivery is a JSON `POST`:
   "id": "event-uuid",
   "type": "voucher.redeemed",
   "payload": {
-    "redemptionId": "redemption-uuid",
+    "redemptionId": "00000000-0000-4000-8000-000000000001",
+    "voucherId": "00000000-0000-4000-8000-000000000002",
     "voucherCode": "WELCOME10",
-    "amount": 1000
+    "customerId": null,
+    "orderId": null,
+    "externalOrderId": "order-42",
+    "amount": 1000,
+    "finalOrder": { "amount": 4000, "currency": "USD" }
   },
   "createdAt": "2026-05-08T22:25:00Z"
 }
@@ -57,10 +62,19 @@ export async function handleOfferKitWebhook(request: Request) {
   }
 
   const event = JSON.parse(rawBody);
-  await processOnce(event.id, event);
+  // acceptOnce is your durable inbox: atomically insert event.id under a
+  // unique constraint and enqueue the event in the same database transaction.
+  await acceptOnce(event.id, event);
   return new Response(null, { status: 204 });
 }
 ```
+
+`acceptOnce` is application code, not an SDK helper. For example, insert an inbox row
+keyed by event ID with `ON CONFLICT DO NOTHING`, and create a pending-work row only if the
+insert succeeds, in the same transaction. A worker reads pending rows, performs the side
+effect with its own idempotency key, and marks the work complete. A process crash after
+sending an email but before marking completion can still resend it unless your delivery
+provider also deduplicates the event ID.
 
 Never verify a re-serialized JSON object. Whitespace or key-order changes produce a
 different signature.
@@ -88,10 +102,63 @@ event-ID deduplication must therefore work for manual replays too.
 
 ## Current event catalog
 
-- `customer.created`
-- `voucher.redeemed`
-- `voucher.redeemed.rolled_back`
-- `voucher.stack.redeemed`
+| Type | When it is emitted | Payload fields |
+| --- | --- | --- |
+| `customer.created` | Customer created through create or upsert | `customerId`, `email`, `name`, `externalId` |
+| `voucher.redeemed` | Successful single discount-voucher redemption | `redemptionId`, `voucherId`, `voucherCode`, `customerId`, `orderId`, `externalOrderId`, `amount`, `finalOrder` |
+| `voucher.stack.redeemed` | Successful discount stack | `batchId`, `customerId`, `orderId`, `externalOrderId`, `amount`, `finalOrder`, `entries` |
+| `voucher.redeemed.rolled_back` | Internal rollback function | `rollbackRedemptionId`, `originalRedemptionId`, `voucherId`, `amount` |
+
+Each stack entry contains `voucherCode`, `voucherId`, `redemptionId`, and `amount`.
+A stack emits its batch event rather than a separate single-redemption event per voucher.
+`amount` is integer minor units; `finalOrder` contains the remaining amount and currency.
+Customer profile fields and optional order/customer references can be null.
+
+There is no public rollback endpoint, so a normal API client cannot trigger the rollback
+event. Gift-card spend also has no event in the current redemption path. There are no dedicated
+events for loyalty earning or spending, referral conversion,
+automatic-promotion qualification, or general configuration edits. Store their direct
+outcomes and trigger your own application work. Do not wait for a nonexistent referral
+webhook before delivering its rewards.
+
+Other payload examples, shown without the common event envelope:
+
+```json
+{
+  "customerId": "00000000-0000-4000-8000-000000000003",
+  "email": "maya@example.com",
+  "name": "Maya",
+  "externalId": "user-42"
+}
+```
+
+```json
+{
+  "batchId": "00000000-0000-4000-8000-000000000004",
+  "customerId": null,
+  "orderId": null,
+  "externalOrderId": "order-43",
+  "amount": 1000,
+  "finalOrder": { "amount": 4000, "currency": "USD" },
+  "entries": [
+    {
+      "voucherCode": "WELCOME10",
+      "voucherId": "00000000-0000-4000-8000-000000000002",
+      "redemptionId": "00000000-0000-4000-8000-000000000005",
+      "amount": 1000
+    }
+  ]
+}
+```
+
+```json
+{
+  "rollbackRedemptionId": "00000000-0000-4000-8000-000000000006",
+  "originalRedemptionId": "00000000-0000-4000-8000-000000000001",
+  "voucherId": "00000000-0000-4000-8000-000000000002",
+  "amount": 1000
+}
+```
 
 Subscribe to `*` only if your handler safely ignores unknown future event types. Prefer
 an explicit default branch that records and acknowledges an unsupported type.
@@ -106,3 +173,15 @@ an explicit default branch that records and acknowledges an unsupported type.
 - an unknown event type;
 - replay from the dashboard;
 - secret rotation in your deployment process.
+
+## Rotate a signing secret
+
+There is no in-place signing-secret rotation API. Create a replacement subscription and
+store its new secret. During overlap, let the receiver verify against either secret and
+deduplicate by event ID across both subscriptions. Drain or reconcile pending deliveries
+on the old subscription, then disable it and remove its secret from the receiver.
+
+The subscription signing secret belongs on your receiver. It is different from
+`WEBHOOK_SECRET_ENCRYPTION_KEY`, which web and worker use to decrypt stored signing
+secrets. Changing that encryption key without migrating ciphertext breaks existing
+subscriptions; it does not rotate their signing secrets.

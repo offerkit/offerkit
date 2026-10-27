@@ -1,6 +1,6 @@
 ---
 title: API reference
-description: REST + RPC routes, generated from the live oRPC contract.
+description: "Read the archived OfferKit v0.1 REST and RPC reference, including authentication and response conventions, or follow the link to current documentation."
 ---
 
 The API contract is defined once in `packages/contract` as Zod schemas + oRPC route metadata. From the same definition, OfferKit serves:
@@ -19,7 +19,7 @@ List endpoints take `limit` (1-100, default 20) and an opaque `cursor`. The resp
 
 ## Idempotency
 
-Mutations that can be safely retried accept an `idempotencyKey` (e.g. `vouchers.redeem`, `redemptions.stack`). Replays return the original outcome with `idempotent: true`.
+Mutations that can be safely retried accept an `idempotencyKey` (e.g. `vouchers.redeem`, `redemptions.stack`). Successful replays return the stored outcome with `idempotent: true`. Keep the original input: body replay keys do not guarantee a conflict for every changed body.
 
 ## Errors and domain outcomes
 

@@ -1,6 +1,6 @@
 ---
 title: Get started
-description: Spin up OfferKit locally and run your first redemption.
+description: "Follow the archived OfferKit v0.1 local setup and first voucher redemption walkthrough, or switch to the stable guide for the current integration flow."
 ---
 
 ## 1. Run the stack
@@ -64,6 +64,11 @@ curl -H "Authorization: Bearer $OFFERKIT_API_KEY" -H 'Content-Type: application/
 ```
 
 The redeem endpoint is idempotent on `(voucherCode, idempotencyKey)` — replays return the same response with `idempotent: true`. Validate, redeem, and stack-redeem failures also include an `explanations` array with support-safe reason codes and details such as activation windows, redemption limits, gift card balance, and stacking skips.
+
+The voucher creation response includes the generated `code`. Copy it into `<CODE>` in
+both requests above; copy the campaign response's `id` into `<CAMPAIGN_ID>`. `1000` USD
+means USD 10.00 and the example cart is USD 50.00. Validation returns `valid`; redemption
+returns `ok`. Keep the API key on your server.
 
 ## Where next
 

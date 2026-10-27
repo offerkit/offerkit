@@ -4,6 +4,11 @@ Command-line interface for OfferKit.
 
 OfferKit is open-source promotion infrastructure for coupons, gift cards, loyalty, referrals, customer segments, and validation rules. The CLI uses `@offerkit/sdk` under the hood and talks to the same `/api/v1` API as the dashboard, SDK, and MCP server.
 
+A campaign groups an initiative; a voucher is a discount or stored-value code. Loyalty
+and referrals have separate programs and customer relationships. Start with
+[How objects connect](https://offerkit.dev/docs/reference/relationships/) if those terms
+are new, or [build your first offer](https://offerkit.dev/docs/getting-started/).
+
 ## Install
 
 ```bash
@@ -59,6 +64,11 @@ webhooks, events, orders, API keys, users, workspace settings, audit log, and
 insights. The generic `api` command is available as a fallback for exact SDK
 procedure calls.
 
+Amounts and `--amount` values use minor units: `25000` EUR is EUR 250.00 and `2500`
+is EUR 25.00. Percentages use basis points (`1000` = 10%). The dashboard's discount input
+uses display amounts instead. `appliesTo: "voucher"` labels a rule; attaching the rule's
+ID to the campaign makes voucher decisions enforce it.
+
 Call any OfferKit API procedure by SDK path:
 
 ```bash
@@ -70,6 +80,13 @@ offerkit api campaigns.create \
 
 offerkit api vouchers.create \
   --input '{"code":"WAPP25","campaignId":"<CAMPAIGN_ID>","type":"DISCOUNT","discount":{"type":"AMOUNT","amount":2500}}'
+```
+
+Copy the returned rule ID into `<RULE_ID>` and campaign ID into `<CAMPAIGN_ID>`.
+Activate the campaign before redeeming:
+
+```bash
+offerkit campaigns update <CAMPAIGN_ID> --status active
 ```
 
 `--input` accepts inline JSON, `@file.json`, or `-` to read JSON from stdin.
@@ -119,12 +136,62 @@ offerkit referrals issue --data @referral.json
 offerkit loyalty members earn --data @earn-points.json
 offerkit webhooks create --data @webhook.json
 offerkit orders create --data @order.json
-offerkit api-keys create --data '{"name":"CI","scopes":["*"]}'
+offerkit api-keys create --data '{"name":"Checkout","scopes":["customers:write","vouchers:validate","vouchers:redeem"]}'
 ```
 
 ## Links
 
 - Repository: https://github.com/offerkit/offerkit
-- Docs: https://offerkit.dev/docs/integrations
+- Docs: https://offerkit.dev/docs/reference/developer-tools/
 - SDK package: https://www.npmjs.com/package/@offerkit/sdk
 - License: MIT
+
+## Example input files
+
+Replace UUID placeholders with IDs returned by your deployment. Save each JSON block
+under the filename shown before using its `--data @filename` command.
+
+`qualify.json`:
+
+```json
+{"customerExternalId":"user-42","order":{"amount":5000,"currency":"USD","items":[]},"filters":{"includeSkipped":true}}
+```
+
+`stack-redemption.json`:
+
+```json
+{"codes":["WELCOME10","MEMBER5"],"customerExternalId":"user-42","order":{"amount":5000,"currency":"USD","items":[]},"externalOrderId":"order-42","idempotencyKey":"order-42:stack"}
+```
+
+`tier.json` (the campaign must be `PROMOTION` with `autoApply: true`):
+
+```json
+{"campaignId":"<PROMOTION_CAMPAIGN_ID>","name":"Ten off","effect":{"type":"AMOUNT","amount":1000},"priority":10}
+```
+
+`referral.json`:
+
+```json
+{"programId":"<REFERRAL_PROGRAM_ID>","referrerCustomerId":"<CUSTOMER_ID>","prefix":"MAYA"}
+```
+
+`earn-points.json`:
+
+```json
+{"memberId":"<LOYALTY_MEMBER_ID>","basePoints":50,"eventId":"order-42","applyMultiplier":true}
+```
+
+`webhook.json`:
+
+```json
+{"name":"Order events","url":"https://shop.example/offerkit-webhook","events":["voucher.redeemed","voucher.stack.redeemed"]}
+```
+
+`order.json`:
+
+```json
+{"externalId":"order-42","customerId":"<CUSTOMER_ID>","amount":5000,"currency":"USD","items":[{"name":"Shirt","quantity":1,"unitPrice":5000}],"status":"CREATED"}
+```
+
+An earning `eventId` records its source; it does not stop duplicate earning. Do not
+blindly rerun the earning command after a timeout. See [Retries and recovery](https://offerkit.dev/docs/reference/retries-and-recovery/).

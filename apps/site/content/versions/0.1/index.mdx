@@ -1,6 +1,6 @@
 ---
 title: OfferKit
-description: Self-hostable, MIT-licensed promotion engine — vouchers, gift cards, loyalty, referrals, all in one.
+description: "Browse the archived OfferKit v0.1 documentation for vouchers, gift cards, loyalty, referrals, deployment, and integrations, or switch to the stable guide."
 ---
 
 Welcome. **OfferKit** is an MIT-licensed promotion engine you run yourself. One published Docker image, one Docker Compose file, or two Railway Docker Image services gives you:
@@ -21,9 +21,13 @@ Welcome. **OfferKit** is an MIT-licensed promotion engine you run yourself. One 
 - [Referrals](/referrals) — wiring refer-a-friend into your checkout
 - [Migrating existing referrals](/migrating-referrals) — one-time bulk import from a legacy system
 
+For a plain-language explanation of the relationships, see the
+[current concept guide](/docs/reference/relationships/). Check this release's API before
+using a field introduced in newer examples.
+
 ## Domain model at a glance
 
-A **campaign** is a parent for one of five kinds of programs (`DISCOUNT`, `GIFT_VOUCHERS`, `LOYALTY_PROGRAM`, `REFERRAL_PROGRAM`, `PROMOTION`). A **voucher** belongs to a discount or gift campaign and either carries a discount config or a gift-card balance. A **loyalty program** has tiers, earning rules, rewards, and member ledgers. A **referral program** issues `{prefix}-{code}` codes that, on convert, hand out two configurable rewards. **Validation rules** live in a reusable JSON-Logic library. Every state-changing operation emits an **event**; **webhooks** subscribe to event types and receive HMAC-signed POSTs with exponential-backoff retries.
+A **campaign** is a parent for one of five kinds of programs (`DISCOUNT`, `GIFT_VOUCHERS`, `LOYALTY_PROGRAM`, `REFERRAL_PROGRAM`, `PROMOTION`). A **voucher** belongs to a discount or gift campaign and either carries a discount config or a gift-card balance. A **loyalty program** has tiers, earning rules, rewards, and member ledgers. A **referral program** issues `{prefix}-{code}` codes that, on convert, hand out two configurable rewards. **Validation rules** live in a reusable JSON-Logic library. **Webhooks** deliver the event types listed in the [webhook reference](/webhooks); do not assume every state change has an event.
 
 ## License
 

@@ -1,6 +1,6 @@
 ---
 title: Launch and operate OfferKit
-description: Move an offer safely from draft to production and support it throughout its lifecycle.
+description: "Prepare OfferKit offers for launch, test checkout and reward delivery, monitor live decisions, and handle support incidents throughout each campaign."
 ---
 
 An offer is ready when the business policy, application behavior, failure experience,
@@ -35,7 +35,7 @@ and operational owner all agree—not merely when the campaign status says activ
 - Support can search by code, customer, order, referral, or event.
 - Dashboards or alerts cover unexpected failures and dead webhook deliveries.
 - A reconciliation query or job can find missing and mismatched outcomes.
-- The rollback or customer-remediation policy is written down.
+- The customer-remediation policy uses operations exposed by the API; internal rollback functions are not public commands.
 
 ## Campaign lifecycle
 
@@ -44,8 +44,11 @@ and operational owner all agree—not merely when the campaign status says activ
 - **Paused** temporarily stops the campaign while preserving its setup.
 - **Ended** communicates that the campaign is complete.
 
-Use a voucher or tier's active setting to stop one item. Use the campaign status to stop
-the whole initiative.
+These statuses gate voucher use and automatic promotion qualification. Use a voucher or
+tier's active setting to stop one item. Loyalty earning, spending, enrollment, referral
+issuance, and referral conversion do not check the parent status or dates. Stop those
+application calls separately when suspending a program. Referral-issued vouchers still
+respect the referral campaign's status and dates when redeemed.
 
 ## Monitor the right signals
 
@@ -68,7 +71,7 @@ Before changing value, eligibility, or priority:
 
 1. capture examples of currently passing and failing carts;
 2. understand which live vouchers or tiers inherit the setting;
-3. pause the affected scope if an inconsistent decision would be costly;
+3. pause affected vouchers or promotions, or stop application calls to the affected program;
 4. make the smallest change;
 5. rerun boundary tests;
 6. reactivate and watch the first production decisions.

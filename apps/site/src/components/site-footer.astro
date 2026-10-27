@@ -1,9 +1,12 @@
 ---
 import { GithubLogoIcon, StarIcon } from "@phosphor-icons/react/ssr";
+import { getCollection } from "astro:content";
 import { formatGitHubStars, getGitHubStars } from "@/lib/github";
 
 const githubStars = await getGitHubStars();
 const githubStarsLabel = formatGitHubStars(githubStars);
+const latestPost = (await getCollection("blog", ({ data }) => !data.draft))
+  .sort((left, right) => right.data.publishedAt.valueOf() - left.data.publishedAt.valueOf())[0];
 ---
 
 <footer class="border-t border-[var(--site-border)] bg-white/55 py-10">
@@ -13,6 +16,14 @@ const githubStarsLabel = formatGitHubStars(githubStars);
       <div>
         <p class="font-bold tracking-[-0.025em] text-[var(--site-heading)]">OfferKit</p>
         <p class="mt-0.5">Open-source promotion infrastructure.</p>
+        {latestPost && (
+          <p class="mt-2 max-w-xs">
+            From the blog:{" "}
+            <a class="underline underline-offset-4 hover:text-[var(--site-heading)]" href={`/blog/${latestPost.id.replace(/\.(md|mdx)$/, "")}/`}>
+              {latestPost.data.title}
+            </a>
+          </p>
+        )}
       </div>
     </div>
     <nav class="flex flex-wrap items-center gap-x-5 gap-y-2" aria-label="Footer navigation">

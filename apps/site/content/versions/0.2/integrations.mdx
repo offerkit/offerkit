@@ -1,79 +1,11 @@
 ---
-title: SDK, CLI, and MCP
-description: Three programmatic surfaces over the same typed contract.
+title: Developer interface reference
+description: "Find the OfferKit developer tools guide to choose between the TypeScript SDK, REST API, CLI, and MCP server, with shared contracts and access scopes."
 ---
 
-All three use the same contract and authenticate with the same `OFFERKIT_API_KEY`. The SDK uses OfferKit's typed RPC transport; the CLI and MCP server build on the same SDK.
+Use [SDK, REST, CLI, and MCP](/reference/developer-tools) for installation, input shapes,
+credentials, and connection examples.
 
-## TypeScript SDK
-
-```bash
-pnpm add @offerkit/sdk
-```
-
-```ts
-import { createClient, verifyWebhook } from "@offerkit/sdk";
-
-const offerkit = createClient({
-  baseUrl: "https://your-offerkit-deployment",
-  apiKey: process.env.OFFERKIT_API_KEY!,
-});
-
-const result = await offerkit.vouchers.redeem({
-  params: { code: "SUMMER10" },
-  body: {
-    order: { amount: 9999, currency: "USD", items: [] },
-    idempotencyKey: "order-42",
-  },
-});
-```
-
-Types flow directly from the oRPC contract — no codegen step. Edge-runtime safe (`node:crypto` is only used for the optional `verifyWebhook` helper).
-
-## CLI (`offerkit`)
-
-```bash
-pnpm add -g @offerkit/cli
-offerkit login --url https://your-offerkit-deployment --api-key offerkit_…
-
-offerkit vouchers list
-offerkit vouchers validate SUMMER10 --amount 9999
-offerkit vouchers redeem SUMMER10 --amount 9999 --idempotency-key order-42
-
-offerkit campaigns create --name "Spring 2026" --type DISCOUNT --currency USD
-offerkit customers list --search alice
-```
-
-Config is stored in `~/.offerkitrc` (chmod 0600). `OFFERKIT_API_URL` / `OFFERKIT_API_KEY` env vars override the file.
-
-## MCP server
-
-The deployed web image can expose an OAuth-protected MCP endpoint generated from the current contract. Set `OFFERKIT_MCP_ENABLED=true`, use the deployment's HTTPS origin as `OFFERKIT_PUBLIC_URL`, and connect to `https://your-deployment/mcp`.
-
-```bash
-codex mcp add offerkit --url https://your-deployment/mcp
-codex mcp login offerkit
-
-claude mcp add --transport http offerkit https://your-deployment/mcp
-```
-
-Codex opens the OAuth sign-in from `codex mcp login`; in Claude Code, run `/mcp` after adding the server. The grant runs with the signed-in OfferKit user's role and can be revoked under **Settings → Agent connections**.
-
-For a local stdio connection with a scoped API key, add `offerkit-mcp` to your MCP host (Claude Desktop, Cursor, …):
-
-```json
-{
-  "mcpServers": {
-    "offerkit": {
-      "command": "npx",
-      "args": ["-y", "@offerkit/mcp"],
-      "env": {
-        "OFFERKIT_API_URL": "https://your-offerkit-deployment",
-        "OFFERKIT_API_KEY": "offerkit_…"
-      }
-    }
-  }
-}
-```
-
-Contract metadata decides which procedures are exposed and labels every tool as `safe`, `mutating`, or `destructive`. Tool names follow the SDK path with underscores—for example `vouchers_list`, `vouchers_validate`, `vouchers_redeem`, and `referrals_convert`. Your MCP client shows the authoritative list for the running version.
+For a new checkout, start with the [integration blueprint](/integrate). The
+[API conventions](/reference/api-reference) explain scopes, results, and compatibility.
+For the domain model, see [How objects connect](/reference/relationships).

@@ -1,13 +1,18 @@
 ---
 title: Referrals
-description: Integrate refer-a-friend, list a customer's codes, and apply codes at checkout.
+description: "Read the archived OfferKit v0.1 referral integration guide for advocate codes, customer relationships, and conversions, or switch to current documentation."
 ---
 
 OfferKit's referral model is **one stable code per referrer, many conversions per code**. A customer's code is fetched-or-created idempotently the first time you call `referrals.issue`. Every friend who checks out with that code creates a separate `referral_conversion` row and issues fresh rewards to both sides.
 
+This archived guide uses the older SDK surface. The
+[current referral guide](/docs/solutions/referrals/) explains campaign links, reward
+fulfillment, loyalty-point rewards, and failure recovery. Check your installed contract
+before copying current-version fields into a 0.1 integration.
+
 ## Prereqs
 
-- A referral program exists in your OfferKit dashboard. Create one under **Campaigns → New (REFERRAL_PROGRAM) → Referral program**. You'll need the `programId`.
+- A referral program exists in your OfferKit dashboard. Create a **REFERRAL_PROGRAM** campaign, then open **Referrals** and create a program attached to it. You'll need the `programId`.
 - Each side has a reward configured. For an EUR 25 mutual discount:
 
   ```json
@@ -43,7 +48,7 @@ export const offerkit = createClient({
 });
 ```
 
-The SDK is dashboard-auth only — calls go from your **server** to OfferKit. Don't ship the API key to a browser.
+The SDK uses an API key for calls from your **server** to OfferKit. Don't ship the API key to a browser.
 
 ## Flow 1: fetch-or-issue the referrer's code
 
@@ -100,6 +105,7 @@ const applicable = await Promise.all(
     const r = await offerkit.vouchers.validate({
       params: { code: v.code },
       body: {
+        customerId: customer.id,
         order: {
           amount: cart.totalCents,
           currency: cart.currency,
@@ -111,7 +117,7 @@ const applicable = await Promise.all(
         },
       },
     });
-    return r.ok ? { voucher: v, validation: r } : null;
+    return r.valid ? { voucher: v, validation: r } : null;
   }),
 );
 
@@ -122,7 +128,7 @@ const usableNow = applicable.filter((x): x is NonNullable<typeof x> => x !== nul
 
 ## Flow 4: convert at checkout
 
-When a buyer applies a referral code and completes payment, call `referrals.convert`. This issues both rewards in a single transaction.
+When a buyer applies a referral code and completes payment, call `referrals.convert`. Check and save both reward outcomes; a failed second reward can leave an earlier reward issued. Inspect the advocate's vouchers or points before retrying.
 
 ```ts
 const conversion = await offerkit.referrals.convert({
@@ -178,7 +184,8 @@ A code returned in `referrerReward.voucherCode` / `refereeReward.voucherCode` is
 await offerkit.vouchers.redeem({
   params: { code: voucherCode },
   body: {
-    order: { amount: cart.totalCents, currency: cart.currency, items: [...] },
+    customerId: customer.id,
+    order: { amount: cart.totalCents, currency: cart.currency, items: [] },
     idempotencyKey: order.id,
   },
 });
@@ -190,7 +197,7 @@ See [Get started](/getting-started) for the full redemption surface.
 
 | Code | Meaning |
 | --- | --- |
-| `program_not_found` | The `programId` (or its parent campaign) was deleted. |
+| `program_not_found` | The program is missing or was deleted. |
 | `referrer_not_found` | The `referrerCustomerId` doesn't exist or was soft-deleted. |
 | `referral_not_found` | The submitted code doesn't match any `referral_code` row. |
 | `self_referral` | Buyer is trying to redeem their own code. |
