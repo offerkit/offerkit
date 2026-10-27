@@ -4,8 +4,10 @@ packages:
 engineStrict: true
 overrides:
   esbuild: 0.28.1
-  hono: 4.12.21
-  qs: 6.15.2
+  hono: 4.13.14
+  qs: 6.16.1
+  miniflare>sharp: 0.35.5
+  miniflare>undici: 7.30.1
 allowBuilds:
   esbuild: true
   lefthook: true
