@@ -9,6 +9,8 @@
     "preview": "astro preview",
     "lint": "oxlint src scripts astro.config.mjs",
     "typecheck": "astro check",
+    "test": "node --test scripts/*.test.mjs",
+    "check:seo": "node scripts/check-seo.mjs",
     "snapshot": "node scripts/snapshot-version.mjs",
     "deploy": "pnpm build && wrangler deploy"
   },

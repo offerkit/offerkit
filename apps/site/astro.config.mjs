@@ -40,6 +40,7 @@ export default defineConfig({
         return (
           !pathname.startsWith("/docs/next/") &&
           !pathname.startsWith("/docs/v/") &&
+          pathname !== "/docs/api-reference/" &&
           pathname !== "/docs/integrations/" &&
           pathname !== "/docs/webhooks/"
         );

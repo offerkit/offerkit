@@ -3,6 +3,7 @@ import { getCollection, type CollectionEntry } from "astro:content";
 import { structure, type StructuredData } from "fumadocs-core/mdx-plugins";
 import { loader, type StaticSource } from "fumadocs-core/source";
 import versionManifest from "../../versions.json";
+import { canonicalDocsUrl } from "./docs-aliases.mjs";
 
 type DocsEntry = CollectionEntry<"docs">;
 type MetaEntry = CollectionEntry<"meta">;
@@ -160,7 +161,7 @@ export function getVersionOptions(slugs: string[]) {
         : variant.kind === "next"
           ? "Unreleased documentation"
           : "Previous release",
-    url: variant.source.getPage(slugs)?.url ?? `${variant.baseUrl}/`,
+    url: canonicalDocsUrl(variant.source.getPage(slugs)?.url ?? `${variant.baseUrl}/`),
   }));
 }
 

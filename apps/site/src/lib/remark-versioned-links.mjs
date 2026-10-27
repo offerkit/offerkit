@@ -1,3 +1,5 @@
+import { canonicalDocsUrl } from "./docs-aliases.mjs";
+
 export function remarkVersionedLinks() {
   return (tree, file) => {
     const filePath = String(file.path ?? file.history?.[0] ?? "").replaceAll("\\", "/");
@@ -23,7 +25,7 @@ export function remarkVersionedLinks() {
         : node.url === "/"
           ? prefix
           : `${prefix}${node.url}`;
-      node.url = withTrailingSlash(versionedUrl);
+      node.url = canonicalDocsUrl(withTrailingSlash(versionedUrl));
     });
   };
 }
