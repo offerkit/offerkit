@@ -4,7 +4,7 @@ description: Diagnose code failures, wrong discounts, missing rewards, balance p
 ---
 
 Start with the exact runtime outcome. Avoid changing campaign configuration until you
-can reproduce the customer's customer, cart, currency, code, and time context.
+can reproduce the customer's identity, cart, currency, code, and time context.
 
 ## A code does not work
 
@@ -21,9 +21,9 @@ Common explanations:
 | Code | What to inspect |
 | --- | --- |
 | `voucher_not_found` | Typo, wrong environment, or deleted code |
-| `campaign_inactive` | Campaign status |
+| `campaign_inactive` | Campaign status, missing parent, or campaign activation window |
 | `voucher_disabled` | Voucher active setting |
-| `voucher_expired` | Campaign and voucher time windows |
+| `voucher_expired` | Voucher start and end timestamps |
 | `redemption_limit_reached` | Voucher usage counter and total limit |
 | `per_user_redemption_limit_reached` | Customer identity and prior activity |
 | `customer_required` | Missing customer context for the policy |
@@ -56,8 +56,10 @@ Fetch the current voucher and its transaction ledger. Reconcile every credit, re
 rollback, and adjustment entry. Check for two application orders using different
 idempotency keys for the same intended purchase.
 
-Do not repair the balance by editing a cached number in your application. Preserve the
-ledger and use the supported operational adjustment path when available.
+Do not repair the balance by editing a cached number in your application. There is no
+public ledger-preserving gift adjustment or voucher rollback endpoint. Use a tracked
+support compensation workflow; see [Retries, refunds, and
+recovery](/reference/retries-and-recovery).
 
 ## Loyalty points are missing or duplicated
 
@@ -93,9 +95,11 @@ ID because replay delivers the same event again.
 
 ## A retry produced a conflict
 
-An idempotency key identifies one logical request body. Reusing it with different codes,
-customer, order context, or amount returns a conflict. Reconstruct the original request
-for a true retry; use a new key only for a genuinely new business operation.
+The HTTP `Idempotency-Key` header identifies one logical request body for 24 hours.
+Reusing it for a different body returns a conflict. Body `idempotencyKey` fields and
+referral event IDs replay stored outcomes under different scopes; they do not all compare
+request bodies. Keep the original input and follow [Retries and
+recovery](/reference/retries-and-recovery).
 
 ## Escalation evidence
 
@@ -113,3 +117,9 @@ Capture:
 
 Remove API keys, webhook secrets, passwords, and unnecessary personal data before sharing
 diagnostic material.
+
+## Find a complete reason-code list
+
+The [API conventions](/reference/api-reference#decision-reasons) list voucher decision
+reasons and promotion-specific differences. A successful HTTP request can still return
+`valid: false` or `ok: false`; check the business result before recording success.

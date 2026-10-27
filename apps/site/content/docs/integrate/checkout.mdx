@@ -4,8 +4,9 @@ description: Preview incentives as the cart changes and commit the final result 
 ---
 
 A checkout integration has a read path and a commit path. The read path can run often
-and returns previews. The commit path changes OfferKit state and must run from your server
-with a stable idempotency key.
+and returns previews. Voucher qualification can create a customer when it receives an
+unknown external ID; upsert the customer explicitly before showing their wallet. The
+commit path changes balances or usage and must run from your server with a stable retry strategy.
 
 ## 1. Build authoritative context
 
@@ -76,7 +77,7 @@ const promotions = await offerkit.promotions.qualify({
 
 Promotion qualification returns a combined preview after priority and exclusivity. It
 is read-only, so persist the selected tier IDs and amount with the order if your checkout
-accepts the result.
+accepts the result. Automatic promotions have no commit endpoint or usage ledger.
 
 ## 5. Decide the calculation order
 
@@ -89,6 +90,20 @@ Write down how your checkout combines:
 
 OfferKit can calculate each supported decision, but your application orchestrates the
 overall order. Gift cards cannot be submitted in the multi-voucher discount stack.
+
+Here is one policy for a USD 100 subtotal, with tax and shipping handled afterward:
+
+| Decision | `order.amount` sent | Result used by your order |
+| --- | ---: | --- |
+| Automatic promotion | `10000` | USD 10 discount; remaining subtotal USD 90 |
+| Voucher discount | `9000` | 20% of USD 90 = USD 18; remaining subtotal USD 72 |
+| Gift-card spend | `7200` | USD 20 from the card; remaining payment USD 52 |
+
+Persist each amount and pass the same basis when rechecking or committing that step.
+A voucher threshold is tested against `9000` in this policy, not the original `10000`.
+Choose a different sequence if your business policy requires it. Priority and exclusivity
+are local to each calculation: an exclusive promotion does not exclude a voucher.
+Neither decision calculates tax, shipping, or the payment-provider charge for you.
 
 ## 6. Recheck and commit
 
@@ -104,7 +119,7 @@ const result = await offerkit.vouchers.redeem({
   body: {
     ...context,
     externalOrderId: order.id,
-    idempotencyKey: order.id,
+    idempotencyKey: `${order.id}:vouchers`,
   },
 });
 ```
@@ -116,7 +131,7 @@ const result = await offerkit.vouchers.stackRedeem({
   codes,
   ...context,
   externalOrderId: order.id,
-  idempotencyKey: order.id,
+  idempotencyKey: `${order.id}:vouchers`,
 });
 ```
 
@@ -128,7 +143,8 @@ Only mark the incentive accepted when `ok` is true.
 Two common strategies exist:
 
 - **Redeem before payment:** reserves no special session, but a later payment failure
-  can leave a consumed voucher that needs operational correction.
+  can leave consumed value. There is no public rollback command; your support workflow
+  must handle compensation.
 - **Redeem after payment:** avoids consuming value on failed payment, but the offer can
   change between authorization and redemption.
 
@@ -136,8 +152,11 @@ Choose deliberately for your payment flow. Keep the interval short, use stable k
 and build a reconciliation job for orders whose payment and OfferKit state disagree.
 
 Referral conversion should usually happen after payment capture. Loyalty earning often
-happens after capture or fulfillment. The same business event should not trigger both
-paths twice.
+happens after capture or fulfillment. One paid order may legitimately trigger all three.
+Track voucher redemption, loyalty earning, and referral conversion as separate steps; a
+retry of one must not rerun the others. See [Retries, refunds, and
+recovery](/reference/retries-and-recovery) for the key mapping and partial-failure
+workflow.
 
 ## Customer-safe errors
 

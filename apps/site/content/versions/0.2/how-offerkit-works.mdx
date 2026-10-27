@@ -1,139 +1,211 @@
 ---
 title: How OfferKit works
-description: Understand where OfferKit fits, how an offer moves through the system, and what the main objects mean.
+description: Understand where OfferKit fits, how an offer moves through the system, and how campaigns, programs, customers, rules, and rewards connect.
 ---
 
-OfferKit is a decision engine and ledger for incentives. It does not replace your cart,
-checkout, payment processor, user database, or messaging system. It receives context
-from those systems, decides which configured benefit applies, records committed use,
-and emits events your application can react to.
+OfferKit decides which incentive applies and keeps the record of what was used. It does
+not replace your cart, checkout, payment processor, user database, or messaging system.
+Your application sends it the customer and the cart, OfferKit answers with what applies,
+and your application commits the business event when it really happens.
 
 ## The lifecycle of an offer
 
-Every OfferKit integration follows the same basic lifecycle:
+Most integrations follow the same path:
 
-1. **Configure** — define the benefit, audience, limits, dates, and stacking behavior.
-2. **Qualify or validate** — send the current customer and cart to preview what applies.
-3. **Present** — your application shows the code, discount, balance, points, or reward.
-4. **Redeem or convert** — commit the business event at checkout or after payment.
-5. **Record** — OfferKit updates counters or balances and writes ledger activity.
-6. **React** — events and webhooks notify the rest of your stack.
+1. **Configure** the benefit, audience, limits, dates, and stacking behavior.
+2. **Preview** what applies by validating a code or qualifying a cart.
+3. **Present** the code, discount, balance, points, or reward in your UI.
+4. **Commit** the business event: a voucher redemption, a referral conversion, a points
+   earning, or a loyalty reward purchase.
+5. **Record**: OfferKit updates counters, balances, and ledgers.
+6. **React**: your systems pick up the result, either from the API response or, for
+   voucher redemptions, from a webhook.
 
-The first two steps are safe to repeat. The commit step changes state and should include
-a stable idempotency key or event ID whenever the operation supports one.
+Previews consume no voucher usage or balance, so you can repeat them when the cart
+changes. Voucher qualification can still create a customer record when you pass a
+`customerExternalId` that OfferKit has not seen before.
+
+Commit calls change state. How safely you can retry them depends on the operation:
+
+| Commit | Retry protection |
+| --- | --- |
+| Voucher redemption and stack redemption | `idempotencyKey` |
+| Referral conversion | `conversionEventId`, unique per referral code |
+| Loyalty earning | `eventId` is stored on the ledger entry but is **not** deduplicated |
+| Loyalty reward redemption | No body replay key. Use application tracking and the HTTP replay header |
+
+For loyalty, your application has to do its own deduplication.
+[Retries and recovery](/reference/retries-and-recovery) covers each case.
 
 ## Start with the customer experience
 
-The object you configure depends on what the customer should experience:
+Pick the object based on what the customer should experience:
 
-| Customer experience | OfferKit mechanism |
+| Customer experience | What you configure |
 | --- | --- |
-| “Enter `SAVE10`” | A discount voucher inside a discount campaign |
-| “Your cart automatically qualifies for USD 10 off” | A promotion tier inside a promotion campaign |
-| “Spend the remaining USD 24.50 on this card” | A gift-card voucher with a balance ledger |
-| “You earned 200 points and reached Gold” | A loyalty member inside a loyalty program |
-| “Invite a friend; you both receive a reward” | A referral code and conversion inside a referral program |
+| "Enter `SAVE10` at checkout" | A discount voucher in a discount campaign |
+| "Your cart automatically qualifies for 10 off" | A promotion tier in a promotion campaign |
+| "You have 24.50 left on this card" | A gift-card voucher in a gift-voucher campaign |
+| "You earned 200 points and reached Gold" | A member of a loyalty program |
+| "Invite a friend and you both get 15 off" | A referral code and conversion in a referral program |
 
-In these docs, **offer** is the plain-language umbrella for all of the above. It is not
-an API resource.
+In these docs, **offer** is the everyday word for all of the above. It is not an API
+resource.
+
+## How the objects connect
+
+Campaigns group benefit configuration. Loyalty and referral campaigns each carry a program,
+and the program holds everything specific to that kind of incentive.
+
+```text
+Campaign (DISCOUNT / GIFT_VOUCHERS)  ── has many ──▶ Vouchers
+Campaign (PROMOTION)                 ── has many ──▶ Promotion tiers
+Campaign (any type)                  ── may use one ─▶ Validation rule
+
+Campaign (LOYALTY_PROGRAM) ── at most one ──▶ Loyalty program
+    Loyalty program ── has many ──▶ Tiers, Earning rules, Rewards, Members
+    Member ── belongs to one ──▶ Customer
+    Member ── has many ──▶ Ledger entries
+
+Campaign (REFERRAL_PROGRAM) ── at most one ──▶ Referral program
+    Referral program ── has many ──▶ Referral codes (one per advocate)
+    Referral code ── has many ──▶ Conversions (one per referred friend)
+    Conversion ── creates ──▶ Reward vouchers in the same campaign,
+                             or loyalty points, or a custom payload
+```
+
+A customer has at most one membership in each loyalty program and one advocate code in
+each referral program. Each advocate code can have many conversions, but only one per
+friend. Campaigns and promotion tiers can each attach one validation rule. Segments have
+no runtime campaign link.
+
+OfferKit rejects a second program on a campaign that already has one. Deleting the
+program frees the campaign so you can create a new one. Both kinds of program need a
+campaign of the matching type.
+
+[How objects connect](/reference/relationships) follows a customer through these links.
 
 ## The main objects
 
 ### Campaign
 
-A campaign is the common configuration and lifecycle container. It supplies a name,
-currency, timezone, activation window, status, code defaults, and optional limits or
-validation rule. Its type declares the behavior it will contain.
+A campaign holds a name, currency, timezone, activation window, status, code defaults,
+an optional per-customer redemption limit, and an optional validation rule. Its type says
+what it contains.
 
-Campaigns move through `draft`, `active`, `paused`, and `ended`. A newly created
-campaign is a draft and cannot be redeemed until it is active.
+A campaign is `draft`, `active`, `paused`, or `ended`. New campaigns start as drafts.
+
+How much a campaign's settings matter depends on what is inside it:
+
+- **Vouchers and promotion tiers** respect campaign status, dates, currency, and the
+  campaign validation rule on every validation, qualification, and redemption. A draft or
+  ended campaign makes them unusable.
+- **Loyalty programs** do not check campaign status or dates. Enrollment, earning,
+  adjustments, and reward redemption work the same whether the campaign is a draft, active,
+  or ended. If you want a loyalty program to stop, stop calling it.
+- **Referral programs** do not check campaign status or dates when issuing codes or
+  converting. The reward vouchers a conversion creates do live in the referral campaign,
+  so they cannot be redeemed until that campaign is active and inside its dates. A
+  conversion on a draft campaign will succeed and hand out codes that fail at checkout
+  with `campaign_inactive`.
 
 ### Voucher
 
-A voucher is a code. A discount voucher contains a fixed or percentage discount. A
-gift-card voucher contains a spendable balance. Vouchers can be shared, generated in
-bulk, or assigned to one customer.
+A voucher is a code. A discount voucher carries a fixed or percentage discount. A
+gift-card voucher carries a spendable balance. Vouchers can be shared, generated in bulk,
+or assigned to one customer.
 
-Vouchers can also have their own dates, redemption limits, priority, exclusivity, and
-metadata. Voucher settings can narrow campaign settings, but cannot make an inactive
-campaign redeemable.
+A voucher can add its own dates, redemption limits, priority, exclusivity, and metadata.
+These can narrow what the campaign allows but cannot make an inactive campaign usable.
 
 ### Promotion tier
 
-A promotion tier is a code-free discount. Your server asks OfferKit to qualify the
-current cart, and OfferKit returns the eligible tiers and a calculated preview. Tiers
-can have different conditions, priorities, dates, and exclusivity behavior.
+A promotion tier is a discount without a code. Your server asks OfferKit to qualify the
+cart, and OfferKit returns the tiers that apply with a calculated preview. Each tier has
+its own conditions, priority, dates, and exclusivity.
 
-### Program
+### Loyalty program and referral program
 
-Loyalty and referral behavior needs more configuration than a common campaign can hold.
-A loyalty program adds tiers, earning rules, rewards, member balances, and point ledgers.
-A referral program adds advocate codes, conversions, and separate rewards for each side.
-
-The campaign remains the lifecycle container; the program is the type-specific behavior
-attached to it. In normal setup there is one active program of the matching type for a
-campaign.
+A loyalty program adds tiers, earning rules, rewards, members, and a points ledger. A
+referral program adds the reward for each side, advocate codes, and conversions. See
+[Launch a loyalty program](/solutions/loyalty) and
+[Launch a referral program](/solutions/referrals).
 
 ### Customer
 
-A customer connects your user to vouchers, redemptions, loyalty membership, referral
-activity, and targeting data. Use your stable user ID as `externalId`; this lets you
-upsert safely without storing an OfferKit UUID as the only lookup key.
+A customer links your user to vouchers, redemptions, loyalty memberships, referral
+activity, and targeting data. Put your stable user ID in `externalId`, so you can upsert
+without storing OfferKit's UUID as your only lookup key.
+
+Voucher validation, qualification, and redemption accept either `customerId` or
+`customerExternalId`. Promotion qualification, loyalty, and referral calls accept only the
+internal `customerId` (or a `memberId`), so upsert the customer first and use the returned
+ID.
 
 ### Order
 
-An order records a transaction and can connect it to its redemptions. For a lightweight
-integration you can send cart context directly during validation and redemption. Create
-OfferKit order records when you also want lifecycle, order lookup, and redemption history
-inside OfferKit.
+An order records a transaction and links it to its redemptions. For a light integration
+you can send cart details inline with validation and redemption. Create order records when
+you also want order lookup and redemption history inside OfferKit.
 
 ### Validation rule and segment
 
-A validation rule answers a question such as “Is the order at least USD 50?”, “Does it
-contain this product?”, or “Is this customer in the intended audience?” Rules can be
-attached to campaigns, promotion tiers, earning behavior, and rewards.
+A validation rule answers a question such as "Is the order over 50.00?" or "Does the cart
+contain this product?". OfferKit evaluates rules attached to campaigns and promotion
+tiers. A loyalty earning rule can store a validation rule ID, but OfferKit does not
+evaluate it, and loyalty rewards have no rule field at all.
 
-A segment is a reusable audience definition evaluated against customers. Preview a
-segment before using its identifier in targeting logic.
+A segment is a saved customer rule you can preview to see how many customers match. It is
+a design tool. Campaign decisions do not consult segments. See
+[Target customers with rules](/solutions/targeting) and [Rules reference](/reference/rules).
 
 ### Reward type
 
-Discounts and gift-card credit are built in. A reward type describes a benefit that your
-own application fulfills, such as free shipping, a complimentary item, or external points.
-OfferKit validates and records the configured payload; your application performs the
-domain-specific action.
+Discounts and gift-card credit are built in. A reward type names a benefit your own
+application delivers, such as free shipping or a free sample. Promotion qualification
+returns a tier's custom rewards in `eligible[].customRewards`. For a voucher, read
+`customRewards` with `vouchers.get` after a successful decision; validation, qualification,
+and redemption responses do not include those payloads.
+
+OfferKit does not check a custom payload against the reward type's schema or check that
+its key names a registered reward type. Your application validates and delivers the benefit.
 
 ## Three kinds of decisions
 
 ### Qualification
 
-Qualification discovers applicable offers without the customer already knowing a code.
-Use it for automatic promotions or to list customer-held vouchers that work for the
-current cart.
+Qualification finds offers the customer did not have to type in. Promotion qualification
+returns the automatic promotions that fit the cart. Voucher qualification lists vouchers
+assigned to the customer that work for the cart. Neither consumes anything, but voucher
+qualification will create a customer for an unknown `customerExternalId`.
 
 ### Validation
 
-Validation checks a known voucher code and returns a read-only discount preview or a
-support-safe explanation. Call it whenever the cart, currency, or customer changes.
+Validation checks one known voucher code and returns a discount preview, or a reason it
+does not apply. It writes nothing, and an unknown `customerExternalId` is treated as a new
+customer with no history. Call it again whenever the cart, currency, or customer changes.
 
 ### Redemption
 
-Redemption commits voucher use. It increments counters, reduces gift-card balance when
-applicable, records a ledger entry, and emits an event. Use an idempotency key.
+Redemption commits a voucher use. It increments counters, reduces gift-card balance when
+relevant, and records the redemption. Discount redemptions emit `voucher.redeemed`; gift
+spends currently do not emit that event. Send an `idempotencyKey`.
 
-Referral conversion and loyalty earning or reward redemption are their program-specific
-versions of a committed business event.
+Referral conversion, loyalty earning, and loyalty reward redemption are the commit steps
+for their programs. They return their results in the API response and do not emit webhook
+events. See [Webhooks](/integrate/webhooks) for the current event list.
 
 ## Where each responsibility belongs
 
-| Responsibility | Typical owner |
+| Responsibility | Usually owned by |
 | --- | --- |
-| Product prices, tax, inventory, and authoritative order total | Your commerce system |
-| Users, authentication, and customer-facing sessions | Your application |
+| Prices, tax, inventory, and the final order total | Your commerce system |
+| Users, sign-in, and sessions | Your application |
 | Payment capture and refunds | Your payment provider or commerce system |
 | Offer configuration, eligibility, usage limits, balances, and ledgers | OfferKit |
-| Checkout presentation and final order persistence | Your application |
+| Deciding how many loyalty points an event is worth | Your application |
+| Delivering custom rewards and loyalty reward payloads | Your application |
 | Email, push, SMS, and in-app messages | Your messaging stack |
 
-The [integration blueprint](/integrate) turns these boundaries into an implementation
-plan. If you already know what you want to build, go directly to [Build for a goal](/solutions).
+The [integration blueprint](/integrate) turns this into an implementation plan. If you
+already know what you want to build, go to [Build for a goal](/solutions).

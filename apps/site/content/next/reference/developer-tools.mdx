@@ -4,7 +4,8 @@ description: Choose the right programmatic surface over OfferKit's shared typed 
 ---
 
 OfferKit defines its contract once and exposes it through several interfaces. They share
-the same resources, authentication model, and business behavior; choose based on where
+the same resources and business behavior. API-key clients and hosted OAuth clients have
+different credentials and permission controls; choose based on where
 the caller runs and how it should be operated.
 
 ## TypeScript SDK
@@ -27,14 +28,36 @@ export const offerkit = createClient({
 Types flow from the oRPC contract without a code-generation step. The client is safe for
 edge runtimes; `verifyWebhook` uses Node crypto only when that helper is imported and used.
 
-The SDK follows nested resource paths:
+The SDK follows nested resource paths, but input shape depends on the route:
+
+| Route input | SDK shape |
+| --- | --- |
+| Simple create or list | Direct fields, such as `vouchers.list({ limit: 20 })` |
+| Path parameters | `params`, such as `vouchers.get({ params: { code } })` |
+| Path plus request payload | `params` and `body`, such as voucher validation |
+| Path plus query filters | `params` and `query`, such as referral code listing |
+| Campaign/program patch update | `params` plus `body: { patch: { ... } }` |
 
 ```ts
-await offerkit.vouchers.validate(...);
-await offerkit.promotions.qualify(...);
-await offerkit.loyalty.members.earn(...);
-await offerkit.referrals.convert(...);
+await offerkit.vouchers.validate({
+  params: { code: "WELCOME10" },
+  body: { order: { amount: 5000, currency: "USD", items: [] } },
+});
+
+await offerkit.campaigns.update({
+  params: { id: campaignId },
+  body: { patch: { status: "active" } },
+});
+
+await offerkit.referrals.listCodes({
+  params: { programId },
+  query: { limit: 20 },
+});
 ```
+
+Update shapes are not universal. Voucher, campaign, order, and program updates use
+`body.patch`. Workspace updates have direct fields because they have no path parameters.
+Use installed SDK types or the server's OpenAPI to check the particular operation.
 
 ## REST API
 
@@ -58,10 +81,13 @@ pnpm add -g @offerkit/cli
 offerkit login --url https://offerkit.example.com --api-key offerkit_…
 
 offerkit vouchers list
-offerkit vouchers validate WELCOME10 --amount 5000
-offerkit vouchers redeem WELCOME10 --amount 5000 --idempotency-key order-42
+offerkit vouchers validate WELCOME10 --amount 5000 --currency USD
+offerkit vouchers redeem WELCOME10 --amount 5000 --currency USD --idempotency-key order-42
 offerkit customers list --search alice
 ```
+
+CLI amounts use minor units: `5000` USD is USD 50.00. Percentage inputs use basis points,
+so `1000` is 10%.
 
 Login writes `~/.offerkitrc` with mode 0600. `OFFERKIT_API_URL` and
 `OFFERKIT_API_KEY` environment variables override file configuration. Avoid placing a

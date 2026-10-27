@@ -35,6 +35,8 @@ unexpected metadata type.
 ## Separate preview and commit tests
 
 Assert that repeated validation or qualification does not change counters or balances.
+Create fixture customers first: voucher qualification can create a customer when an
+unknown `customerExternalId` is supplied, whereas voucher validation does not.
 Then assert that redemption changes state exactly once and the response matches the
 persisted ledger.
 
@@ -44,7 +46,7 @@ fresh final decision rather than trusting browser state.
 ## Exercise retries and concurrency
 
 - Repeat the same redemption with the same idempotency key.
-- Send the same key with a different request body and expect a conflict.
+- Send the same HTTP `Idempotency-Key` header with a different request body and expect a conflict. Body replay keys have different guarantees; see [Retries and recovery](/reference/retries-and-recovery).
 - Send simultaneous requests that spend the last gift-card balance.
 - Send simultaneous uses of a one-use voucher.
 - Redeliver the same referral conversion event.
@@ -64,7 +66,7 @@ Before launch, make sure an operator can:
 - explain a failed validation;
 - pause a campaign;
 - disable a compromised code;
-- inspect gift or loyalty ledgers;
+- inspect gift or loyalty ledgers and explain the available compensation options;
 - find a referral conversion and both outcomes;
 - inspect and replay a webhook delivery;
 - correlate an application order with OfferKit records.

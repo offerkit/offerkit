@@ -12,7 +12,7 @@ This guide walks the import end-to-end. It's intentionally explicit about *what 
 
 ## Decide what you're preserving
 
-OfferKit needs three things for each historical record:
+Map these fields before starting the import:
 
 | Your data | OfferKit field | Notes |
 | --- | --- | --- |
@@ -22,7 +22,16 @@ OfferKit needs three things for each historical record:
 | Original event id | `referral_conversion.conversion_event_id` | Optional but **strongly recommended** — your old order id is the cleanest dedupe key. |
 | Issued voucher code(s) | `referral_conversion.referrer_outcome.voucherCode` / `referee_outcome.voucherCode` | Only if you still want them to honor the original vouchers (see [Step 4](#step-4-decide-what-to-do-with-historical-vouchers)). |
 
-Things you **don't** need to import: original conversion timestamps (OfferKit uses `created_at = now()` unless you override), the running program total, or analytics aggregates (OfferKit derives those).
+Preserve original conversion and creation timestamps so support can reconstruct the
+history. Program totals and analytics aggregates do not need a separate import.
+
+Create the destination referral campaign and program first. The SQL below needs the
+program UUID. Prepare `legacy_referral(referrer_user_id, code, created_at)` and
+`legacy_conversion(referrer_user_id, referee_user_id, converted_at, original_order_id,
+created_at)` staging tables from your export. The user-ID columns must match the values
+stored in `customer.external_id`; the example compares them as text. Back up the database
+and rehearse the import before cutover. The [migration guide](/operate/migrating-referrals)
+covers destination setup and reward policy.
 
 ## Step 1: import customers
 
@@ -126,7 +135,10 @@ JOIN referral_code rc    ON rc.referrer_customer_id = c_referrer.id
 ON CONFLICT (code_id, referee_customer_id) DO NOTHING;
 ```
 
-The `(code_id, referee_customer_id)` unique constraint blocks duplicate inserts; the partial unique on `(code_id, conversion_event_id) WHERE conversion_event_id IS NOT NULL` blocks duplicate event-id replays. Together they make the importer safely re-runnable.
+The `(code_id, referee_customer_id)` unique constraint blocks duplicate inserts; the partial unique on `(code_id, conversion_event_id) WHERE conversion_event_id IS NOT NULL` blocks duplicate event-id replays. These constraints prevent those duplicate rows. `ON CONFLICT (code_id,
+referee_customer_id)` does not catch a different friend reusing an event ID on the same
+code; validate those conflicts before importing. A changed legacy code for an already
+imported advocate also needs reconciliation rather than a silent overwrite.
 
 ## Step 4: decide what to do with historical vouchers
 

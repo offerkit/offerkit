@@ -20,7 +20,7 @@ voucher to a customer.
 Before building, decide:
 
 - fixed amount or percentage discount;
-- whole order or selected product and collection IDs;
+- whether eligibility depends on specific products or collections;
 - total and per-customer usage limits;
 - start and end dates;
 - whether the code can combine with other vouchers;
@@ -83,7 +83,7 @@ const redemption = await offerkit.vouchers.redeem({
       currency: order.currency,
       items: order.items,
     },
-    idempotencyKey: order.id,
+    idempotencyKey: `${order.id}:vouchers`,
   },
 });
 ```
@@ -126,3 +126,32 @@ when the whole promotion must stop temporarily; mark it ended when it is complet
 
 For several codes on one order, use [Combine discounts safely](/solutions/stacking).
 For code-free behavior, use [Build an automatic cart discount](/solutions/automatic-cart-discount).
+
+## Limits, assignment, and generated codes
+
+A voucher's `redemptionLimit` caps its total uses across all customers. Its
+`perUserRedemptionLimit` caps uses by one identified customer. A campaign's
+`perUserRedemptionLimit` counts that customer's voucher uses across the entire campaign.
+
+For example, campaign limit 1 means using `WELCOME10` prevents the same customer from
+using another voucher in that campaign. It does not mean one use of each code. There is
+no campaign-wide total redemption limit field. Failed attempts do not consume per-user
+usage; internal rollback records are excluded from that count. A payment refund alone
+does not restore usage, and there is no public rollback command. Assigned vouchers require the matching
+customer; unassigned codes may allow guests when no customer-dependent condition or
+per-user limit is configured.
+
+Creating or generating a code does not assign or send it to anyone. Set `customerId` on
+the voucher to assign it, then deliver the code through your application. Assigned codes
+can appear in the customer's available-offers list. A shared public code is not returned
+there just because the customer could use it.
+
+Bulk generation runs inline for up to 10,000 codes. Larger requests return `generated: 0`
+and a `jobId` while the worker generates them. That response is acceptance, not completion.
+Check the campaign's voucher list and count, and correlate worker logs by job ID before
+sending a batch. There is no public job-status endpoint. Check for a completed batch
+before resubmitting a timed-out request; bulk generation has no body idempotency key.
+
+A product condition makes the whole offer eligible when the product is present. The
+current calculator uses `order.amount` as its discount base and does not enforce
+`discount.appliesTo` as a line-item filter. See [Rule inputs and operators](/reference/rules).

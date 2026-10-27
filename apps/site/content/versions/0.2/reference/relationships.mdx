@@ -1,0 +1,107 @@
+---
+title: How objects connect
+description: Follow a customer, campaign, program, and reward through OfferKit.
+---
+
+A campaign groups an initiative. A program holds the extra configuration needed for
+loyalty or referrals. A customer is the person taking part. These are separate records,
+with separate IDs.
+
+## Start with one customer
+
+Suppose Maya has account ID `user-42` in your shop. Upserting that ID creates an OfferKit
+customer. She can then hold several vouchers, join several loyalty programs, and have a
+referral code in each referral program. Each loyalty membership has its own balance;
+joining one program does not enroll her in another.
+
+```text
+Your user (externalId: user-42)
+└── OfferKit customer (customerId)
+    ├── assigned vouchers
+    ├── loyalty member in program A → balance, tier, transactions
+    ├── loyalty member in program B → separate balance, tier, transactions
+    └── referral code in program C → conversions → rewards for both people
+```
+
+Dashboard staff accounts are separate from customers. A staff user can configure the
+program; that account does not become a loyalty member or a referred customer.
+
+## Choose the campaign type
+
+| Campaign type | What belongs to it | How it is used |
+| --- | --- | --- |
+| `DISCOUNT` | Discount vouchers | The customer presents a voucher code. |
+| `GIFT_VOUCHERS` | Gift-card vouchers | The customer spends a code's remaining balance. |
+| `PROMOTION` | Promotion tiers | Your server qualifies a cart without a code. |
+| `LOYALTY_PROGRAM` | One non-deleted loyalty program, with its members, tiers, earning rules, and rewards | Your server enrolls customers, awards points, and exchanges points for rewards. |
+| `REFERRAL_PROGRAM` | One non-deleted referral program, its advocate codes, conversions, and issued reward vouchers | Your server records successful referrals and delivers the rewards. |
+
+Creating a loyalty or referral campaign does not create its program. Create the program
+separately and pass the campaign's ID as `campaignId`. Use the resulting program's ID as
+`programId` for enrollment or referral-code issuance. Promotion tiers attach directly to
+their campaign; there is no separate promotion-program record.
+
+The voucher API also permits a voucher without a campaign. Such a voucher has no parent
+currency, activation window, or campaign rule. Use a campaign for the flows in these guides
+so those controls are explicit.
+
+## What a campaign controls
+
+| Setting | Discount and gift vouchers | Automatic promotions | Loyalty and referral operations |
+| --- | --- | --- | --- |
+| Status and dates | Checked during validation and redemption, along with the voucher's own controls | Checked along with each tier's controls | Not checked by enrollment, earning, loyalty reward redemption, referral issuance, or conversion |
+| Currency | Must match the submitted order | Must match the submitted order | Points are not money; referral-issued vouchers use the referral campaign's currency |
+| Validation rule | Checked for each contained voucher | Checked along with the tier's rule | Not evaluated by program operations |
+| Per-user redemption limit | Counts voucher uses across the campaign | Does not cap promotion qualification | Does not cap earning or referral conversion |
+| Code defaults | Used when generating campaign vouchers | No customer-entered code | Referral advocate codes use program code length and an advocate prefix |
+| `autoApply` | Does not make discount codes automatic | Must be enabled for discovery | Does not trigger program activity |
+
+Pausing a referral campaign blocks use of its issued vouchers, but does not stop new
+referral conversions. Pausing a loyalty campaign does not stop point earning or spending.
+Stop those calls in your application when closing or suspending a program.
+
+## Follow a referral reward
+
+Maya shares her advocate code. When Noor completes the event your application recognizes
+as a successful referral, `referrals.convert` creates reward outcomes:
+
+| Configured benefit | Result | What your application does next |
+| --- | --- | --- |
+| Discount | A fresh, recipient-assigned, single-use discount voucher in the referral campaign | Deliver the code; validate and redeem it on a later purchase. |
+| Gift card | A fresh, recipient-assigned balance-bearing voucher in the referral campaign | Deliver the code and accept its value at checkout. |
+| Loyalty points | An adjustment to the recipient's membership in `loyaltyProgramId` | Enroll that recipient beforehand and display the updated balance. |
+| Custom | A returned payload | Validate it against your business contract and fulfill the benefit. |
+
+The advocate code identifies who referred the friend. It is not one of the reward voucher
+codes. A post-payment conversion does not discount the order that has already been paid.
+
+For a full example linking the two program types, see [Launch a referral program](/solutions/referrals).
+
+## Follow a loyalty reward
+
+A loyalty reward is something a member buys with points. `loyalty.members.redeem` deducts
+the point cost and returns the reward payload. It does not create a discount or gift-card
+voucher. Your fulfillment code creates the voucher, applies store credit, or carries out
+the custom action. See [Launch a loyalty program](/solutions/loyalty).
+
+A **reward type** describes a custom payload, such as free shipping. It is not a loyalty
+reward or referral program. Vouchers and promotion tiers can carry `customRewards` entries
+with a `typeKey` and `payload`; loyalty and referral rewards use their own payload shapes.
+Registered reward-type schemas are stored for your integration to use, but are not
+automatically enforced against those payloads by decision calls.
+
+Promotion qualification returns custom entries in `eligible[].customRewards`. Voucher
+validation and redemption responses do not include the voucher's custom payloads; fetch
+`vouchers.get({ params: { code } })` to read `customRewards`, then fulfill them only after
+a successful decision or commit according to your policy. Track fulfillment with the
+redemption or source-order ID so a retry does not deliver twice.
+
+## Rules and audiences
+
+A reusable validation rule is connected by its ID to a campaign or promotion tier.
+Creating it in the rule library alone changes no live offer. Its `appliesTo` label does
+not attach it to a resource or cause earning rules to run.
+
+Segments let you preview an audience against stored customer data. Segment previews do
+not populate membership in voucher or promotion decisions. Put the equivalent customer
+conditions in the attached validation rule. See [Rule inputs and operators](/reference/rules).

@@ -16,12 +16,17 @@ For every voucher family, decide:
 
 - whether it may combine with other discounts;
 - its priority relative to other codes;
-- whether applying it should exclude every lower-priority voucher;
+- whether it should compete as an exclusive voucher, excluding every other voucher;
 - whether percentage discounts should have a maximum amount;
 - what the customer sees when a code is skipped.
 
-Mark a voucher `exclusive` when it must win alone. Use higher priority for the benefit
-that should be considered first.
+Mark a voucher `exclusive` when it must win alone. If any submitted eligible voucher is
+exclusive, only the exclusive voucher with the highest numeric priority applies. Even a
+higher-priority non-exclusive voucher is skipped. There is no separate “may combine” flag.
+
+Without an exclusive voucher, larger priority numbers run first. Equal priorities use
+creation time, oldest first, then voucher ID. This ordering is deterministic; it does not
+choose whichever combination saves the most money.
 
 ## Preview individual codes
 
@@ -41,7 +46,7 @@ const result = await offerkit.vouchers.stackRedeem({
     currency: order.currency,
     items: order.items,
   },
-  idempotencyKey: order.id,
+  idempotencyKey: `${order.id}:vouchers`,
 });
 ```
 
@@ -73,3 +78,27 @@ Test:
 
 Record the returned batch and entry IDs with the order so support can reconstruct the
 calculation later.
+
+## Follow the calculation
+
+On a USD 100 order, put a USD 10 voucher before a 20% voucher:
+
+| Step | Discount | Remaining amount |
+| --- | ---: | ---: |
+| Starting order | — | USD 100.00 |
+| Fixed voucher | USD 10.00 | USD 90.00 |
+| 20% of the remaining USD 90 | USD 18.00 | USD 72.00 |
+
+Reversing their priorities gives USD 20 off first, then USD 10, leaving USD 70. Two 10%
+vouchers leave USD 81, not USD 80. Percentage amounts round half up to an integer minor
+unit, then apply any cap. Every effect is capped at the remaining total.
+
+An effect after the total reaches zero is skipped with `zero_after_running_total` and
+has no committed redemption entry. An exclusive winner produces `exclusivity_lost` for
+other codes. A validation failure such as an expired code rejects the stack; an ordinary
+stacking skip is part of a successful calculation. At most 20 codes may be submitted.
+
+Stack redemption has no read-only combined-preview endpoint. Individual validation can
+explain whether each code is usable, but adding its individual preview amounts does not
+reproduce the running-total calculation. Use the committed breakdown as the accepted
+result and keep your displayed calculation consistent with this ordering.

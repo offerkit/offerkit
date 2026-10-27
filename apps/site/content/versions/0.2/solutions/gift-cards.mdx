@@ -91,7 +91,8 @@ const card = await offerkit.vouchers.get({ params: { code } });
 const history = await offerkit.vouchers.transactions({ params: { code } });
 ```
 
-Ledger reasons include initial credit, redemption, rollback, and adjustment. Do not
+The ledger can contain initial credit, redemption, rollback, and adjustment reasons.
+Rollback and ledger-preserving adjustments are not exposed through the public API. Do not
 calculate the authoritative balance by summing a cached history in the browser; use the
 current balance returned by OfferKit.
 
@@ -117,3 +118,23 @@ all cards in that program must stop working.
 Gift cards are not supported inside the multi-voucher stack redemption flow. Process a
 gift card separately from stacked discount vouchers and make the payment order explicit
 in your checkout.
+
+## Payment and refunds
+
+Gift cards, store credit, and promotional credit all use a gift-card voucher when OfferKit
+holds the monetary balance. Your application decides whether customers purchase that
+value or receive it as a benefit. A discount reduces the price; gift value pays part of
+the amount remaining. Both currently appear as a voucher redemption in OfferKit.
+
+For example, after discounts a USD 50 order may have USD 20 paid by gift value and USD 30
+collected by your payment provider. Pass `5000` as the gift redemption's order amount and
+store the actual gift spend. If the card has USD 80, the same call spends USD 50; it has
+no separate input for “spend only USD 10.” Keep that policy explicit in your checkout.
+
+Canceling the order or refunding the payment does not restore gift value. There is no
+public gift-card rollback or ledger-preserving balance-adjustment command. Plan support
+compensation before launch; [Retries, refunds, and recovery](/reference/retries-and-recovery)
+describes the supported options.
+
+Gift-card redemption currently does not emit `voucher.redeemed`. Use the direct spend
+response and your stored order record to trigger receipts or reconciliation.

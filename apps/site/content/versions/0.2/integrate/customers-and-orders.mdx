@@ -100,11 +100,14 @@ const offerkitOrder = await offerkit.orders.create({
 });
 ```
 
-Pass `offerkitOrder.id` as `orderId` when redeeming. You may also pass your own
-`externalOrderId` for direct reconciliation.
+Pass `offerkitOrder.id` as `orderId` when redeeming, along with the inline `order` context
+used for the decision. You may also pass your own `externalOrderId` for reconciliation.
+Passing only that external reference does not attach the redemption to the stored order.
 
-OfferKit order states are `CREATED`, `PAID`, `FULFILLED`, and `CANCELED`. Keep state
-transitions driven by your authoritative order workflow.
+OfferKit order states are `CREATED`, `PAID`, `FULFILLED`, and `CANCELED`. They record
+progress from your authoritative order workflow. Creating an order or changing its
+status does not redeem a voucher, award points, convert a referral, refund a payment, or
+reverse a benefit. Call those operations separately and store their outcomes.
 
 ## Understand the two item shapes
 
@@ -121,3 +124,36 @@ during validation and redemption.
 Customer and order deletion is soft deletion. Before deleting a customer, decide how
 their vouchers, loyalty membership, referrals, and audit needs should be handled. Avoid
 using deletion as a routine sync mechanism for temporarily disabled accounts.
+
+## Which ID goes where?
+
+| Field or call | Identifier |
+| --- | --- |
+| `customers.upsert.externalId` | Your application's immutable user ID |
+| Voucher validate, redeem, qualify, stack | Either `customerExternalId` or the OfferKit UUID in `customerId`; if both are sent they must identify the same customer |
+| Promotion qualification | OfferKit `customerId`; it does not accept `customerExternalId` |
+| Loyalty enrollment | OfferKit `customerId` and loyalty `programId` |
+| Loyalty earn, spend, adjust, history | Loyalty `memberId`, created by enrollment |
+| Referral issue | Referral `programId` and OfferKit `referrerCustomerId` |
+| Referral convert | Advocate code string and OfferKit `refereeCustomerId` |
+| `orders.create.externalId` | Your application's order ID |
+| Redemption `externalOrderId` | Your application's order reference; does not look up or create a stored order |
+| Redemption `orderId` | UUID of an order already stored in OfferKit |
+| Redemption `order` | Inline amount, currency, and items used for the decision; not an order ID |
+
+Voucher validation does not create a customer for an unknown external ID. Voucher
+qualification and redemption can create a minimal customer with that external ID, without
+profile metadata. This is why an explicit upsert is useful even when you do not need to
+save the OfferKit UUID. Use a persisted customer for assignment and customer-data rules.
+
+An unassigned voucher can be used without customer context when no per-user limit or
+customer-dependent rule requires it. Loyalty and referrals require identified customers.
+Do not use a session's changing guest ID as a durable per-person limit.
+
+## Your catalog stays in your shop
+
+`productId` is your stable product or SKU identifier. A collection is a group such as
+`summer-sale`; `collectionId` is the identifier you send for that group. OfferKit has no
+catalog-sync requirement and does not resolve these IDs against your shop. Match the
+strings in your rules to the strings in decision items. The runtime item shape accepts
+one collection ID per item.

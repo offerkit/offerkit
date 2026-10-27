@@ -11,7 +11,7 @@ and tiered offers where a larger cart earns a larger discount.
 
 Decide whether your storefront will:
 
-- silently apply the best result;
+- apply the result selected by your priority and exclusivity settings;
 - show all eligible benefits and let the customer choose;
 - show progress before qualification, such as “Spend USD 12 more”; or
 - explain that another exclusive offer won.
@@ -75,9 +75,12 @@ the result changed, update the order or ask the customer to review it again.
 
 ## Priority and exclusivity
 
-OfferKit evaluates eligible tiers by priority when calculating the preview. An exclusive
-tier prevents lower-priority tiers from contributing. Non-exclusive tiers can combine
-until the running order total reaches zero.
+Larger priority numbers run first. If any eligible tier is exclusive, only the
+highest-priority exclusive tier contributes a monetary discount; all other tiers lose,
+even non-exclusive tiers with a larger priority number. Without an exclusive tier,
+non-exclusive tiers combine against the running order total until it reaches zero.
+Equal-priority promotion tiers are ordered by ID. Priority is a configured preference,
+not a search for the largest possible saving.
 
 The response identifies skipped tiers with reasons such as `exclusivity_lost`,
 `zero_after_running_total`, `currency_mismatch`, or `rule_failed`.
@@ -102,3 +105,19 @@ the campaign.
 
 If the customer must present a code or you need a redemption ledger and usage limits,
 use [Run a promotional code](/solutions/public-promo-code) instead.
+
+## What auto-apply does
+
+`autoApply` includes a `PROMOTION` campaign in qualification. Setting it on a `DISCOUNT`
+campaign does not make its vouchers automatic. Your storefront still has to call
+qualification and apply the returned amount to its own order.
+
+Promotion qualification creates no usage counter, stored redemption, or promotion event.
+There is no promotion commit call or reservation. If you need a one-use or per-customer
+limit, use a voucher. If you combine promotions with voucher discounts, pass the amount
+remaining after the promotion to the voucher calculation. Promotion exclusivity only
+compares promotion tiers; it does not exclude voucher codes. See the
+[checkout calculation example](/integrate/checkout#5-decide-the-calculation-order).
+
+Product conditions can qualify a tier, but `effect.appliesTo` does not restrict the
+calculated discount to matching items. The discount uses the submitted order amount.
