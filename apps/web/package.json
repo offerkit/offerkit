@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
-    "@better-auth/oauth-provider": "^1.6.25",
+    "@better-auth/oauth-provider": "^1.7.13",
     "@modelcontextprotocol/sdk": "^1.32.2",
     "@offerkit/contract": "workspace:*",
     "@offerkit/core": "workspace:*",
@@ -31,7 +31,7 @@
     "@tanstack/react-query": "^5.100.9",
     "@tanstack/react-query-devtools": "^5.100.9",
     "@tanstack/react-table": "^8.21.3",
-    "better-auth": "^1.6.25",
+    "better-auth": "^1.7.13",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",

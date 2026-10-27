@@ -41,6 +41,9 @@ function build() {
         oauthRefreshToken: schema.oauthRefreshToken,
         oauthAccessToken: schema.oauthAccessToken,
         oauthConsent: schema.oauthConsent,
+        oauthResource: schema.oauthResource,
+        oauthClientResource: schema.oauthClientResource,
+        oauthClientAssertion: schema.oauthClientAssertion,
       },
     }),
     emailAndPassword: {
@@ -82,6 +85,8 @@ function build() {
             allowPublicClientPrelogin: true,
             allowDynamicClientRegistration: true,
             allowUnauthenticatedClientRegistration: true,
+            // Local MCP hosts register loopback callbacks without application_type.
+            clientRegistrationDefaultApplicationType: "infer",
             silenceWarnings: {
               oauthAuthServerConfig: true,
               openidConfig: true,
@@ -101,7 +106,12 @@ function build() {
               "offline_access",
               HOSTED_MCP_SCOPE,
             ],
-            validAudiences: [hostedMcpResourceUrl()],
+            resources: [hostedMcpResourceUrl()],
+            // OfferKit protects a single resource that every registered client exists to
+            // reach, so per-client links add no protection. Clients registered before
+            // Better Auth 1.7 have no links, and enforcing them would break their tokens.
+            // Unconfigured resource indicators are still rejected with invalid_target.
+            enforcePerClientResources: false,
           }),
         ]
       : [],
