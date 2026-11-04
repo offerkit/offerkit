@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useForm } from "@tanstack/react-form";
+import { useForm, useStore } from "@tanstack/react-form";
 import { T, useGT } from "gt-next/client";
 import { FormFieldErrors } from "@/components/dashboard/form-field-errors";
 import { currencyFractionDigits } from "@/lib/money";
@@ -181,7 +181,11 @@ export function VoucherForm({
   currency?: string;
   /** True when the form's campaign has no known currency; blocks submit. */
   currencyMissing?: boolean;
-  /** Called as the Campaign ID field changes, so the caller can load its currency. */
+  /**
+   * Receives the form's own Campaign ID on mount and whenever it changes
+   * (typing or reset), so the caller loads the currency of the campaign that
+   * will actually be submitted.
+   */
   onCampaignIdChange?: (campaignId: string) => void;
 }) {
   const gt = useGT();
@@ -197,6 +201,11 @@ export function VoucherForm({
     },
     onSubmit: ({ value }) => onSubmit(value),
   });
+
+  const formCampaignId = useStore(form.store, (state) => state.values.campaignId);
+  useEffect(() => {
+    onCampaignIdChange?.(formCampaignId);
+  }, [formCampaignId, onCampaignIdChange]);
 
   return (
     <form
@@ -244,10 +253,7 @@ export function VoucherForm({
                 <Input
                   id={field.name}
                   value={field.state.value}
-                  onChange={(e) => {
-                    field.handleChange(e.target.value);
-                    onCampaignIdChange?.(e.target.value);
-                  }}
+                  onChange={(e) => field.handleChange(e.target.value)}
                   aria-invalid={field.state.meta.errors.length > 0}
                   placeholder={gt("Optional")}
                   disabled={mode === "edit"}

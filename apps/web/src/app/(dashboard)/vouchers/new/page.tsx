@@ -29,13 +29,18 @@ export default function NewVoucherPage() {
   });
 
   // Money precision follows the campaign the form will submit, which the user
-  // can change from the one in the URL. Shares the query cache with `campaign`.
+  // can change from the one in the URL. The form reports its own Campaign ID
+  // (on mount, reset and edit), so this always names the submitted campaign.
+  // Shares the query cache with `campaign`.
   const [selectedCampaignId, setSelectedCampaignId] = useState(campaignId);
-  // The form remounts when the URL campaign changes; follow it.
-  const [urlCampaignId, setUrlCampaignId] = useState(campaignId);
-  if (urlCampaignId !== campaignId) {
-    setUrlCampaignId(campaignId);
-    setSelectedCampaignId(campaignId);
+  // Mount the form once per URL campaign, after its first lookup settles, so
+  // its type can seed the defaults. Later refetches (e.g. retrying a failed
+  // lookup) must not unmount it and discard edits.
+  const [formMountedFor, setFormMountedFor] = useState<string | null>(
+    campaignId === "" ? "" : null,
+  );
+  if (formMountedFor !== campaignId && (campaignId === "" || !campaignPending)) {
+    setFormMountedFor(campaignId);
   }
   const selectedIsCampaign = isCampaignId(selectedCampaignId);
   const { data: selectedCampaign } = useQuery({
@@ -67,9 +72,7 @@ export default function NewVoucherPage() {
           <T>Configure a single voucher. Use bulk generate on the campaign for batches.</T>
         </p>
       </header>
-      {/* Mount once the URL campaign's first lookup settles, so its type can
-          seed the defaults without remounting (and resetting) a form in use. */}
-      {campaignId !== "" && campaignPending ? (
+      {formMountedFor !== campaignId ? (
         <p className="text-sm text-muted-foreground">
           <T>Loading…</T>
         </p>
@@ -102,7 +105,11 @@ export default function NewVoucherPage() {
           }}
           submitLabel={gt("Create voucher")}
           pending={create.isPending}
-          onSubmit={(state) => create.mutate(state)}
+          onSubmit={(state) => {
+            // Defensive: never submit amounts scaled for a different campaign.
+            if (state.campaignId !== selectedCampaignId) return;
+            create.mutate(state);
+          }}
         />
       )}
     </div>
