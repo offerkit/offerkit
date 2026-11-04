@@ -7,6 +7,8 @@ import { sendEmail } from "@offerkit/core/email";
 import type { RequestContext } from "@/server/context";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { resolveEmailLocale } from "@/lib/email/locale";
+import { accountCreatedEmail, passwordResetByAdminEmail } from "@/lib/email/templates";
 import { requireSession } from "@/server/middleware/auth";
 
 const os = implement(contract).$context<RequestContext>();
@@ -110,11 +112,10 @@ const create = os.users.create.use(requireSession).handler(async ({ context, inp
     .set({ role: input.role, mustChangePassword: true })
     .where(eq(schema.user.id, result.user.id));
   const row = await findUserOrThrow(result.user.id);
+  // The recipient's language isn't stored, so use the admin's request locale.
   await sendEmail({
     to: input.email,
-    subject: "Your Offerkit account",
-    html: `<p>Your account has been created. Sign in with the temporary password: <code>${password}</code></p>`,
-    text: `Your temporary password: ${password}`,
+    ...accountCreatedEmail({ password }, resolveEmailLocale(context.headers)),
   });
   return { ...toUserOutput(row), password };
 });
@@ -131,11 +132,10 @@ const resetPassword = os.users.resetPassword
       .set({ mustChangePassword: true, updatedAt: new Date() })
       .where(eq(schema.user.id, row.id));
     const updated = await findUserOrThrow(row.id);
+    // The recipient's language isn't stored, so use the admin's request locale.
     await sendEmail({
       to: row.email,
-      subject: "Your Offerkit password was reset",
-      html: `<p>Your password has been reset. New temporary password: <code>${password}</code></p>`,
-      text: `New temporary password: ${password}`,
+      ...passwordResetByAdminEmail({ password }, resolveEmailLocale(context.headers)),
     });
     return { ...toUserOutput(updated), password };
   });
