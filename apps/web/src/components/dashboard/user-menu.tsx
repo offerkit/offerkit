@@ -2,8 +2,8 @@
 
 import { Languages, LogOut, User } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
-import { T, useLocale } from "gt-next/client";
+import { useId, useTransition } from "react";
+import { T, useLocale, useSetLocale } from "gt-next/client";
 import { authClient } from "@/lib/auth-client";
 import { DASHBOARD_LOCALES, isDashboardLocale, localeCookie } from "@/lib/i18n";
 import {
@@ -23,12 +23,15 @@ export function UserMenu({ name, email }: { name: string; email: string }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const locale = useLocale();
+  const setLocale = useSetLocale();
+  const languageLabelId = useId();
   function changeLocale(next: string) {
     if (!isDashboardLocale(next) || next === locale) return;
-    // Persist the choice for a year; gt-next prefers this cookie over
-    // Accept-Language, and the refresh re-renders server components in it.
+    // gt-next's setter updates the client provider's locale state (it does
+    // not follow later server props) and refreshes server components. It
+    // writes a session cookie, so rewrite it to persist the choice for a year.
+    setLocale(next);
     document.cookie = localeCookie(next);
-    router.refresh();
   }
   function signOut() {
     start(async () => {
@@ -54,11 +57,18 @@ export function UserMenu({ name, email }: { name: string; email: string }) {
         <DropdownMenuLabel className="text-xs text-muted-foreground">{email}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuLabel className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Languages className="size-3.5" />
+          <DropdownMenuLabel
+            id={languageLabelId}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground"
+          >
+            <Languages className="size-3.5" aria-hidden />
             <T>Language</T>
           </DropdownMenuLabel>
-          <DropdownMenuRadioGroup value={locale} onValueChange={changeLocale}>
+          <DropdownMenuRadioGroup
+            aria-labelledby={languageLabelId}
+            value={locale}
+            onValueChange={changeLocale}
+          >
             {DASHBOARD_LOCALES.map((option) => (
               <DropdownMenuRadioItem key={option.code} value={option.code} lang={option.code}>
                 {option.label}
