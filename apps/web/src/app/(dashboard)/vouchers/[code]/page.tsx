@@ -183,6 +183,7 @@ export default function VoucherDetailPage({ params }: PageProps) {
       <VoucherForm
         key={data.updatedAt}
         mode="edit"
+        currency={campaignCurrency}
         initial={initial}
         submitLabel={gt("Save changes")}
         pending={update.isPending}
