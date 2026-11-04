@@ -37,6 +37,26 @@ function readCookie(cookieHeader: string | null, name: string): string | null {
 /** RFC 9110 qvalue: 0–1 with at most three decimals. */
 const QVALUE = /^(?:0(?:\.\d{0,3})?|1(?:\.0{0,3})?)$/;
 
+/**
+ * Weight of one Accept-Language entry from its `;`-separated parameters.
+ * Parameter names are case-insensitive. A malformed, out-of-range or
+ * repeated q-value drops the entry (returns 0) rather than outranking valid
+ * ones; a later parameter can never rehabilitate an invalid one.
+ */
+function parseWeight(params: string[]): number {
+  let q: number | null = null;
+  for (const param of params) {
+    const eq = param.indexOf("=");
+    const key = (eq === -1 ? param : param.slice(0, eq)).trim().toLowerCase();
+    if (key !== "q") continue;
+    if (q !== null) return 0;
+    const raw = eq === -1 ? "" : param.slice(eq + 1).trim();
+    if (!QVALUE.test(raw)) return 0;
+    q = Number(raw);
+  }
+  return q ?? 1;
+}
+
 /** Best supported match from an Accept-Language header, honouring q-values. */
 export function matchAcceptLanguage(header: string | null | undefined): EmailLocale | null {
   if (!header) return null;
@@ -44,17 +64,7 @@ export function matchAcceptLanguage(header: string | null | undefined): EmailLoc
     .split(",")
     .map((entry, index) => {
       const [tag = "", ...params] = entry.trim().split(";");
-      let q = 1;
-      for (const param of params) {
-        const [key, value = ""] = param.trim().split("=");
-        // Parameter names are case-insensitive; malformed or out-of-range
-        // q-values drop the entry rather than outranking valid ones.
-        if (key?.trim().toLowerCase() === "q") {
-          const raw = value.trim();
-          q = QVALUE.test(raw) ? Number(raw) : 0;
-        }
-      }
-      return { tag: tag.trim(), q, index };
+      return { tag: tag.trim(), q: parseWeight(params), index };
     })
     .filter((entry) => entry.tag.length > 0 && entry.q > 0)
     .sort((a, b) => b.q - a.q || a.index - b.index);

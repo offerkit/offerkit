@@ -72,6 +72,19 @@ describe("resolveEmailLocale", () => {
     expect(matchAcceptLanguage("nl;q = 0.9 , it;q=0.5")).toBe("nl");
   });
 
+  it("drops entries whose q-value has trailing garbage", () => {
+    expect(matchAcceptLanguage("nl;q=0.9=garbage, it;q=0.8")).toBe("it");
+  });
+
+  it("does not let a later q parameter rehabilitate an invalid one", () => {
+    expect(matchAcceptLanguage("nl;q=bogus;q=1, it;q=0.8")).toBe("it");
+  });
+
+  it("drops entries with repeated q parameters", () => {
+    expect(matchAcceptLanguage("nl;q=0.9;q=0.9, it;q=0.8")).toBe("it");
+    expect(matchAcceptLanguage("nl;q, it;q=0.8")).toBe("it");
+  });
+
   it("falls back to en for unsupported languages", () => {
     expect(resolveEmailLocale(headers({ "accept-language": "fr-FR,de;q=0.8" }))).toBe("en");
   });
