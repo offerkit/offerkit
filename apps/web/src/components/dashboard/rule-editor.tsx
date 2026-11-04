@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { T, useGT } from "gt-next/client";
+import { msg } from "gt-next";
+import { T, useGT, useMessages } from "gt-next/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,27 +37,27 @@ interface BuilderCondition {
 
 const SAMPLE_RULES = [
   {
-    label: "Email contains @example.com",
+    label: msg("Email contains @example.com"),
     rule: { in: ["@example.com", { var: "customer.email" }] },
   },
   {
-    label: "Has any phone number",
+    label: msg("Has any phone number"),
     rule: { "!=": [{ var: "customer.phone" }, null] },
   },
   {
-    label: "Total spent over 10000 minor units",
+    label: msg("Total spent over 10000 minor units"),
     rule: { ">": [{ var: "customer.summary.totalSpent" }, 10000] },
   },
 ];
 
 const CONDITION_LABELS: Record<ConditionType, string> = {
-  "order-total": "Order total above",
-  product: "Order contains product",
-  collection: "Order contains collection",
-  "customer-segment": "Customer is in segment",
-  "redemption-count": "Customer redemptions above",
-  "date-window": "Current date is between",
-  "metadata-equals": "Metadata field equals",
+  "order-total": msg("Order total above"),
+  product: msg("Order contains product"),
+  collection: msg("Order contains collection"),
+  "customer-segment": msg("Customer is in segment"),
+  "redemption-count": msg("Customer redemptions above"),
+  "date-window": msg("Current date is between"),
+  "metadata-equals": msg("Metadata field equals"),
 };
 
 const DEFAULT_CONDITION: BuilderCondition = {
@@ -140,6 +141,7 @@ function needsSecondValue(type: ConditionType) {
 
 export function RuleEditor({ value, onChange }: RuleEditorProps) {
   const gt = useGT();
+  const m = useMessages();
   const [operator, setOperator] = useState<ConditionOperator>("all");
   const [conditions, setConditions] = useState<BuilderCondition[]>([DEFAULT_CONDITION]);
   const draft = useJsonObjectDraft({
@@ -208,13 +210,24 @@ export function RuleEditor({ value, onChange }: RuleEditorProps) {
             <Label>
               <T>Match</T>
             </Label>
-            <Select value={operator} onValueChange={(v) => updateOperator(v as ConditionOperator)}>
+            <Select
+              items={[
+                { label: gt("all"), value: "all" },
+                { label: gt("any"), value: "any" },
+              ]}
+              value={operator}
+              onValueChange={(v) => updateOperator(v as ConditionOperator)}
+            >
               <SelectTrigger className="w-32">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">all</SelectItem>
-                <SelectItem value="any">any</SelectItem>
+                <SelectItem value="all">
+                  {gt("all")}
+                </SelectItem>
+                <SelectItem value="any">
+                  {gt("any")}
+                </SelectItem>
               </SelectContent>
             </Select>
             <span className="text-sm text-muted-foreground">
@@ -227,7 +240,7 @@ export function RuleEditor({ value, onChange }: RuleEditorProps) {
               <div key={condition.id} className="grid gap-2 rounded-md border p-3 md:grid-cols-[220px_1fr_1fr_auto]">
                 <Select
                   items={(Object.keys(CONDITION_LABELS) as ConditionType[]).map((type) => ({
-                    label: CONDITION_LABELS[type],
+                    label: m(CONDITION_LABELS[type]),
                     value: type,
                   }))}
                   value={condition.type}
@@ -239,7 +252,7 @@ export function RuleEditor({ value, onChange }: RuleEditorProps) {
                   <SelectContent>
                     {(Object.keys(CONDITION_LABELS) as ConditionType[]).map((type) => (
                       <SelectItem key={type} value={type}>
-                        {CONDITION_LABELS[type]}
+                        {m(CONDITION_LABELS[type])}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -305,7 +318,7 @@ export function RuleEditor({ value, onChange }: RuleEditorProps) {
                   className="rounded-md border px-2 py-0.5 text-muted-foreground hover:text-foreground"
                   onClick={() => applyRule(s.rule)}
                 >
-                  <T>{s.label}</T>
+                  {m(s.label)}
                 </button>
               ))}
             </div>

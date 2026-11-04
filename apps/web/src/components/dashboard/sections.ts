@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import { msg } from "gt-next";
 import {
   BarChart3,
   Boxes,
@@ -22,7 +23,8 @@ import {
 
 export interface DashboardSectionItem {
   href: string;
-  // `label`, `section`, and `description` are stable English source strings; <T> wraps them at render.
+  // `label` and `description` are msg()-encoded English source strings; decode
+  // them with useMessages() / getMessages() when rendering.
   label: string;
   description: string;
   icon: ComponentType<{ className?: string }>;
@@ -39,142 +41,142 @@ export interface DashboardSection {
 
 export const dashboardSections: DashboardSection[] = [
   {
-    label: "Overview",
+    label: msg("Overview"),
     items: [
       {
         href: "/dashboard",
-        label: "Overview",
-        description: "Start from the main dashboard hub.",
+        label: msg("Overview"),
+        description: msg("Start from the main dashboard hub."),
         icon: Home,
       },
     ],
   },
   {
-    label: "People",
+    label: msg("People"),
     items: [
       {
         href: "/customers",
-        label: "Customers",
-        description: "People who can redeem vouchers and earn loyalty points.",
+        label: msg("Customers"),
+        description: msg("People who can redeem vouchers and earn loyalty points."),
         icon: Users,
       },
       {
         href: "/segments",
-        label: "Segments",
-        description: "Audience rules for targeting campaigns and offers.",
+        label: msg("Segments"),
+        description: msg("Audience rules for targeting campaigns and offers."),
         icon: ListTree,
       },
     ],
   },
   {
-    label: "Promotions",
+    label: msg("Promotions"),
     items: [
       {
         href: "/campaigns",
-        label: "Campaigns",
-        description: "Discount, gift, loyalty, referral and promotion programs.",
+        label: msg("Campaigns"),
+        description: msg("Discount, gift, loyalty, referral and promotion programs."),
         icon: Megaphone,
       },
       {
         href: "/vouchers",
-        label: "Vouchers",
-        description: "Issued codes, balances, redemption tests, and status changes.",
+        label: msg("Vouchers"),
+        description: msg("Issued codes, balances, redemption tests, and status changes."),
         icon: TicketPercent,
       },
       {
         href: "/orders",
-        label: "Orders",
-        description: "Customer orders used for fulfillment and redemption context.",
+        label: msg("Orders"),
+        description: msg("Customer orders used for fulfillment and redemption context."),
         icon: ShoppingBag,
       },
       {
         href: "/insights",
-        label: "Insights",
-        description: "Redemption volume, top campaigns, and validation failures.",
+        label: msg("Insights"),
+        description: msg("Redemption volume, top campaigns, and validation failures."),
         icon: BarChart3,
       },
     ],
   },
   {
-    label: "Programs",
+    label: msg("Programs"),
     items: [
       {
         href: "/loyalty",
-        label: "Loyalty",
-        description: "Points, tiers, member balances, and loyalty rewards.",
+        label: msg("Loyalty"),
+        description: msg("Points, tiers, member balances, and loyalty rewards."),
         icon: Coins,
       },
       {
         href: "/referrals",
-        label: "Referrals",
-        description: "Referral codes, conversions, and reward issuance.",
+        label: msg("Referrals"),
+        description: msg("Referral codes, conversions, and reward issuance."),
         icon: UserPlus,
       },
     ],
   },
   {
-    label: "Configuration",
+    label: msg("Configuration"),
     items: [
       {
         href: "/rules",
-        label: "Validation rules",
-        description: "Reusable checks for voucher and promotion eligibility.",
+        label: msg("Validation rules"),
+        description: msg("Reusable checks for voucher and promotion eligibility."),
         icon: ClipboardList,
       },
       {
         href: "/rewards",
-        label: "Reward types",
-        description: "Custom reward definitions attached to vouchers and programs.",
+        label: msg("Reward types"),
+        description: msg("Custom reward definitions attached to vouchers and programs."),
         icon: Gift,
       },
       {
         href: "/events",
-        label: "Events",
-        description: "Workspace event stream for customer and promotion activity.",
+        label: msg("Events"),
+        description: msg("Workspace event stream for customer and promotion activity."),
         icon: ScrollText,
       },
       {
         href: "/webhooks",
-        label: "Webhooks",
-        description: "Delivery endpoints and signing secrets for outbound events.",
+        label: msg("Webhooks"),
+        description: msg("Delivery endpoints and signing secrets for outbound events."),
         icon: Webhook,
       },
     ],
   },
   {
-    label: "Settings",
+    label: msg("Settings"),
     items: [
       {
         href: "/settings/connections",
-        label: "Agent connections",
-        description: "OAuth access granted to MCP clients.",
+        label: msg("Agent connections"),
+        description: msg("OAuth access granted to MCP clients."),
         icon: Cable,
         requiresHostedMcp: true,
       },
       {
         href: "/settings/api-keys",
-        label: "API keys",
-        description: "Scoped API credentials for server integrations.",
+        label: msg("API keys"),
+        description: msg("Scoped API credentials for server integrations."),
         icon: Key,
       },
       {
         href: "/settings/audit-log",
-        label: "Audit log",
-        description: "Admin-only mutation history across dashboard and API actions.",
+        label: msg("Audit log"),
+        description: msg("Admin-only mutation history across dashboard and API actions."),
         icon: FileText,
         adminOnly: true,
       },
       {
         href: "/settings/users",
-        label: "Users",
-        description: "Admin-only staff accounts and role management.",
+        label: msg("Users"),
+        description: msg("Admin-only staff accounts and role management."),
         icon: Boxes,
         adminOnly: true,
       },
       {
         href: "/settings",
-        label: "Workspace",
-        description: "Workspace profile, currency, and operational defaults.",
+        label: msg("Workspace"),
+        description: msg("Workspace profile, currency, and operational defaults."),
         icon: Settings,
       },
     ],

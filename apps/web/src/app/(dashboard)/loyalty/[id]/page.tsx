@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, DateTime, useGT } from "gt-next/client";
+import { useApiErrorMessage } from "@/lib/api-error-message";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
@@ -143,6 +144,7 @@ export default function LoyaltyProgramPage({ params }: PageProps) {
 function TiersTab({ programId }: { programId: string }) {
   const queryClient = useQueryClient();
   const gt = useGT();
+  const apiError = useApiErrorMessage();
   const [name, setName] = useState("");
   const [threshold, setThreshold] = useState(0);
   const [multiplier, setMultiplier] = useState(10000);
@@ -169,7 +171,7 @@ function TiersTab({ programId }: { programId: string }) {
       toast.success(gt("Tier added"));
     },
     onError: (err: unknown) =>
-      toast.error(err instanceof Error ? err.message : gt("Create failed")),
+      toast.error(apiError(err, gt("Create failed"))),
   });
 
   const remove = useMutation({
@@ -231,7 +233,7 @@ function TiersTab({ programId }: { programId: string }) {
               id="tier-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Bronze"
+              placeholder={gt("Bronze")}
             />
           </div>
           <div className="space-y-2">
@@ -282,6 +284,7 @@ function TiersTab({ programId }: { programId: string }) {
 function EarningRulesTab({ programId }: { programId: string }) {
   const queryClient = useQueryClient();
   const gt = useGT();
+  const apiError = useApiErrorMessage();
   const [name, setName] = useState("");
   const [event, setEvent] = useState("order.paid");
   const [kind, setKind] = useState<"fixed" | "per_cents" | "custom">("per_cents");
@@ -307,7 +310,7 @@ function EarningRulesTab({ programId }: { programId: string }) {
       toast.success(gt("Rule added"));
     },
     onError: (err: unknown) =>
-      toast.error(err instanceof Error ? err.message : gt("Create failed")),
+      toast.error(apiError(err, gt("Create failed"))),
   });
 
   const remove = useMutation({
@@ -441,6 +444,7 @@ function EarningRulesTab({ programId }: { programId: string }) {
 function RewardsTab({ programId }: { programId: string }) {
   const queryClient = useQueryClient();
   const gt = useGT();
+  const apiError = useApiErrorMessage();
   const [name, setName] = useState("");
   const [cost, setCost] = useState(500);
   const [kind, setKind] = useState<"discount" | "gift_card" | "custom">("discount");
@@ -470,7 +474,7 @@ function RewardsTab({ programId }: { programId: string }) {
       toast.success(gt("Reward added"));
     },
     onError: (err: unknown) =>
-      toast.error(err instanceof Error ? err.message : gt("Create failed")),
+      toast.error(apiError(err, gt("Create failed"))),
   });
 
   const remove = useMutation({
@@ -599,6 +603,7 @@ function RewardsTab({ programId }: { programId: string }) {
 function MembersTab({ programId }: { programId: string }) {
   const queryClient = useQueryClient();
   const gt = useGT();
+  const apiError = useApiErrorMessage();
   const [customerId, setCustomerId] = useState("");
 
   const { data } = useQuery({
@@ -614,7 +619,7 @@ function MembersTab({ programId }: { programId: string }) {
       toast.success(gt("Member enrolled"));
     },
     onError: (err: unknown) =>
-      toast.error(err instanceof Error ? err.message : gt("Enroll failed")),
+      toast.error(apiError(err, gt("Enroll failed"))),
   });
   const columns: ColumnDef<LoyaltyMemberRow>[] = [
     {

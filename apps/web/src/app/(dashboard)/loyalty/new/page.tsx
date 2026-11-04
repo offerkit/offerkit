@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
+import { useApiErrorMessage } from "@/lib/api-error-message";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +23,7 @@ export default function NewLoyaltyProgramPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const gt = useGT();
+  const apiError = useApiErrorMessage();
 
   const { data: campaigns } = useQuery({
     queryKey: ["campaigns", "loyalty-only"],
@@ -42,7 +44,7 @@ export default function NewLoyaltyProgramPage() {
       router.push(`/loyalty/${program.id}`);
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : gt("Create failed"));
+      toast.error(apiError(err, gt("Create failed")));
     },
   });
 

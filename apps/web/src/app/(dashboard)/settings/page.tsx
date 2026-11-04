@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
+import { useApiErrorMessage } from "@/lib/api-error-message";
 import { toast } from "sonner";
 import { Save } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -67,6 +68,7 @@ export default function WorkspaceSettingsPage() {
 
 function WorkspaceForm({ initial }: { initial: WorkspaceData }) {
   const gt = useGT();
+  const apiError = useApiErrorMessage();
   const queryClient = useQueryClient();
   const [name, setName] = useState(initial.name);
   const [currency, setCurrency] = useState(initial.defaultCurrency);
@@ -84,7 +86,7 @@ function WorkspaceForm({ initial }: { initial: WorkspaceData }) {
       toast.success(gt("Workspace settings saved"));
     },
     onError: (err: unknown) =>
-      toast.error(err instanceof Error ? err.message : gt("Save failed")),
+      toast.error(apiError(err, gt("Save failed"))),
   });
 
   return (

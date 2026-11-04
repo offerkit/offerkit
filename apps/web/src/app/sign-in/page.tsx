@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "@tanstack/react-form";
 import { T, useGT } from "gt-next/client";
+import { useApiErrorMessage } from "@/lib/api-error-message";
 import { signIn } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +15,7 @@ export default function SignInPage() {
   const router = useRouter();
   const params = useSearchParams();
   const gt = useGT();
+  const apiError = useApiErrorMessage();
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm({
@@ -22,7 +24,7 @@ export default function SignInPage() {
       setError(null);
       const result = await signIn.email(value);
       if (result.error) {
-        setError(result.error.message ?? gt("Sign in failed"));
+        setError(apiError(result.error, gt("Sign in failed")));
         return;
       }
       // oauthProviderClient follows the signed OAuth redirect returned by sign-in.

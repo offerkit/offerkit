@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "@tanstack/react-form";
 import { T, useGT } from "gt-next/client";
+import { useApiErrorMessage } from "@/lib/api-error-message";
 import { changePassword, oauth2 } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +15,7 @@ export default function ChangePasswordPage() {
   const router = useRouter();
   const params = useSearchParams();
   const gt = useGT();
+  const apiError = useApiErrorMessage();
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm({
@@ -34,7 +36,7 @@ export default function ChangePasswordPage() {
         revokeOtherSessions: true,
       });
       if (result.error) {
-        setError(result.error.message ?? gt("Password change failed"));
+        setError(apiError(result.error, gt("Password change failed")));
         return;
       }
       const cleared = await fetch("/api/v1/me/clear-must-change-password", { method: "POST" });
@@ -45,7 +47,7 @@ export default function ChangePasswordPage() {
       if (params.has("sig") && params.has("client_id")) {
         const continued = await oauth2.continue({ postLogin: true });
         if (continued.error) {
-          setError(continued.error.message ?? gt("Unable to continue authorization"));
+          setError(apiError(continued.error, gt("Unable to continue authorization")));
         }
         return;
       }

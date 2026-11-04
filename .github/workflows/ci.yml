@@ -52,5 +52,8 @@ jobs:
       - name: Test
         run: pnpm --filter '!@offerkit/site' -r test
 
+      - name: Check dashboard translations are up to date
+        run: pnpm --filter @offerkit/web i18n:check
+
       - name: Build
         run: pnpm turbo run build --filter='!@offerkit/site'

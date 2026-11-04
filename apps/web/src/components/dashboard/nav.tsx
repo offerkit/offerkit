@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { T } from "gt-next/client";
+import { useMessages } from "gt-next/client";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -21,6 +21,7 @@ export function DashboardNav({
   hostedMcpEnabled: boolean;
 }) {
   const pathname = usePathname();
+  const m = useMessages();
   return (
     <>
       {dashboardSections.map((section) => {
@@ -33,7 +34,7 @@ export function DashboardNav({
         return (
           <SidebarGroup key={section.label}>
             <SidebarGroupLabel>
-              <T>{section.label}</T>
+              {m(section.label)}
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
@@ -45,11 +46,11 @@ export function DashboardNav({
                       <SidebarMenuButton
                         isActive={active}
                         render={<Link href={item.href} />}
-                        tooltip={{ children: <T>{item.label}</T> }}
+                        tooltip={{ children: m(item.label) }}
                       >
                         <Icon className="size-4" />
                         <span>
-                          <T>{item.label}</T>
+                          {m(item.label)}
                         </span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

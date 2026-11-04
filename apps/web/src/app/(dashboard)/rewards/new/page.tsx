@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
+import { useApiErrorMessage } from "@/lib/api-error-message";
 import { toast } from "sonner";
 import {
   RewardTypeForm,
@@ -14,6 +15,7 @@ export default function NewRewardTypePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const gt = useGT();
+  const apiError = useApiErrorMessage();
 
   const create = useMutation({
     mutationFn: (state: RewardTypeFormState) =>
@@ -29,7 +31,7 @@ export default function NewRewardTypePage() {
       router.push(`/rewards/${rt.id}`);
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : gt("Create failed"));
+      toast.error(apiError(err, gt("Create failed")));
     },
   });
 

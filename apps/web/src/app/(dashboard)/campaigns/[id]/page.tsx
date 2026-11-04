@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, DateTime, useGT } from "gt-next/client";
+import { useApiErrorMessage } from "@/lib/api-error-message";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
@@ -40,6 +41,7 @@ export default function CampaignDetailPage({ params }: PageProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const gt = useGT();
+  const apiError = useApiErrorMessage();
   const [bulkCount, setBulkCount] = useState(10);
   const [bulkDiscountAmount, setBulkDiscountAmount] = useState(1000);
   const [bulkGiftBalance, setBulkGiftBalance] = useState(10000);
@@ -68,7 +70,7 @@ export default function CampaignDetailPage({ params }: PageProps) {
       toast.success(gt("Campaign updated"));
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : gt("Update failed"));
+      toast.error(apiError(err, gt("Update failed")));
     },
   });
 
@@ -80,7 +82,7 @@ export default function CampaignDetailPage({ params }: PageProps) {
       router.push("/campaigns");
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : gt("Delete failed"));
+      toast.error(apiError(err, gt("Delete failed")));
     },
   });
 
@@ -100,7 +102,7 @@ export default function CampaignDetailPage({ params }: PageProps) {
       );
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : gt("Bulk generate failed"));
+      toast.error(apiError(err, gt("Bulk generate failed")));
     },
   });
 

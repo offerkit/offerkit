@@ -1,9 +1,10 @@
+import { msg } from "gt-next";
 import { z } from "zod";
 
 export const optionalLocalDateTime = z.union([
   z.literal(""),
   z.string().refine((value) => !Number.isNaN(new Date(value).getTime()), {
-    message: "Enter a valid date and time",
+    message: msg("Enter a valid date and time"),
   }),
 ]);
 
@@ -23,7 +24,7 @@ export function validateDateRange(
     context.addIssue({
       code: "custom",
       path: ["endDate"],
-      message: "End date must be after the start date",
+      message: msg("End date must be after the start date"),
     });
   }
 }

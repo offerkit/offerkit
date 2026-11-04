@@ -5,9 +5,11 @@ import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { T, DateTime, useGT, useLocale } from "gt-next/client";
+import { T, DateTime, useGT, useLocale, Var } from "gt-next/client";
+import { useApiErrorMessage } from "@/lib/api-error-message";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { ReferralRewardKindLabel } from "@/components/dashboard/referral-reward-kind";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { DataTable } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
@@ -55,29 +57,44 @@ function cents(value: number | undefined, currency: string, locale: string): str
   return formatMinorCurrency(value ?? 0, currency, locale);
 }
 
-function rewardKindLabel(kind: ReferralReward["kind"]): string {
-  switch (kind) {
-    case "discount":
-      return "Discount voucher";
-    case "gift_card":
-      return "Gift card";
-    case "loyalty_points":
-      return "Loyalty points";
-    case "custom":
-      return "Custom reward";
-  }
-}
-
-function rewardDescription(reward: ReferralReward, currency: string, locale: string): string {
+function RewardDescription({
+  reward,
+  currency,
+  locale,
+}: {
+  reward: ReferralReward;
+  currency: string;
+  locale: string;
+}) {
   if (reward.kind === "discount") {
     if (reward.discount?.type === "PERCENTAGE") {
-      return `${(reward.discount.percent ?? 0) / 100}% off`;
+      return (
+        <T>
+          <Var>{(reward.discount.percent ?? 0) / 100}</Var>% off
+        </T>
+      );
     }
-    return `${cents(reward.discount?.amount, currency, locale)} off`;
+    return (
+      <T>
+        <Var>{cents(reward.discount?.amount, currency, locale)}</Var> off
+      </T>
+    );
   }
-  if (reward.kind === "gift_card") return `${cents(reward.creditCents, currency, locale)} credit`;
-  if (reward.kind === "loyalty_points") return `${reward.loyaltyPoints ?? 0} points`;
-  return reward.typeKey || "Custom payload";
+  if (reward.kind === "gift_card") {
+    return (
+      <T>
+        <Var>{cents(reward.creditCents, currency, locale)}</Var> credit
+      </T>
+    );
+  }
+  if (reward.kind === "loyalty_points") {
+    return (
+      <T>
+        <Var>{reward.loyaltyPoints ?? 0}</Var> points
+      </T>
+    );
+  }
+  return reward.typeKey ? <>{reward.typeKey}</> : <T>Custom payload</T>;
 }
 
 function RewardSummary({
@@ -96,8 +113,12 @@ function RewardSummary({
         <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
-        <Badge variant="secondary">{rewardKindLabel(reward.kind)}</Badge>
-        <p className="text-sm font-medium">{rewardDescription(reward, currency, locale)}</p>
+        <Badge variant="secondary">
+          <ReferralRewardKindLabel kind={reward.kind} />
+        </Badge>
+        <p className="text-sm font-medium">
+          <RewardDescription reward={reward} currency={currency} locale={locale} />
+        </p>
         {reward.kind === "loyalty_points" && reward.loyaltyProgramId ? (
           <p className="font-mono text-xs text-muted-foreground">{reward.loyaltyProgramId}</p>
         ) : null}
@@ -112,7 +133,9 @@ function OutcomeSummary({ label, outcome }: { label: string; outcome: ReferralOu
     <div className="rounded-md border p-3">
       <p className="text-xs font-medium uppercase text-muted-foreground">{label}</p>
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        <Badge variant="secondary">{rewardKindLabel(outcome.kind)}</Badge>
+        <Badge variant="secondary">
+          <ReferralRewardKindLabel kind={outcome.kind} />
+        </Badge>
         {outcome.voucherCode ? (
           <Link className="font-mono text-sm hover:underline" href={`/vouchers/${outcome.voucherCode}`}>
             {outcome.voucherCode}
@@ -124,7 +147,9 @@ function OutcomeSummary({ label, outcome }: { label: string; outcome: ReferralOu
           </span>
         ) : null}
         {outcome.kind === "custom" ? (
-          <span className="text-sm text-muted-foreground">Custom payload emitted</span>
+          <span className="text-sm text-muted-foreground">
+            <T>Custom payload emitted</T>
+          </span>
         ) : null}
       </div>
     </div>
@@ -136,6 +161,7 @@ export default function ReferralProgramDetail({ params }: PageProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const gt = useGT();
+  const apiError = useApiErrorMessage();
   const [referrerCustomerId, setReferrerCustomerId] = useState("");
   const [convertCode, setConvertCode] = useState("");
   const [refereeCustomerId, setRefereeCustomerId] = useState("");
@@ -173,10 +199,10 @@ export default function ReferralProgramDetail({ params }: PageProps) {
     mutationFn: () =>
       ovx().referrals.issue({ programId: id, referrerCustomerId }),
     onSuccess: async (r) => {
-      if (!r.ok) toast.error(r.message ?? gt("Issue failed"));
+      if (!r.ok) toast.error(apiError(r, gt("Issue failed")));
       else {
         setLastIssued({ codeId: r.codeId, code: r.code });
-        toast.success(r.code ? `Code issued: ${r.code}` : gt("Code issued"));
+        toast.success(r.code ? gt("Code issued: {code}", { code: r.code }) : gt("Code issued"));
         setReferrerCustomerId("");
         await codesQuery.refetch();
       }
@@ -187,7 +213,7 @@ export default function ReferralProgramDetail({ params }: PageProps) {
     mutationFn: () =>
       ovx().referrals.convert({ code: convertCode, refereeCustomerId }),
     onSuccess: async (r) => {
-      if (!r.ok) toast.error(r.message ?? gt("Convert failed"));
+      if (!r.ok) toast.error(apiError(r, gt("Convert failed")));
       else {
         setLastConversion({
           conversionId: r.conversionId,

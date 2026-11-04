@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, DateTime, useGT } from "gt-next/client";
+import { useApiErrorMessage } from "@/lib/api-error-message";
 import { Cable, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
@@ -28,6 +29,7 @@ async function connections(): Promise<Connection[]> {
 
 export default function ConnectionsPage() {
   const gt = useGT();
+  const apiError = useApiErrorMessage();
   const queryClient = useQueryClient();
   const { data, isLoading, error } = useQuery({
     queryKey: ["oauth-connections"],
@@ -47,7 +49,7 @@ export default function ConnectionsPage() {
       toast.success(gt("Connection revoked"));
     },
     onError: (cause: unknown) =>
-      toast.error(cause instanceof Error ? cause.message : gt("Revoke failed")),
+      toast.error(apiError(cause, gt("Revoke failed"))),
   });
 
   return (

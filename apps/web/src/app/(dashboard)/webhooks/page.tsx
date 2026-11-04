@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
+import { useApiErrorMessage } from "@/lib/api-error-message";
 import { toast } from "sonner";
 import { Copy, Plus, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
@@ -21,6 +22,7 @@ type WebhookRow = ApiListItem<OfferKitClient["webhooks"]["list"]>;
 export default function WebhooksPage() {
   const queryClient = useQueryClient();
   const gt = useGT();
+  const apiError = useApiErrorMessage();
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [eventsCsv, setEventsCsv] = useState("*");
@@ -51,7 +53,7 @@ export default function WebhooksPage() {
       toast.success(gt("Webhook created — copy the secret now"));
     },
     onError: (err: unknown) =>
-      toast.error(err instanceof Error ? err.message : gt("Create failed")),
+      toast.error(apiError(err, gt("Create failed"))),
   });
 
   const remove = useMutation({

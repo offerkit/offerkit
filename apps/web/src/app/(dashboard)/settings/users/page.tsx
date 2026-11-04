@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
+import { useApiErrorMessage } from "@/lib/api-error-message";
 import { toast } from "sonner";
 import { Copy, Plus, RotateCcw, ShieldCheck, ShieldOff } from "lucide-react";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
@@ -29,6 +30,7 @@ type Role = "admin" | "member";
 export default function UsersPage() {
   const queryClient = useQueryClient();
   const gt = useGT();
+  const apiError = useApiErrorMessage();
   const roleItems = [
     { label: gt("Member"), value: "member" },
     { label: gt("Admin"), value: "admin" },
@@ -54,7 +56,7 @@ export default function UsersPage() {
       toast.success(gt("User created — share the temporary password securely"));
     },
     onError: (err: unknown) =>
-      toast.error(err instanceof Error ? err.message : gt("Create failed")),
+      toast.error(apiError(err, gt("Create failed"))),
   });
 
   const reset = useMutation({

@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Bot, Check, ShieldCheck } from "lucide-react";
+import { T, useGT, Var } from "gt-next/client";
 import { oauth2 } from "@/lib/auth-client";
+import { useApiErrorMessage } from "@/lib/api-error-message";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -19,16 +21,17 @@ interface PublicClient {
   client_uri?: string;
 }
 
-const SCOPE_LABELS: Record<string, string> = {
-  offerkit: "View and manage OfferKit data using the tools available to your account",
-  offline_access: "Stay connected when you are not actively using the agent",
-  openid: "Confirm your OfferKit identity",
-  profile: "Read your name and profile",
-  email: "Read your email address",
-};
-
 export function OAuthConsent() {
   const params = useSearchParams();
+  const gt = useGT();
+  const apiError = useApiErrorMessage();
+  const scopeLabels: Record<string, string> = {
+    offerkit: gt("View and manage OfferKit data using the tools available to your account"),
+    offline_access: gt("Stay connected when you are not actively using the agent"),
+    openid: gt("Confirm your OfferKit identity"),
+    profile: gt("Read your name and profile"),
+    email: gt("Read your email address"),
+  };
   const clientId = params.get("client_id") ?? "";
   const scopes = useMemo(
     () => (params.get("scope") ?? "offerkit").split(/\s+/).filter(Boolean),
@@ -44,21 +47,21 @@ export function OAuthConsent() {
       .publicClient({ query: { client_id: clientId } })
       .then((result) => {
         if (result.data) setClient(result.data);
-        if (result.error) setError(result.error.message ?? "Unable to load application details");
+        if (result.error) setError(apiError(result.error, gt("Unable to load application details")));
       });
-  }, [clientId]);
+  }, [clientId, apiError, gt]);
 
   async function decide(accept: boolean) {
     setSubmitting(true);
     setError(null);
     const result = await oauth2.consent({ accept });
     if (result.error) {
-      setError(result.error.message ?? "Unable to complete authorization");
+      setError(apiError(result.error, gt("Unable to complete authorization")));
       setSubmitting(false);
     }
   }
 
-  const clientName = client?.client_name?.trim() || "An AI assistant";
+  const clientName = client?.client_name?.trim();
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted/30 p-6">
@@ -68,20 +71,30 @@ export function OAuthConsent() {
             <Bot className="size-6" />
           </div>
           <div>
-            <CardTitle className="text-lg">Connect {clientName} to OfferKit?</CardTitle>
+            <CardTitle className="text-lg">
+              {clientName ? (
+                <T>
+                  Connect <Var>{clientName}</Var> to OfferKit?
+                </T>
+              ) : (
+                <T>Connect an AI assistant to OfferKit?</T>
+              )}
+            </CardTitle>
             <CardDescription className="mt-1">
-              Only continue if you started this connection from your MCP client.
+              <T>Only continue if you started this connection from your MCP client.</T>
             </CardDescription>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="rounded-lg border bg-background p-4">
-            <p className="mb-3 text-sm font-medium">This connection will be able to:</p>
+            <p className="mb-3 text-sm font-medium">
+              <T>This connection will be able to:</T>
+            </p>
             <ul className="space-y-3">
               {scopes.map((scope) => (
                 <li key={scope} className="flex items-start gap-2 text-sm text-muted-foreground">
                   <Check className="mt-0.5 size-4 shrink-0 text-foreground" />
-                  <span>{SCOPE_LABELS[scope] ?? scope}</span>
+                  <span>{scopeLabels[scope] ?? scope}</span>
                 </li>
               ))}
             </ul>
@@ -89,18 +102,20 @@ export function OAuthConsent() {
           <div className="flex gap-2 text-xs text-muted-foreground">
             <ShieldCheck className="mt-0.5 size-4 shrink-0" />
             <p>
-              The assistant receives your current OfferKit role. Mutating operations remain audited,
-              and you can revoke this connection later.
+              <T>
+                The assistant receives your current OfferKit role. Mutating operations remain
+                audited, and you can revoke this connection later.
+              </T>
             </p>
           </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
         </CardContent>
         <CardFooter className="justify-end gap-2">
           <Button variant="outline" disabled={submitting} onClick={() => void decide(false)}>
-            Deny
+            <T>Deny</T>
           </Button>
           <Button disabled={submitting || !clientId} onClick={() => void decide(true)}>
-            {submitting ? "Connecting…" : "Allow access"}
+            {submitting ? <T>Connecting…</T> : <T>Allow access</T>}
           </Button>
         </CardFooter>
       </Card>

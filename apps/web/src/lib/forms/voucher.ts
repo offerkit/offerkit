@@ -1,3 +1,4 @@
+import { msg } from "gt-next";
 import { z } from "zod";
 import {
   voucherCreateInput,
@@ -60,14 +61,14 @@ function withVoucherRules(mode: "create" | "edit") {
         context.addIssue({
           code: "custom",
           path: ["discountValue"],
-          message: "Discount must be at least 0.01",
+          message: msg("Discount must be at least 0.01"),
         });
       }
       if (value.discountKind === "PERCENTAGE" && value.discountValue > 10_000) {
         context.addIssue({
           code: "custom",
           path: ["discountValue"],
-          message: "Percentage cannot exceed 100%",
+          message: msg("Percentage cannot exceed 100%"),
         });
       }
     }
@@ -80,7 +81,7 @@ function withVoucherRules(mode: "create" | "edit") {
       context.addIssue({
         code: "custom",
         path: ["giftBalance"],
-        message: "Gift card balance must be at least 1",
+        message: msg("Gift card balance must be at least 1"),
       });
     }
   });
