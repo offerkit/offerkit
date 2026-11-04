@@ -6,14 +6,21 @@ import { useGT } from "gt-next/client";
 type Gt = ReturnType<typeof useGT>;
 
 /**
- * Pulls `code` and `message` out of the error shapes the dashboard sees:
- * thrown oRPC client errors (`ORPCError`), `{ ok: false, code, message }`
- * results from loyalty/referral procedures, and better-auth `error` objects.
+ * Pulls the error code and `message` out of the error shapes the dashboard
+ * sees: thrown oRPC client errors (`ORPCError`), `{ ok: false, code, message }`
+ * results from loyalty procedures, `{ ok: false, errorCode, message }` results
+ * from referral procedures (where `code` is the referral code, not an error),
+ * and better-auth `error` objects.
  */
 export function readApiError(error: unknown): { code?: string; message?: string } {
   if (!error || typeof error !== "object") return {};
   const record = error as Record<string, unknown>;
-  const code = typeof record["code"] === "string" ? record["code"] : undefined;
+  const code =
+    typeof record["errorCode"] === "string"
+      ? record["errorCode"]
+      : typeof record["code"] === "string"
+        ? record["code"]
+        : undefined;
   const message =
     typeof record["message"] === "string" && record["message"].length > 0
       ? record["message"]

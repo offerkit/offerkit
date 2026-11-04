@@ -5,10 +5,31 @@ import { translateApiError } from "./api-error-message";
 const gt = ((text: string) => `T(${text})`) as unknown as Parameters<typeof translateApiError>[0];
 
 describe("translateApiError", () => {
-  it("translates a known domain error code from an { ok: false } result", () => {
-    const result = { ok: false, code: "self_referral", message: "Referrer cannot also be the referee" };
+  it("translates a known domain error code from a loyalty { ok: false, code } result", () => {
+    const result = { ok: false, code: "member_not_found", message: "Member not found" };
+    expect(translateApiError(gt, result, "Redeem failed")).toBe("T(Loyalty member not found)");
+  });
+
+  it("translates a referral { ok: false, errorCode } result as the router returns it", () => {
+    const result = {
+      ok: false,
+      errorCode: "self_referral",
+      message: "Referrer cannot also be the referee",
+    };
     expect(translateApiError(gt, result, "Convert failed")).toBe(
       "T(Referrer cannot also be the referee)",
+    );
+  });
+
+  it("prefers errorCode over a referral code carried in `code`", () => {
+    const result = {
+      ok: false,
+      code: "FRIEND-42",
+      errorCode: "referee_already_converted",
+      message: "already converted",
+    };
+    expect(translateApiError(gt, result, "Convert failed")).toBe(
+      "T(This referee has already converted this referral code)",
     );
   });
 

@@ -254,6 +254,7 @@
   "2570a8daa096c210": "Maximaal kortingsbedrag",
   "db89367b182189de": "Prioriteit",
   "909f8ce3adb7594c": "Exclusief (niet stapelbaar)",
+  "d5c3f4fd41fcfc29": "Opslaan is niet mogelijk zolang de valuta van de campagne onbekend is.",
   "9f28e8a12298f08b": "Voer een geldige datum en tijd in",
   "ac4370ccff2a992c": "De einddatum moet na de startdatum liggen",
   "e18fd64044d67f59": "De korting moet minstens 0,01 zijn",
@@ -707,6 +708,15 @@
   "3b0021dc535abe42": "Valideren",
   "8fb0340fb0f43651": "Inwisselen",
   "263919a119c0ab8e": "Register cadeaukaart",
+  "4e12903a64278d3c": [
+    "Huidig saldo:",
+    " ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
   "e3c7776ae876cb34": "Nog geen transacties.",
   "a246340a30f25203": "Voucher aangemaakt",
   "75c976a7c91bee3b": "Voucher aanmaken",

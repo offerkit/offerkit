@@ -4,7 +4,7 @@ import Link from "next/link";
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { T, DateTime, useGT } from "gt-next/client";
+import { T, DateTime, useGT, Var } from "gt-next/client";
 import { useApiErrorMessage } from "@/lib/api-error-message";
 import { toast } from "sonner";
 import { ArrowLeft, Trash2 } from "lucide-react";
@@ -18,7 +18,7 @@ import {
   VoucherForm,
   type VoucherFormState,
 } from "@/components/dashboard/voucher-form";
-import { voucherFormToUpdateInput } from "@/lib/forms/voucher";
+import { campaignCurrencyMissing, voucherFormToUpdateInput } from "@/lib/forms/voucher";
 import { Money } from "@/components/dashboard/money";
 import { ovx } from "@/lib/sdk";
 import { DATE_TIME_FORMAT } from "@/lib/date-format";
@@ -186,6 +186,7 @@ export default function VoucherDetailPage({ params }: PageProps) {
         key={data.updatedAt}
         mode="edit"
         currency={campaignCurrency}
+        currencyMissing={campaignCurrencyMissing(data.campaignId ?? "", campaignCurrency)}
         initial={initial}
         submitLabel={gt("Save changes")}
         pending={update.isPending}
@@ -293,7 +294,13 @@ function GiftCardLedger({
           <span className="text-sm font-normal text-muted-foreground">
             <T>
               Current balance:{" "}
-              {currency ? <Money value={balance} currency={currency} /> : (balance / 100).toFixed(2)}
+              <Var>
+                {currency ? (
+                  <Money value={balance} currency={currency} />
+                ) : (
+                  (balance / 100).toFixed(2)
+                )}
+              </Var>
             </T>
           </span>
         </CardTitle>

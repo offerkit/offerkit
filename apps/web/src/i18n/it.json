@@ -254,6 +254,7 @@
   "2570a8daa096c210": "Importo massimo dello sconto",
   "db89367b182189de": "Priorità",
   "909f8ce3adb7594c": "Esclusivo (non cumulabile)",
+  "d5c3f4fd41fcfc29": "Il salvataggio non è disponibile finché la valuta della campagna non è nota.",
   "9f28e8a12298f08b": "Inserisci una data e un'ora valide",
   "ac4370ccff2a992c": "La data di fine deve essere successiva alla data di inizio",
   "e18fd64044d67f59": "Lo sconto deve essere almeno 0,01",
@@ -709,6 +710,15 @@
   "3b0021dc535abe42": "Valida",
   "8fb0340fb0f43651": "Riscatta",
   "263919a119c0ab8e": "Registro gift card",
+  "4e12903a64278d3c": [
+    "Saldo attuale:",
+    " ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
   "e3c7776ae876cb34": "Ancora nessuna transazione.",
   "a246340a30f25203": "Voucher creato",
   "75c976a7c91bee3b": "Crea voucher",

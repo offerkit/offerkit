@@ -13,6 +13,21 @@ const emptyOrCampaignId = z.union([
   z.literal(""),
   voucherCreateInput.shape.campaignId.unwrap(),
 ]);
+/**
+ * Whether saving must wait because the form names a campaign whose currency
+ * is not known: still loading, the lookup failed, or the campaign is missing.
+ * Money inputs fall back to 2 decimals without a currency, so saving then
+ * could store the wrong minor units. Fails closed.
+ */
+export function campaignCurrencyMissing(campaignId: string, currency: string | undefined): boolean {
+  return campaignId !== "" && !currency;
+}
+
+/** Whether `value` is a well-formed campaign ID (not whether the campaign exists). */
+export function isCampaignId(value: string): boolean {
+  return voucherCreateInput.shape.campaignId.unwrap().safeParse(value).success;
+}
+
 const emptyOrGiftBalance = z.union([
   z.literal(""),
   voucherCreateInput.shape.giftBalance.unwrap(),

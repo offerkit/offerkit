@@ -254,6 +254,7 @@
   "2570a8daa096c210": "Maximum discount amount",
   "db89367b182189de": "Priority",
   "909f8ce3adb7594c": "Exclusive (no stacking)",
+  "d5c3f4fd41fcfc29": "Saving is unavailable until the campaign's currency is known.",
   "9f28e8a12298f08b": "Enter a valid date and time",
   "ac4370ccff2a992c": "End date must be after the start date",
   "e18fd64044d67f59": "Discount must be at least 0.01",
@@ -708,6 +709,15 @@
   "3b0021dc535abe42": "Validate",
   "8fb0340fb0f43651": "Redeem",
   "263919a119c0ab8e": "Gift card ledger",
+  "4e12903a64278d3c": [
+    "Current balance:",
+    " ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
   "e3c7776ae876cb34": "No transactions yet.",
   "a246340a30f25203": "Voucher created",
   "75c976a7c91bee3b": "Create voucher",

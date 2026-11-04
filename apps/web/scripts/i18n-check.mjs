@@ -1,11 +1,11 @@
 // Fails when src/i18n is out of date with the source, or when the gt
 // extractor's diagnostics differ in any way from the allowlist below.
 //
-// `i18n:extract` passes --ignore-errors because a few <T> blocks still wrap
-// raw date/money formatting owned by the locale-formatting work (#146).
-// Without this check, --ignore-errors would also hide any *new* expression
-// the extractor cannot translate, so it would silently stay English while
-// the JSON files still looked up to date.
+// `i18n:extract` passes --ignore-errors so extraction always completes.
+// Without this check, --ignore-errors would hide any expression the extractor
+// cannot translate, so it would silently stay English while the JSON files
+// still looked up to date. The allowlist is empty: add an entry only for a
+// diagnostic that is deliberately left untranslated.
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -21,12 +21,9 @@ const webRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
  * <Var>/<DateTime>/<Currency>. All of these are owned by #146 and must be
  * removed or updated when integrating it.
  */
-const KNOWN_DIAGNOSTICS = [
-  [
-    "src/app/(dashboard)/vouchers/[code]/page.tsx",
-    "{currency ? <Money value={balance} currency={currency} /> : (balance / 100).toFixed(2)}",
-  ],
-].map(([file, ...body]) => ({ file, body }));
+/** @type {Array<[string, ...string[]]>} */
+const KNOWN_DIAGNOSTICS_RAW = [];
+const KNOWN_DIAGNOSTICS = KNOWN_DIAGNOSTICS_RAW.map(([file, ...body]) => ({ file, body }));
 
 function run(command, args) {
   const result = spawnSync(command, args, {
