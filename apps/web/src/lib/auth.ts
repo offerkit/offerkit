@@ -5,6 +5,8 @@ import { oauthProvider } from "@better-auth/oauth-provider";
 import { schema } from "@offerkit/db";
 import { sendEmail } from "@offerkit/core/email";
 import { db } from "./db.ts";
+import { resolveEmailLocale } from "./email/locale.ts";
+import { resetPasswordLinkEmail } from "./email/templates.ts";
 import { inferredRequestOrigin } from "./auth-origin.ts";
 import {
   HOSTED_MCP_SCOPE,
@@ -49,13 +51,11 @@ function build() {
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: false,
-      sendResetPassword: async ({ user, url }) => {
-        await sendEmail({
-          to: user.email,
-          subject: "Reset your Offerkit password",
-          html: `<p>Open this link to reset your password: <a href="${url}">${url}</a></p>`,
-          text: `Reset your password: ${url}`,
-        });
+      sendResetPassword: async ({ user, url }, request) => {
+        // `request` is undefined when the endpoint is called server-side
+        // without one; the locale then falls back to the default.
+        const locale = resolveEmailLocale(request?.headers);
+        await sendEmail({ to: user.email, ...resetPasswordLinkEmail({ url }, locale) });
       },
     },
     user: {
