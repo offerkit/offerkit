@@ -7,7 +7,11 @@ import { T, useGT } from "gt-next/client";
 import { useApiErrorMessage } from "@/lib/api-error-message";
 import { toast } from "sonner";
 import { VoucherForm, type VoucherFormState } from "@/components/dashboard/voucher-form";
-import { isCampaignId, voucherFormToCreateInput } from "@/lib/forms/voucher";
+import {
+  campaignCurrencyMissing,
+  isCampaignId,
+  voucherFormToCreateInput,
+} from "@/lib/forms/voucher";
 import { ovx } from "@/lib/sdk";
 
 export default function NewVoucherPage() {
@@ -18,7 +22,7 @@ export default function NewVoucherPage() {
   const search = useSearchParams();
   const campaignId = search.get("campaignId") ?? "";
 
-  const { data: campaign } = useQuery({
+  const { data: campaign, isPending: campaignPending } = useQuery({
     queryKey: ["campaigns", campaignId],
     queryFn: () => ovx().campaigns.get({ params: { id: campaignId } }),
     enabled: campaignId !== "",
@@ -27,8 +31,14 @@ export default function NewVoucherPage() {
   // Money precision follows the campaign the form will submit, which the user
   // can change from the one in the URL. Shares the query cache with `campaign`.
   const [selectedCampaignId, setSelectedCampaignId] = useState(campaignId);
+  // The form remounts when the URL campaign changes; follow it.
+  const [urlCampaignId, setUrlCampaignId] = useState(campaignId);
+  if (urlCampaignId !== campaignId) {
+    setUrlCampaignId(campaignId);
+    setSelectedCampaignId(campaignId);
+  }
   const selectedIsCampaign = isCampaignId(selectedCampaignId);
-  const { data: selectedCampaign, isPending: selectedPending } = useQuery({
+  const { data: selectedCampaign } = useQuery({
     queryKey: ["campaigns", selectedCampaignId],
     queryFn: () => ovx().campaigns.get({ params: { id: selectedCampaignId } }),
     enabled: selectedIsCampaign,
@@ -57,33 +67,44 @@ export default function NewVoucherPage() {
           <T>Configure a single voucher. Use bulk generate on the campaign for batches.</T>
         </p>
       </header>
-      <VoucherForm
-        key={`${campaignId}:${campaign?.type ?? "default"}`}
-        mode="create"
-        currency={selectedIsCampaign ? selectedCampaign?.currency : undefined}
-        currencyPending={selectedIsCampaign && selectedPending}
-        onCampaignIdChange={setSelectedCampaignId}
-        initial={{
-          code: "",
-          campaignId,
-          type: campaign?.type === "GIFT_VOUCHERS" ? "GIFT_CARD" : "DISCOUNT",
-          discountKind: "AMOUNT",
-          discountValue: 1000,
-          maxDiscountAmount: "",
-          giftBalance: campaign?.type === "GIFT_VOUCHERS" ? 10000 : "",
-          redemptionLimit: "",
-          perUserRedemptionLimit: "",
-          customerId: "",
-          priority: 0,
-          exclusive: false,
-          active: true,
-          startDate: "",
-          endDate: "",
-        }}
-        submitLabel={gt("Create voucher")}
-        pending={create.isPending}
-        onSubmit={(state) => create.mutate(state)}
-      />
+      {/* Mount once the URL campaign's first lookup settles, so its type can
+          seed the defaults without remounting (and resetting) a form in use. */}
+      {campaignId !== "" && campaignPending ? (
+        <p className="text-sm text-muted-foreground">
+          <T>Loading…</T>
+        </p>
+      ) : (
+        <VoucherForm
+          key={campaignId}
+          mode="create"
+          currency={selectedIsCampaign ? selectedCampaign?.currency : undefined}
+          currencyMissing={campaignCurrencyMissing(
+            selectedCampaignId,
+            selectedIsCampaign ? selectedCampaign?.currency : undefined,
+          )}
+          onCampaignIdChange={setSelectedCampaignId}
+          initial={{
+            code: "",
+            campaignId,
+            type: campaign?.type === "GIFT_VOUCHERS" ? "GIFT_CARD" : "DISCOUNT",
+            discountKind: "AMOUNT",
+            discountValue: 1000,
+            maxDiscountAmount: "",
+            giftBalance: campaign?.type === "GIFT_VOUCHERS" ? 10000 : "",
+            redemptionLimit: "",
+            perUserRedemptionLimit: "",
+            customerId: "",
+            priority: 0,
+            exclusive: false,
+            active: true,
+            startDate: "",
+            endDate: "",
+          }}
+          submitLabel={gt("Create voucher")}
+          pending={create.isPending}
+          onSubmit={(state) => create.mutate(state)}
+        />
+      )}
     </div>
   );
 }

@@ -169,7 +169,7 @@ export function VoucherForm({
   pending,
   mode,
   currency,
-  currencyPending = false,
+  currencyMissing = false,
   onCampaignIdChange,
 }: {
   initial: VoucherFormState;
@@ -179,8 +179,8 @@ export function VoucherForm({
   mode: "create" | "edit";
   /** ISO 4217 code of the voucher's campaign; sets the money inputs' minor-unit precision. */
   currency?: string;
-  /** True while the selected campaign's currency is loading; blocks submit. */
-  currencyPending?: boolean;
+  /** True when the form's campaign has no known currency; blocks submit. */
+  currencyMissing?: boolean;
   /** Called as the Campaign ID field changes, so the caller can load its currency. */
   onCampaignIdChange?: (campaignId: string) => void;
 }) {
@@ -632,10 +632,15 @@ export function VoucherForm({
         }
       </form.Subscribe>
 
-      <div className="flex justify-end gap-2">
+      <div className="flex items-center justify-end gap-2">
+        {currencyMissing ? (
+          <p className="text-sm text-muted-foreground">
+            <T>Saving is unavailable until the campaign&apos;s currency is known.</T>
+          </p>
+        ) : null}
         <form.Subscribe selector={(s) => [s.canSubmit, s.isSubmitting] as const}>
           {([canSubmit, isSubmitting]) => (
-            <Button type="submit" disabled={pending || currencyPending || isSubmitting || !canSubmit}>
+            <Button type="submit" disabled={pending || currencyMissing || isSubmitting || !canSubmit}>
               {pending || isSubmitting ? <T>Saving…</T> : submitLabel}
             </Button>
           )}

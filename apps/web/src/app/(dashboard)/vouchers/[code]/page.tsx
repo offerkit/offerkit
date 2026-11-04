@@ -18,7 +18,7 @@ import {
   VoucherForm,
   type VoucherFormState,
 } from "@/components/dashboard/voucher-form";
-import { voucherFormToUpdateInput } from "@/lib/forms/voucher";
+import { campaignCurrencyMissing, voucherFormToUpdateInput } from "@/lib/forms/voucher";
 import { Money } from "@/components/dashboard/money";
 import { ovx } from "@/lib/sdk";
 import { DATE_TIME_FORMAT } from "@/lib/date-format";
@@ -46,7 +46,7 @@ export default function VoucherDetailPage({ params }: PageProps) {
     queryFn: () => ovx().vouchers.get({ params: { code } }),
   });
 
-  const { data: campaign, isPending: campaignPending } = useQuery({
+  const { data: campaign } = useQuery({
     queryKey: ["campaigns", data?.campaignId],
     queryFn: () => ovx().campaigns.get({ params: { id: data?.campaignId ?? "" } }),
     enabled: Boolean(data?.campaignId),
@@ -186,7 +186,7 @@ export default function VoucherDetailPage({ params }: PageProps) {
         key={data.updatedAt}
         mode="edit"
         currency={campaignCurrency}
-        currencyPending={Boolean(data.campaignId) && campaignPending}
+        currencyMissing={campaignCurrencyMissing(data.campaignId ?? "", campaignCurrency)}
         initial={initial}
         submitLabel={gt("Save changes")}
         pending={update.isPending}

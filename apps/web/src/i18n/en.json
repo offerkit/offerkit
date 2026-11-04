@@ -254,6 +254,7 @@
   "2570a8daa096c210": "Maximum discount amount",
   "db89367b182189de": "Priority",
   "909f8ce3adb7594c": "Exclusive (no stacking)",
+  "d5c3f4fd41fcfc29": "Saving is unavailable until the campaign's currency is known.",
   "9f28e8a12298f08b": "Enter a valid date and time",
   "ac4370ccff2a992c": "End date must be after the start date",
   "e18fd64044d67f59": "Discount must be at least 0.01",

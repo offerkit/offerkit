@@ -254,6 +254,7 @@
   "2570a8daa096c210": "Importo massimo dello sconto",
   "db89367b182189de": "Priorità",
   "909f8ce3adb7594c": "Esclusivo (non cumulabile)",
+  "d5c3f4fd41fcfc29": "Il salvataggio non è disponibile finché la valuta della campagna non è nota.",
   "9f28e8a12298f08b": "Inserisci una data e un'ora valide",
   "ac4370ccff2a992c": "La data di fine deve essere successiva alla data di inizio",
   "e18fd64044d67f59": "Lo sconto deve essere almeno 0,01",
