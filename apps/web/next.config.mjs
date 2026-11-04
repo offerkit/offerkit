@@ -19,11 +19,6 @@ const nextConfig = {
         destination: "https://offerkit.dev/docs/:path*",
         permanent: true,
       },
-      {
-        source: "/MCP",
-        destination: "/mcp",
-        permanent: true,
-      },
     ];
   },
 };

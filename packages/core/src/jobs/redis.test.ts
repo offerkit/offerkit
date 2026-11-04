@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { createRedisJobQueue, createJobRegistry } from "./index.ts";
 
 class FakeQueue {
@@ -38,6 +38,10 @@ class FakeWorker {
 }
 
 describe("createRedisJobQueue", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("enqueues jobs into BullMQ with delay and retry metadata", async () => {
     FakeQueue.calls = [];
     FakeQueue.jobs.clear();
@@ -50,17 +54,20 @@ describe("createRedisJobQueue", () => {
       WorkerCtor: FakeWorker,
     });
 
+    onTestFinished(() => queue.close());
+
     const id = await queue.enqueue("webhook.deliver", { deliveryId: "del_1" }, {
       runAt: new Date("2026-01-01T00:00:05.000Z"),
       maxAttempts: 7,
     });
 
-    expect(id).toBe("generated-id");
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
     expect(FakeQueue.calls).toHaveLength(1);
     expect(FakeQueue.calls[0]).toMatchObject({
       name: "webhook.deliver",
       data: { deliveryId: "del_1" },
       opts: {
+        jobId: id,
         delay: 5_000,
         attempts: 7,
         backoff: { type: "exponential", delay: 2_000 },
@@ -78,6 +85,8 @@ describe("createRedisJobQueue", () => {
       QueueCtor: FakeQueue,
       WorkerCtor: FakeWorker,
     });
+
+    onTestFinished(() => queue.close());
 
     await queue.ensureScheduled("loyalty.points.expire", new Date("2026-01-01T00:00:00.000Z"));
 
@@ -101,7 +110,7 @@ describe("createRedisJobQueue", () => {
     const worker = queue.currentWorkerForTests as FakeWorker;
 
     await worker.processor({
-      id: "job-1",
+      id: "3",
       name: "bulk_codes.generate",
       data: { campaignId: "cmp_1" },
       attemptsMade: 2,
@@ -110,7 +119,7 @@ describe("createRedisJobQueue", () => {
     await workerPromise;
 
     expect(handled).toEqual([
-      { jobId: "job-1", attempt: 3, payload: { campaignId: "cmp_1" } },
+      { jobId: "3", attempt: 3, payload: { campaignId: "cmp_1" } },
     ]);
   });
 });

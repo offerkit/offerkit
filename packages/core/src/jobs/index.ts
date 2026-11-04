@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { Queue, Worker } from "bullmq";
 import IORedis from "ioredis";
 import { schema, type Db } from "@offerkit/db";
@@ -95,6 +96,8 @@ export function createRedisJobQueue(options: RedisJobQueueOptions): JobQueueAdap
   const adapter: JobQueueAdapter = {
     async enqueue(type, payload = {}, enqueueOptions = {}) {
       const job = await queue.add(type, payload, {
+        // Job IDs cross the API boundary as UUIDs, like the Postgres queue's IDs.
+        jobId: randomUUID(),
         delay: delayUntil(enqueueOptions.runAt),
         attempts: enqueueOptions.maxAttempts ?? 5,
         backoff: { type: "exponential", delay: 2_000 },

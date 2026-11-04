@@ -208,8 +208,8 @@ export default function VoucherDetailPage({ params }: PageProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-end gap-2">
-            <div className="space-y-2">
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="w-full min-w-0 space-y-2 sm:w-40">
               <Label htmlFor="order-amount">
                 <T>Order amount (minor units)</T>
               </Label>
@@ -219,10 +219,10 @@ export default function VoucherDetailPage({ params }: PageProps) {
                 min={0}
                 value={orderAmount}
                 onChange={(e) => setOrderAmount(Number(e.target.value))}
-                className="w-40"
+                className="w-full"
               />
             </div>
-            <div className="space-y-2">
+            <div className="w-full min-w-0 space-y-2 sm:w-64">
               <Label htmlFor="idempotency-key">
                 <T>Idempotency key</T>
               </Label>
@@ -231,7 +231,7 @@ export default function VoucherDetailPage({ params }: PageProps) {
                 value={redeemKey}
                 onChange={(e) => setRedeemKey(e.target.value)}
                 placeholder={gt("Optional, replays on duplicate")}
-                className="w-64"
+                className="w-full"
               />
             </div>
             <Button
