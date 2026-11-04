@@ -1,376 +1,673 @@
 ---
 import {
+  ArrowRightIcon,
+  CheckIcon,
+  CopyIcon,
   GiftIcon,
   GithubLogoIcon,
   MedalIcon,
-  StarIcon,
   TagIcon,
   UsersThreeIcon,
 } from "@phosphor-icons/react/ssr";
 import Layout from "@/components/layout.astro";
 import SiteFooter from "@/components/site-footer.astro";
 import SiteHeader from "@/components/site-header.astro";
-import { formatGitHubStars, getGitHubStars } from "@/lib/github";
+import { getLatestRelease } from "@/lib/github";
 import "@/styles/global.css";
 
-const githubStars = await getGitHubStars();
-const githubStarsLabel = formatGitHubStars(githubStars);
+const latestRelease = await getLatestRelease();
+const githubUrl = "https://github.com/offerkit/offerkit";
 
-const capabilities = [
+type Lang = "ts" | "json" | "bash";
+
+const KEYWORDS = new Set([
+  "const", "await", "import", "from", "export", "async", "function", "return", "if", "true", "false", "null",
+]);
+
+/** Minimal, dependency-free syntax highlighting for the static snippets on this page. */
+function highlight(code: string, lang: Lang) {
+  const escaped = code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const comment = lang === "bash" ? String.raw`#.*$` : String.raw`\/\/.*$`;
+  const pattern = new RegExp(
+    `(${comment})|("(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*')|\\b([A-Za-z_]+)\\b|(\\b\\d[\\d_]*\\b)`,
+    "gm",
+  );
+  return escaped.replace(pattern, (match, isComment, isString, word, isNumber, offset: number, whole: string) => {
+    if (isComment) return `<span class="tok-comment">${match}</span>`;
+    if (isString) {
+      const isKey = lang === "json" && /^\s*:/.test(whole.slice(offset + match.length));
+      return `<span class="${isKey ? "tok-key" : "tok-string"}">${match}</span>`;
+    }
+    if (word) return lang !== "bash" && KEYWORDS.has(word) ? `<span class="tok-keyword">${match}</span>` : match;
+    if (isNumber) return `<span class="tok-number">${match}</span>`;
+    return match;
+  });
+}
+
+const quickstart = `git clone https://github.com/offerkit/offerkit
+cd offerkit && cp .env.example .env
+docker compose up`;
+
+const targetingRule = `{
+  "and": [
+    { ">=": [
+      { "var": "order.amount" },
+      4000
+    ] },
+    { "===": [
+      { "var": "customer.metadata.vip" },
+      true
+    ] }
+  ]
+}`;
+
+const finalCommands = `# In your checkout server
+npm install @offerkit/sdk
+
+# Or try the CLI against your instance
+npm install -g @offerkit/cli
+offerkit login --url http://localhost:3000 \\
+  --api-key offerkit_…
+offerkit vouchers validate WELCOME10 \\
+  --amount 5000`;
+
+const validateRequest = `// On your server, with an OfferKit API key
+await offerkit.vouchers.validate({
+  params: { code: "WELCOME10" },
+  body: {
+    order: { amount: 5000, currency: "USD" },
+  },
+});`;
+
+const heroExamples = [
   {
-    id: "discounts",
+    id: "valid",
+    label: "Validate",
+    short: "Valid",
+    status: "valid",
+    request: validateRequest,
+    note: "WELCOME10 takes a fixed USD 10.00 off. 5000 means USD 50.00, because amounts are integers in minor units.",
+    json: `{
+  "valid": true,
+  "preview": {
+    "amount": 1000,
+    "finalOrder": {
+      "amount": 4000,
+      "currency": "USD"
+    }
+  }
+}`,
+  },
+  {
+    id: "rejected",
+    label: "Wrong currency",
+    short: "EUR",
+    status: "rejected",
+    request: validateRequest.replace('"USD"', '"EUR"'),
+    note: "Rejections return a typed code your checkout can branch on, plus a readable message.",
+    json: `{
+  "valid": false,
+  "code": "currency_mismatch",
+  "explanations": [
+    {
+      "code": "currency_mismatch",
+      "voucherCode": "WELCOME10"
+    }
+  ]
+}`,
+  },
+  {
+    id: "stacked",
+    label: "Stack two codes",
+    short: "Stacked",
+    status: "redeemed",
+    request: `await offerkit.vouchers.stackRedeem({
+  codes: ["SUMMER15", "LOYAL5"],
+  order: { amount: 10000, currency: "USD" },
+  idempotencyKey: "order_5002",
+});`,
+    note: "15% plus USD 5.00 off a USD 100.00 cart, committed in one transaction. If either code fails, neither is used.",
+    json: `{
+  "ok": true,
+  "amount": 2000,
+  "finalOrder": { "amount": 8000 },
+  "breakdown": [
+    { "code": "SUMMER15", "amount": 1500 },
+    { "code": "LOYAL5", "amount": 500 }
+  ]
+}`,
+  },
+];
+
+const facts = [
+  { label: "License", value: "MIT. No enterprise edition.", href: `${githubUrl}/blob/main/LICENSE` },
+  latestRelease
+    ? {
+        label: "Latest release",
+        value: latestRelease.publishedAt
+          ? `${latestRelease.tag} · ${latestRelease.publishedAt.toLocaleDateString("en", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}`
+          : latestRelease.tag,
+        href: latestRelease.url,
+      }
+    : { label: "Releases", value: "On GitHub", href: `${githubUrl}/releases` },
+  { label: "Runs on", value: "Node.js, Postgres, Redis", href: undefined },
+  { label: "Docker image", value: "ghcr.io/offerkit/offerkit", href: `${githubUrl}/pkgs/container/offerkit` },
+];
+
+const incentives = [
+  {
     title: "Discounts",
-    description: "Fixed or percentage offers, eligibility rules, limits, stacking, and atomic redemption.",
+    description: "Fixed or percentage codes with caps, product and collection eligibility, and limits. Generate up to 100,000 unique codes in one call.",
+    call: "vouchers.validate WELCOME10, USD 50.00 cart",
+    result: "USD 10.00 off · USD 40.00 due",
     Icon: TagIcon,
-    className: "bento-discounts",
   },
   {
-    id: "gift-cards",
     title: "Gift cards",
-    description: "Stored balances with partial spend, an immutable ledger, expiration, and rollback safety.",
+    description: "Stored balances you can spend in part. Every debit lands in an append-only transaction ledger.",
+    call: "vouchers.redeem on a USD 50.00 card, USD 18.50 order",
+    result: "USD 18.50 spent · USD 31.50 left",
     Icon: GiftIcon,
-    className: "bento-gift-cards",
   },
   {
-    id: "loyalty",
     title: "Loyalty",
-    description: "Programs, tiers, earning rules, rewards, member ledgers, and points expiration.",
+    description: "Programs with tiers, rewards, and a points ledger. Points can expire per earning.",
+    call: "loyalty.members.earn, 129 base points for order_5003",
+    result: "+129 points · balance 129 · EARN ledger entry",
     Icon: MedalIcon,
-    className: "bento-loyalty",
   },
   {
-    id: "referrals",
     title: "Referrals",
-    description: "Stable referral codes, idempotent conversion, and configurable rewards for both sides.",
+    description: "A stable code per advocate. Each conversion is recorded once and rewards both sides.",
+    call: "referrals.convert ANNA-UfXSjyQq",
+    result: "USD 10.00 voucher to each person",
     Icon: UsersThreeIcon,
-    className: "bento-referrals",
   },
 ];
 
-const surfaces = [
-  ["REST API", "OpenAPI 3.1 from the live contract"],
-  ["TypeScript SDK", "Types without a codegen step"],
-  ["CLI", "Back-office actions from the terminal"],
-  ["MCP server", "Agent tools with explicit risk metadata"],
+const guarantees = [
+  {
+    title: "Validation never writes",
+    body: "Preview a code each time the cart changes. Counters, balances, and limits stay untouched.",
+    token: "POST /api/v1/vouchers/{code}/validate",
+  },
+  {
+    title: "Retries are idempotent",
+    body: "Use the order ID as the idempotency key. A retry returns the first result instead of redeeming twice.",
+    token: "idempotencyKey: order.id",
+  },
+  {
+    title: "Stacking is all-or-nothing",
+    body: "Apply up to 20 codes to one order in a single database transaction. All commit, or none do.",
+    token: "POST /api/v1/redemptions/stack",
+  },
+  {
+    title: "Every rejection has a reason",
+    body: "Sixteen typed codes, from expired vouchers to spent limits, each with a message support can read.",
+    token: `"code": "redemption_limit_reached"`,
+  },
+  {
+    title: "Your application handles reversals",
+    body: "There is no public rollback endpoint, and cancelling an order does not reverse a redemption. Issue a replacement voucher, adjust loyalty points, or refund through your commerce system.",
+    token: "Recovery guide →",
+  },
 ];
 
-const steps = [
+const retryRequest = `const body = {
+  order: { amount: 5000, currency: "USD" },
+  idempotencyKey: "order_5001",
+};
+const redeem = () =>
+  offerkit.vouchers.redeem({
+    params: { code: "WELCOME10" },
+    body,
+  });
+
+try {
+  await redeem();
+} catch {
+  // Only transport errors throw. Rejections
+  // return { ok: false, code } instead.
+  await redeem();
+}`;
+
+const retryResponse = `{
+  "ok": true,
+  "redemptionId": "b32060f3-46e9-…",
+  "amount": 1000,
+  "idempotent": true
+}`;
+
+const interfaces = [
   {
-    id: "validate",
-    title: "Validate",
-    description: "Preview eligibility without changing counters or balances.",
-    method: "POST",
-    endpoint: "/api/v1/vouchers/SUMMER10/validate",
-    code: `const preview = await offerkit.vouchers.validate({
-  code: "SUMMER10",
-  order: { amount: 9999, currency: "USD" },
+    id: "sdk",
+    label: "TypeScript SDK",
+    short: "SDK",
+    caption: "Typed from the contract. Nothing to regenerate.",
+    lang: "ts" as Lang,
+    code: `import { createClient } from "@offerkit/sdk";
+
+const offerkit = createClient({
+  baseUrl: process.env.OFFERKIT_API_URL,
+  apiKey: process.env.OFFERKIT_API_KEY,
+});
+
+// In your order handler
+await offerkit.vouchers.redeem({
+  params: { code: "WELCOME10" },
+  body: {
+    order: { amount: 5000, currency: "USD" },
+    idempotencyKey: order.id,
+  },
 });`,
-    event: "voucher.eligible",
-    status: "200 OK",
-    details: ["Rules evaluated", "No state changed", "Reason included"],
   },
   {
-    id: "redeem",
-    title: "Redeem",
-    description: "Commit atomically with a stable idempotency key.",
-    method: "POST",
-    endpoint: "/api/v1/vouchers/SUMMER10/redemption",
-    code: `const result = await offerkit.vouchers.redeem({
-  code: "SUMMER10",
-  order: { amount: 9999, currency: "USD" },
-  idempotencyKey: "order-42",
-});`,
-    event: "redemption.accepted",
-    status: "200 OK",
-    details: ["Idempotent", "Balance committed", "Event emitted"],
+    id: "rest",
+    label: "REST API",
+    short: "REST",
+    caption: "Plain HTTP with an OpenAPI 3.1 document.",
+    lang: "bash" as Lang,
+    code: `curl -X POST \\
+  "$OFFERKIT_API_URL/api/v1/vouchers/WELCOME10/redemption" \\
+  -H "Authorization: Bearer $OFFERKIT_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "order": { "amount": 5000, "currency": "USD" },
+    "idempotencyKey": "order_5001"
+  }'`,
   },
   {
-    id: "explain",
-    title: "Explain",
-    description: "Return typed, support-safe reasons for every rejection.",
-    method: "POST",
-    endpoint: "/api/v1/vouchers/WELCOME/explain",
-    code: `const decision = await offerkit.vouchers.explain({
-  code: "WELCOME",
-  customerId: "cus_88",
-  order: { amount: 2400, currency: "USD" },
-});`,
-    event: "voucher.ineligible",
-    status: "MINIMUM_NOT_MET",
-    details: ["Typed reason", "Safe for support", "Rule identified"],
+    id: "cli",
+    label: "CLI",
+    short: "CLI",
+    caption: "Back-office work from a terminal or script.",
+    lang: "bash" as Lang,
+    code: `npm install -g @offerkit/cli
+offerkit login --url https://offers.example.com \\
+  --api-key offerkit_…
+
+offerkit vouchers validate WELCOME10 \\
+  --amount 5000
+offerkit vouchers redeem WELCOME10 \\
+  --amount 5000 --idempotency-key order_5001`,
   },
   {
-    id: "observe",
-    title: "Observe",
-    description: "Trace events, signed webhooks, audit entries, and telemetry.",
-    method: "GET",
-    endpoint: "/api/v1/events?subject=order-42",
-    code: `const events = await offerkit.events.list({
-  subject: "order-42",
-  types: ["redemption.accepted"],
-});`,
-    event: "webhook.delivered",
-    status: "SIGNED",
-    details: ["Audit linked", "Webhook verified", "Trace available"],
+    id: "mcp",
+    label: "MCP server",
+    short: "MCP",
+    caption: "OAuth-protected tools, each marked safe, mutating, or destructive.",
+    lang: "bash" as Lang,
+    code: `# On the OfferKit web service
+OFFERKIT_MCP_ENABLED=true
+
+# In Claude Code
+claude mcp add --transport http offerkit \\
+  https://offers.example.com/mcp
+
+# In Codex
+codex mcp add offerkit \\
+  --url https://offers.example.com/mcp`,
   },
+];
+
+const voucherifyPricingUrl = "https://www.voucherify.io/pricing";
+
+const comparison = [
+  ["Price", "Free. You pay for your own hosting.", "From $650/month for 25,000 API calls (Business plan)"],
+  ["License", "MIT. Read, fork, and patch the engine.", "Proprietary"],
+  ["Hosting and data", "Your infrastructure and your Postgres", "Vendor cloud. Private hosting on Enterprise."],
+  ["Operations", "You run Postgres, Redis, and upgrades", "Managed, with custom SLAs on Enterprise"],
+  ["Interfaces", "REST, SDK, CLI, and a self-hosted MCP server, all from one contract", "REST API and SDKs"],
+  ["Programs", "Coupons, gift cards, loyalty, referrals", "Those, plus bundling, gamification, and wallets"],
+  ["Usage limits", "None. Throughput depends on your hardware.", "25,000 API calls a month and 100 a minute on Business"],
+  ["Maturity", "Young project (v0.x), community-supported", "Established commercial vendor"],
 ];
 ---
 
 <Layout title="OfferKit">
   <div class="relative overflow-hidden">
-    <div class="site-grid pointer-events-none absolute inset-x-0 top-0 h-[52rem]"></div>
     <SiteHeader active="home" />
 
     <main>
-      <section class="site-container relative grid gap-14 py-16 sm:py-24 lg:grid-cols-[0.88fr_1.12fr] lg:items-center lg:gap-16 lg:py-28">
-        <div class="relative z-10">
-          <h1 class="max-w-3xl text-5xl font-bold leading-[0.98] tracking-[-0.065em] text-[var(--site-heading)] sm:text-6xl lg:text-[4.65rem]">
-            Promotions are infrastructure.
-            <span class="block text-[var(--site-primary)]">Treat them like it.</span>
-          </h1>
-          <p class="mt-7 max-w-2xl text-lg leading-8 text-[var(--site-muted)] sm:text-xl">
-            Run vouchers, gift cards, loyalty, and referrals behind one typed API. OfferKit is
-            MIT-licensed, agent-ready, and yours to deploy.
+      <!-- Hero -->
+      <section class="site-container hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Open-source Voucherify alternative</p>
+          <h1>Launch checkout promotions without another deploy.</h1>
+          <p class="hero-lede">
+            OfferKit is an open-source promotion engine for teams that own their checkout. Integrate
+            one API for coupons, gift cards, loyalty, and referrals. After that, your team changes
+            offers from the dashboard.
           </p>
-          <div class="mt-9 flex flex-wrap gap-3">
+
+          <div class="hero-actions">
             <a href="/docs/getting-started/" class="site-button-primary">
-              Get started <span class="ml-2" aria-hidden="true">→</span>
+              Read the quickstart <ArrowRightIcon size={16} weight="bold" aria-hidden="true" />
             </a>
             <a
-              href="https://github.com/offerkit/offerkit"
+              href={githubUrl}
               target="_blank"
               rel="noreferrer"
               class="site-button-secondary"
-              aria-label={`Check out OfferKit on GitHub${githubStars === null ? "" : `, ${githubStars.toLocaleString("en")} stars`}`}
             >
-              <GithubLogoIcon size={19} weight="bold" aria-hidden="true" />
-              <span class="ml-2">Checkout on GitHub</span>
-              <span class="cta-star-count cta-star-count-secondary" aria-hidden="true">
-                <StarIcon size={13} weight="fill" />
-                {githubStarsLabel}
-              </span>
+              <GithubLogoIcon size={18} weight="bold" aria-hidden="true" />
+              <span class="ml-2">View source on GitHub</span>
             </a>
           </div>
+
+          <div class="quickstart">
+            <div class="quickstart-head">
+              <span>Run it locally · requires Docker</span>
+              <button type="button" class="copy-button" data-copy={quickstart} aria-label="Copy quickstart commands">
+                <span class="copy-idle"><CopyIcon size={14} weight="bold" aria-hidden="true" /> Copy</span>
+                <span class="copy-done"><CheckIcon size={14} weight="bold" aria-hidden="true" /> Copied</span>
+              </button>
+            </div>
+            <pre><code set:html={highlight(quickstart, "bash")} /></pre>
+            <p>
+              Then open <code>localhost:3000</code>, mint an API key, and create WELCOME10.{" "}
+              <a href="/docs/getting-started/">Quickstart steps →</a>
+            </p>
+          </div>
         </div>
 
-        <div class="hero-system" data-hero-system aria-label="Live OfferKit promotion flow">
-          <div class="hero-system-header">
-            <div>
-              <span class="hero-system-eyebrow">Promotion graph</span>
-              <strong>Live checkout</strong>
+        <div class="hero-proof" data-tabs>
+          <div class="code-window">
+            <div class="code-window-bar">
+              <span class="code-file">checkout.ts</span>
+              <div class="segmented" role="tablist" aria-label="Example request">
+                {heroExamples.map((example, index) => (
+                  <button
+                    type="button"
+                    role="tab"
+                    id={`hero-tab-${example.id}`}
+                    aria-controls={`hero-panel-${example.id}`}
+                    aria-selected={index === 0 ? "true" : "false"}
+                    tabindex={index === 0 ? 0 : -1}
+                    data-tab
+                  >
+                    <span class="tab-long">{example.label}</span>
+                    <span class="tab-short" aria-hidden="true">{example.short}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-            <span class="hero-system-status"><span></span> Operational</span>
-          </div>
-
-          <div class="hero-canvas">
-            <svg class="hero-flow-lines" viewBox="0 0 720 420" role="img" aria-label="Checkout request flowing through OfferKit to promotion outcomes">
-              <path d="M165 210 C235 210 244 210 310 210"></path>
-              <path d="M408 210 C470 210 470 72 540 72"></path>
-              <path d="M408 210 C482 210 474 166 540 166"></path>
-              <path d="M408 210 C482 210 474 260 540 260"></path>
-              <path d="M408 210 C470 210 470 354 540 354"></path>
-              <circle r="4" fill="var(--site-teal)">
-                <animateMotion dur="2.2s" repeatCount="indefinite" path="M165 210 C235 210 244 210 310 210"></animateMotion>
-              </circle>
-            </svg>
-
-            <div class="hero-request">
-              <span>Incoming checkout</span>
-              <strong data-hero-code>SUMMER10</strong>
-              <small data-hero-order>$129.00 order</small>
-            </div>
-
-            <div class="hero-engine">
-              <span class="hero-engine-mark">OK</span>
-              <strong>OfferKit</strong>
-              <small>evaluate()</small>
-            </div>
-
-            <div class="hero-outcome hero-outcome-discounts is-active" data-hero-outcome="discounts">
-              <TagIcon size={18} weight="bold" aria-hidden="true" />
-              <span><strong>Discount</strong><small data-hero-result>− $12.90</small></span>
-            </div>
-            <div class="hero-outcome hero-outcome-gift" data-hero-outcome="gift-cards">
-              <GiftIcon size={18} weight="bold" aria-hidden="true" />
-              <span><strong>Gift card</strong><small>Balance checked</small></span>
-            </div>
-            <div class="hero-outcome hero-outcome-loyalty" data-hero-outcome="loyalty">
-              <MedalIcon size={18} weight="bold" aria-hidden="true" />
-              <span><strong>Loyalty</strong><small>+116 points</small></span>
-            </div>
-            <div class="hero-outcome hero-outcome-referrals" data-hero-outcome="referrals">
-              <UsersThreeIcon size={18} weight="bold" aria-hidden="true" />
-              <span><strong>Referral</strong><small>Reward queued</small></span>
-            </div>
-          </div>
-
-          <div class="hero-activity">
-            <span class="hero-activity-check">✓</span>
-            <span><strong data-hero-event>redemption.accepted</strong><small data-hero-meta>42 ms · order_1042</small></span>
-            <span class="hero-activity-status">200 OK</span>
+            {heroExamples.map((example, index) => (
+              <div
+                role="tabpanel"
+                id={`hero-panel-${example.id}`}
+                aria-labelledby={`hero-tab-${example.id}`}
+                hidden={index !== 0}
+                data-panel
+              >
+                <pre class="code-request"><code set:html={highlight(example.request, "ts")} /></pre>
+                <div class="code-response">
+                  <div class="code-response-label">
+                    <span>Response · trimmed</span>
+                    <span class:list={["result-badge", example.status === "rejected" ? "result-rejected" : "result-valid"]}>{example.status}</span>
+                  </div>
+                  <pre><code set:html={highlight(example.json, "json")} /></pre>
+                  <p class="code-note">{example.note}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      <section class="border-y border-[var(--site-border)] bg-white/65">
-        <div class="site-container grid divide-y divide-[var(--site-border)] sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
-          {surfaces.map(([title, description]) => (
-            <div class="px-6 py-7 first:pl-0 last:pr-0 sm:first:pl-6 lg:first:pl-0">
-              <div class="flex items-center gap-2.5">
-                <span class="grid size-5 place-items-center rounded-full bg-[var(--site-primary-soft)] text-xs font-bold text-[var(--site-primary-strong)]">✓</span>
-                <p class="text-sm font-bold text-[var(--site-heading)]">{title}</p>
-              </div>
-              <p class="mt-2 text-sm leading-6 text-[var(--site-muted)]">{description}</p>
+      <!-- Facts strip -->
+      <section class="facts" aria-label="Project facts">
+        <dl class="site-container facts-grid">
+          {facts.map(({ label, value, href }) => (
+            <div>
+              <dt>{label}</dt>
+              <dd>{href ? <a href={href} target="_blank" rel="noreferrer">{value}</a> : value}</dd>
             </div>
           ))}
-        </div>
+        </dl>
       </section>
 
-      <section class="site-container py-24 sm:py-32">
-        <div class="max-w-2xl">
-          <h2 class="text-4xl font-bold tracking-[-0.05em] text-[var(--site-heading)] sm:text-5xl">
-            One model for every incentive.
-          </h2>
-          <p class="mt-5 text-lg leading-8 text-[var(--site-muted)]">
-            Replace scattered checkout conditionals and one-off admin tools with a system your
-            team can inspect, test, and operate.
+      <!-- Incentives -->
+      <section class="site-container section">
+        <div class="section-head split">
+          <h2>Four incentive types on one data model.</h2>
+          <p>
+            Campaigns, customers, orders, and rules are shared by every incentive. Each result below
+            came from a real call against a local instance.
           </p>
         </div>
 
-        <div class="capability-bento mt-12">
-          {capabilities.map(({ id, title, description, Icon, className }) => (
-            <article class:list={["capability-card site-card", className]}>
-              <div class="capability-copy">
-                <span class="capability-icon"><Icon size={25} weight="duotone" aria-hidden="true" /></span>
-                <h3>{title}</h3>
-                <p>{description}</p>
+        <div class="incentive-grid">
+          {incentives.map(({ title, description, call, result, Icon }) => (
+            <article class="incentive">
+              <h3><Icon size={20} weight="duotone" aria-hidden="true" />{title}</h3>
+              <p>{description}</p>
+              <div class="incentive-proof">
+                <code>{call}</code>
+                <span>{result}</span>
               </div>
-
-              {id === "discounts" && (
-                <div class="discount-visual" aria-hidden="true">
-                  <div class="discount-total">
-                    <span>Cart total</span>
-                    <strong>$129.00</strong>
-                  </div>
-                  <div class="discount-rule"><span>SUMMER10</span><strong>−10%</strong></div>
-                  <div class="discount-rule"><span>Loyal member</span><strong>−$5</strong></div>
-                  <div class="discount-final"><span>Due now</span><strong>$111.10</strong></div>
-                </div>
-              )}
-
-              {id === "gift-cards" && (
-                <div class="gift-card-visual" aria-hidden="true">
-                  <div class="gift-card-balance"><span>Available</span><strong>$84.50</strong></div>
-                  <div class="gift-card-ledger"><span>Order #1042</span><strong>−$24.00</strong></div>
-                  <div class="gift-card-line"><span style="width: 72%"></span></div>
-                </div>
-              )}
-
-              {id === "loyalty" && (
-                <div class="loyalty-visual" aria-hidden="true">
-                  <div><span>Gold tier</span><strong>2,840 pts</strong></div>
-                  <div class="loyalty-track"><span></span></div>
-                  <small>160 points to next reward</small>
-                </div>
-              )}
-
-              {id === "referrals" && (
-                <div class="referral-visual" aria-hidden="true">
-                  <span class="referral-person">AM</span>
-                  <span class="referral-line"></span>
-                  <span class="referral-person">JK</span>
-                  <span class="referral-reward">Reward both sides</span>
-                </div>
-              )}
             </article>
           ))}
         </div>
-      </section>
 
-      <section class="border-y border-[var(--site-border)] bg-[var(--site-bg-subtle)] py-24 sm:py-32" data-hotpath>
-        <div class="site-container grid gap-14 lg:grid-cols-[0.8fr_1.2fr] lg:items-start lg:gap-24">
+        <div class="targeting">
           <div>
-            <h2 class="text-4xl font-bold tracking-[-0.05em] text-[var(--site-heading)] sm:text-5xl">
-              Own the hot path.
-            </h2>
-            <p class="mt-5 text-lg leading-8 text-[var(--site-muted)]">
-              Checkout logic needs clear outcomes under retries, concurrency, and partial failure.
-              OfferKit makes those constraints part of the contract.
+            <h3>Target who qualifies</h3>
+            <p>
+              Attach a JSON Logic rule to a campaign. This one limits <code>VIPWEEKEND</code> to VIP
+              customers with a cart of USD 40.00 or more.
             </p>
-            <a class="mt-7 inline-flex text-sm font-semibold text-[var(--site-primary-strong)] transition hover:text-[var(--site-primary)]" href="/docs/reference/api-reference/">
-              Read the API conventions <span class="ml-2" aria-hidden="true">→</span>
-            </a>
+            <pre><code set:html={highlight(targetingRule, "json")} /></pre>
           </div>
-
-          <div class="contract-window site-card">
-            <div class="contract-toolbar">
-              <span>Live contract</span>
-              <span class="contract-ready"><span></span> Ready</span>
-            </div>
-            <div class="contract-stage">
-              {steps.map((step, index) => (
-                <article
-                  class:list={["contract-panel", index === 0 && "is-active"]}
-                  data-contract-panel={step.id}
-                  id={`hotpath-panel-${step.id}`}
-                  role="tabpanel"
-                  aria-labelledby={`hotpath-tab-${step.id}`}
-                  hidden={index !== 0}
-                >
-                  <div class="contract-endpoint">
-                    <span>{step.method}</span>
-                    <code>{step.endpoint}</code>
-                  </div>
-                  <pre><code>{step.code}</code></pre>
-                  <div class="contract-response">
-                    <div>
-                      <span>{step.event}</span>
-                      <strong>{step.status}</strong>
-                    </div>
-                    <ul>
-                      {step.details.map((detail) => <li>{detail}</li>)}
-                    </ul>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div class="site-container mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" role="tablist" aria-label="OfferKit contract stages">
-          {steps.map((step, index) => (
-            <button
-              type="button"
-              class:list={["hotpath-tab", index === 0 && "is-active"]}
-              data-hotpath-tab={step.id}
-              id={`hotpath-tab-${step.id}`}
-              role="tab"
-              aria-controls={`hotpath-panel-${step.id}`}
-              aria-selected={index === 0 ? "true" : "false"}
-              tabindex={index === 0 ? 0 : -1}
-            >
-              <span class="hotpath-tab-title">{step.title}</span>
-              <span class="hotpath-tab-copy">{step.description}</span>
-              <span class="hotpath-progress" aria-hidden="true"><span></span></span>
-            </button>
-          ))}
+          <ul class="targeting-results" aria-label="Validation results for VIPWEEKEND">
+            <li><span>VIP, USD 50.00 cart</span><strong class="is-valid">valid · USD 10.00 off</strong></li>
+            <li><span>VIP, USD 25.00 cart</span><strong>validation_failed</strong></li>
+            <li><span>Not VIP, USD 50.00 cart</span><strong>validation_failed</strong></li>
+          </ul>
         </div>
       </section>
 
-      <section class="site-container py-24 sm:py-32">
-        <div class="cta-card site-card relative overflow-hidden px-6 py-16 text-center sm:px-12 sm:py-20">
-          <div class="absolute -left-16 -top-16 size-44 rounded-full bg-[#2db99a]/10 blur-2xl"></div>
-          <div class="absolute -bottom-20 -right-16 size-52 rounded-full bg-[#388df2]/10 blur-2xl"></div>
-          <img src="/icon.webp" alt="" width="72" height="72" class="relative mx-auto size-[4.5rem] rounded-2xl shadow-[0_12px_28px_rgba(68,88,113,0.16)]" />
-          <h2 class="relative mx-auto mt-8 max-w-3xl text-4xl font-bold tracking-[-0.055em] text-[var(--site-heading)] sm:text-5xl">
-            Your promotions. Your data. Your infrastructure.
-          </h2>
-          <p class="relative mx-auto mt-5 max-w-2xl text-lg leading-8 text-[var(--site-muted)]">
-            Start locally, keep the contract stable, and deploy OfferKit wherever your stack runs.
+      <!-- Dashboard -->
+      <section class="site-container section">
+        <div class="section-head split">
+          <h2>See exactly why codes fail.</h2>
+          <p>
+            The admin dashboard ships in the same image. Support sees every failed redemption
+            grouped by its typed reason, and marketing adjusts the offer in the same place.
+            Screens are from a local instance with demo data.
           </p>
-          <div class="relative mt-8 flex flex-wrap justify-center gap-3">
-            <a href="/docs/getting-started/" class="site-button-primary">Get started</a>
-            <a href="/docs/self-host/" class="site-button-secondary">Self-hosting guide</a>
+        </div>
+        <div class="dashboard-pair">
+          <figure>
+            <figcaption>Insights: validation failure breakdown</figcaption>
+            <img
+              class="dashboard-shot"
+              src="/images/dashboard-failures.webp"
+              width="860"
+              height="660"
+              loading="lazy"
+              decoding="async"
+              alt="OfferKit Insights validation failure breakdown: currency_mismatch 21, campaign_inactive 13, redemption_limit_reached 12, customer_required 8, no_discount_effect 5, per_user_redemption_limit_reached 1."
+            />
+          </figure>
+          <figure>
+            <figcaption>WELCOME10 discount settings</figcaption>
+            <img
+              class="dashboard-shot"
+              src="/images/dashboard-edit-welcome10.webp"
+              width="740"
+              height="790"
+              loading="lazy"
+              decoding="async"
+              alt="OfferKit dashboard Discount settings for WELCOME10: fixed amount, discount amount 10.00, no maximum cap, priority 0, exclusive (no stacking) off, active on."
+            />
+          </figure>
+        </div>
+      </section>
+
+      <!-- Guarantees -->
+      <section class="band band-dark">
+        <div class="site-container section">
+          <div class="section-head split">
+            <h2>Safe to call while money is moving.</h2>
+            <p>
+              Checkouts retry, double-submit, and fail halfway. These are OfferKit's guarantees
+              inside each call, and the one thing your application still owns.
+            </p>
+          </div>
+          <div class="guarantee-grid">
+            {guarantees.map(({ title, body, token }, index) => (
+              <>
+                <div class="guarantee">
+                  <span class="guarantee-index">{String(index + 1).padStart(2, "0")}</span>
+                  <div>
+                    <h3>{title}</h3>
+                    <p>{body}</p>
+                    {token.endsWith("→") ? <a class="guarantee-link" href="/docs/reference/retries-and-recovery/">{token}</a> : <code>{token}</code>}
+                  </div>
+                </div>
+                {index === 1 && (
+                  <div class="code-window retry-window">
+                    <div class="code-window-bar">
+                      <span class="code-file">retry.ts</span>
+                    </div>
+                    <pre class="code-request"><code set:html={highlight(retryRequest, "ts")} /></pre>
+                    <div class="code-response">
+                      <div class="code-response-label">
+                        <span>Retry response</span>
+                        <span class="result-badge result-valid">same redemption</span>
+                      </div>
+                      <pre><code set:html={highlight(retryResponse, "json")} /></pre>
+                    </div>
+                  </div>
+                )}
+              </>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <!-- Interfaces -->
+      <section class="site-container section" data-tabs>
+        <div class="interfaces-grid">
+          <div>
+        <div class="section-head">
+          <h2>Call it from code, a terminal, or an agent.</h2>
+          <p>
+            The REST API, SDK, CLI, and MCP server share one typed contract. They accept the same
+            inputs and return the same results.
+          </p>
+        </div>
+        <p class="auth-note">
+          Install with <code>npm install @offerkit/sdk</code>. Each surface authenticates with a
+          server API key from the dashboard.
+        </p>
+        <a class="text-link" href="/docs/reference/developer-tools/">
+          SDK, REST, CLI, and MCP reference <ArrowRightIcon size={14} weight="bold" aria-hidden="true" />
+        </a>
+          </div>
+        <div class="interface-layout">
+          <div class="interface-tabs" role="tablist" aria-label="OfferKit interfaces">
+            {interfaces.map((item, index) => (
+              <button
+                type="button"
+                role="tab"
+                id={`iface-tab-${item.id}`}
+                aria-controls={`iface-panel-${item.id}`}
+                aria-selected={index === 0 ? "true" : "false"}
+                tabindex={index === 0 ? 0 : -1}
+                data-tab
+              >
+                <span class="interface-label">{item.label}</span>
+                <span class="interface-short" aria-hidden="true">{item.short}</span>
+              </button>
+            ))}
+          </div>
+          <div class="interface-code">
+            {interfaces.map((item, index) => (
+              <div
+                class="interface-body"
+                role="tabpanel"
+                id={`iface-panel-${item.id}`}
+                aria-labelledby={`iface-tab-${item.id}`}
+                hidden={index !== 0}
+                data-panel
+              >
+                <p class="interface-panel-caption">{item.caption}</p>
+                <pre class={`lang-${item.lang}`}><code set:html={highlight(item.code, item.lang)} /></pre>
+              </div>
+            ))}
+          </div>
+        </div>
+        </div>
+      </section>
+
+      <!-- Comparison -->
+      <section class="band">
+        <div class="site-container section">
+          <div class="section-head" id="compare">
+            <h2>OfferKit or Voucherify?</h2>
+          </div>
+
+          <table class="compare-table">
+            <thead>
+              <tr>
+                <th scope="col"><span class="sr-only">Aspect</span></th>
+                <th scope="col">OfferKit</th>
+                <th scope="col">Voucherify</th>
+              </tr>
+            </thead>
+            <tbody>
+              {comparison.map(([aspect, ours, theirs]) => (
+                <tr>
+                  <th scope="row">{aspect}</th>
+                  <td data-label="OfferKit">{ours}</td>
+                  <td data-label="Voucherify">{theirs}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div class="compare-verdict">
+            <p><strong>Choose Voucherify</strong> for a managed platform with the widest feature set.</p>
+            <p><strong>Choose OfferKit</strong> to own the code, the data, and the deployment, if you're comfortable running it.</p>
+          </div>
+          <p class="compare-note">
+            There is no Voucherify importer yet. Campaigns, vouchers, customers, and validation
+            rules are the same core concepts, so offers can be recreated through the API; see{" "}
+            <a href="/docs/reference/relationships/">how objects connect</a>. Voucherify figures
+            are from its <a href={voucherifyPricingUrl} target="_blank" rel="noreferrer">pricing page</a>,
+            checked November 2026.
+          </p>
+        </div>
+      </section>
+
+      <!-- Final CTA -->
+      <section class="site-container section section-final">
+        <div class="final-cta">
+          <div>
+            <h2>Start with a working offer.</h2>
+            <p>
+              Once <code>docker compose up</code> is running, add the SDK to your checkout server or
+              try a code from the CLI. The quickstart walks through creating WELCOME10.
+            </p>
+            <div class="final-actions">
+              <a href="/docs/getting-started/" class="site-button-primary">Read the quickstart</a>
+              <a href={githubUrl} target="_blank" rel="noreferrer" class="site-button-secondary">
+                <GithubLogoIcon size={18} weight="bold" aria-hidden="true" />
+                <span class="ml-2">View source on GitHub</span>
+              </a>
+              <a href="/docs/self-host/" class="final-link">Self-hosting guide <ArrowRightIcon size={14} weight="bold" aria-hidden="true" /></a>
+            </div>
+          </div>
+          <div class="final-command">
+            <div class="final-command-head">
+              <span>Terminal</span>
+              <button type="button" class="copy-button" data-copy={finalCommands} aria-label="Copy setup commands">
+                <span class="copy-idle"><CopyIcon size={14} weight="bold" aria-hidden="true" /> Copy</span>
+                <span class="copy-done"><CheckIcon size={14} weight="bold" aria-hidden="true" /> Copied</span>
+              </button>
+            </div>
+            <pre><code set:html={highlight(finalCommands, "bash")} /></pre>
           </div>
         </div>
       </section>
@@ -381,95 +678,77 @@ const steps = [
 </Layout>
 
 <script>
-  const HERO_ROTATION_MS = 2_600;
-  const HOTPATH_ROTATION_MS = 3_000;
+  function initializeTabs() {
+    document.querySelectorAll<HTMLElement>("[data-tabs]").forEach((root) => {
+      if (root.dataset.initialized === "true") return;
+      root.dataset.initialized = "true";
 
-  function initializeHeroVisualization() {
-    const root = document.querySelector<HTMLElement>("[data-hero-system]");
-    if (!root || root.dataset.initialized === "true") return;
-    root.dataset.initialized = "true";
+      const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-tab]"));
+      const panels = Array.from(root.querySelectorAll<HTMLElement>("[data-panel]"));
 
-    const scenarios = [
-      { code: "SUMMER10", order: "$129.00 order", target: "discounts", result: "− $12.90", event: "redemption.accepted", meta: "42 ms · order_1042" },
-      { code: "GIFT-84K", order: "$24.00 order", target: "gift-cards", result: "Balance checked", event: "gift_card.debited", meta: "38 ms · order_1043" },
-      { code: "GOLD-MEMBER", order: "$86.40 order", target: "loyalty", result: "+116 points", event: "points.credited", meta: "45 ms · order_1044" },
-      { code: "REFER-AK", order: "New customer", target: "referrals", result: "Reward queued", event: "referral.converted", meta: "40 ms · customer_882" },
-    ];
-    let scenarioIndex = 0;
+      const select = (nextIndex: number, focus = false) => {
+        const activeIndex = (nextIndex + tabs.length) % tabs.length;
+        tabs.forEach((tab, index) => {
+          const isActive = index === activeIndex;
+          tab.setAttribute("aria-selected", String(isActive));
+          tab.tabIndex = isActive ? 0 : -1;
+        });
+        panels.forEach((panel, index) => {
+          panel.hidden = index !== activeIndex;
+        });
+        if (focus) tabs[activeIndex].focus();
+      };
 
-    const renderScenario = () => {
-      const scenario = scenarios[scenarioIndex];
-      root.querySelector<HTMLElement>("[data-hero-code]")!.textContent = scenario.code;
-      root.querySelector<HTMLElement>("[data-hero-order]")!.textContent = scenario.order;
-      root.querySelector<HTMLElement>("[data-hero-event]")!.textContent = scenario.event;
-      root.querySelector<HTMLElement>("[data-hero-meta]")!.textContent = scenario.meta;
-      root.querySelectorAll<HTMLElement>("[data-hero-outcome]").forEach((outcome) => {
-        const isActive = outcome.dataset.heroOutcome === scenario.target;
-        outcome.classList.toggle("is-active", isActive);
-        if (isActive) outcome.querySelector("small")!.textContent = scenario.result;
-      });
-    };
-
-    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      const timer = window.setInterval(() => {
-        if (!root.isConnected) return window.clearInterval(timer);
-        scenarioIndex = (scenarioIndex + 1) % scenarios.length;
-        renderScenario();
-      }, HERO_ROTATION_MS);
-    }
-  }
-
-  function initializeHotpathSlideshow() {
-    const root = document.querySelector<HTMLElement>("[data-hotpath]");
-    if (!root || root.dataset.initialized === "true") return;
-    root.dataset.initialized = "true";
-
-    const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-hotpath-tab]"));
-    const panels = Array.from(root.querySelectorAll<HTMLElement>("[data-contract-panel]"));
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    let activeIndex = 0;
-    let timer: number | undefined;
-
-    const showStep = (nextIndex: number, restart = true) => {
-      activeIndex = (nextIndex + tabs.length) % tabs.length;
       tabs.forEach((tab, index) => {
-        const isActive = index === activeIndex;
-        tab.classList.toggle("is-active", isActive);
-        tab.setAttribute("aria-selected", String(isActive));
-        tab.tabIndex = isActive ? 0 : -1;
-      });
-      panels.forEach((panel, index) => {
-        const isActive = index === activeIndex;
-        panel.classList.toggle("is-active", isActive);
-        panel.hidden = !isActive;
-      });
-
-      if (restart && !reduceMotion) {
-        if (timer) window.clearInterval(timer);
-        timer = window.setInterval(() => {
-          if (!root.isConnected) return timer && window.clearInterval(timer);
-          showStep(activeIndex + 1, false);
-        }, HOTPATH_ROTATION_MS);
-      }
-    };
-
-    tabs.forEach((tab, index) => {
-      tab.addEventListener("click", () => showStep(index));
-      tab.addEventListener("keydown", (event) => {
-        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-        event.preventDefault();
-        const direction = event.key === "ArrowRight" ? 1 : -1;
-        showStep(activeIndex + direction);
-        tabs[(activeIndex + tabs.length) % tabs.length].focus();
+        tab.addEventListener("click", () => select(index));
+        tab.addEventListener("keydown", (event) => {
+          if (event.key === "ArrowRight" || event.key === "ArrowDown") select(index + 1, true);
+          else if (event.key === "ArrowLeft" || event.key === "ArrowUp") select(index - 1, true);
+          else return;
+          event.preventDefault();
+        });
       });
     });
+  }
 
-    showStep(0);
+  function initializeCopyButtons() {
+    document.querySelectorAll<HTMLButtonElement>("[data-copy]").forEach((button) => {
+      if (button.dataset.initialized === "true") return;
+      button.dataset.initialized = "true";
+      button.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(button.dataset.copy ?? "");
+          button.dataset.copied = "true";
+          window.setTimeout(() => delete button.dataset.copied, 1_600);
+        } catch {
+          // Clipboard access can be denied; the commands remain selectable.
+        }
+      });
+    });
+  }
+
+  function markScrollableCode() {
+    document.querySelectorAll<HTMLPreElement>("pre").forEach((pre) => {
+      const update = () => {
+        pre.toggleAttribute("data-overflow", pre.scrollWidth - pre.clientWidth > 2);
+        pre.toggleAttribute("data-scrolled-end", pre.scrollLeft + pre.clientWidth >= pre.scrollWidth - 2);
+      };
+      if (pre.dataset.scrollWatch !== "true") {
+        pre.dataset.scrollWatch = "true";
+        pre.addEventListener("scroll", update, { passive: true });
+      }
+      update();
+    });
   }
 
   function initializeLandingPage() {
-    initializeHeroVisualization();
-    initializeHotpathSlideshow();
+    initializeTabs();
+    initializeCopyButtons();
+    markScrollableCode();
+    document
+      .querySelectorAll("[data-tab]")
+      .forEach((tab) => tab.addEventListener("click", () => requestAnimationFrame(markScrollableCode)));
+    window.addEventListener("resize", markScrollableCode, { passive: true });
   }
 
   initializeLandingPage();
@@ -477,787 +756,1146 @@ const steps = [
 </script>
 
 <style>
-  .cta-star-count {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.26rem;
-    margin-left: 0.65rem;
-    border-left: 1px solid rgba(255, 255, 255, 0.28);
-    padding-left: 0.65rem;
+  code,
+  pre,
+  .eyebrow,
+  .guarantee-index,
+  .code-file {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 0.68rem;
   }
 
-  .cta-star-count-secondary {
-    border-left-color: var(--site-border);
-    color: var(--site-muted);
+  .eyebrow a {
+    text-decoration: underline;
+    text-decoration-color: rgba(8, 119, 93, 0.35);
+    text-underline-offset: 0.25em;
   }
 
-  .hero-system {
-    position: relative;
-    min-height: 31rem;
-    overflow: hidden;
-    border: 1px solid var(--site-border);
-    border-radius: 1.75rem;
-    background:
-      linear-gradient(rgba(216, 225, 234, 0.38) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(216, 225, 234, 0.38) 1px, transparent 1px),
-      linear-gradient(150deg, #ffffff, #f5faf8);
-    background-size: 28px 28px, 28px 28px, auto;
-    box-shadow: var(--site-shadow-lg);
+  .eyebrow a:hover {
+    text-decoration-color: currentColor;
   }
 
-  .hero-system::after {
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.82);
-    pointer-events: none;
-    content: "";
+  .guarantee-link {
+    display: inline-block;
+    margin-top: 0.6rem;
+    color: #7fdcb8;
+    font-size: 0.85rem;
+    font-weight: 650;
   }
 
-  .hero-system-header {
-    position: relative;
-    z-index: 3;
-    display: flex;
-    min-height: 4.6rem;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid var(--site-border);
-    background: rgba(255, 255, 255, 0.82);
-    padding: 0.9rem 1.15rem;
-    backdrop-filter: blur(12px);
-  }
-
-  .hero-system-header > div {
-    display: grid;
-    gap: 0.15rem;
-  }
-
-  .hero-system-header strong {
-    color: var(--site-heading);
-    font-size: 0.88rem;
-  }
-
-  .hero-system-eyebrow {
-    color: var(--site-muted-light);
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 0.62rem;
-    letter-spacing: 0.12em;
+  .eyebrow {
+    color: var(--site-primary-strong);
+    font-size: 0.75rem;
+    font-weight: 650;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
   }
 
-  .hero-system-status,
-  .contract-ready {
+  /* ---------- Hero ---------- */
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3rem;
+    padding-block: 3rem 4rem;
+  }
+
+  .hero h1 {
+    max-width: 20ch;
+    text-wrap: balance;
+    margin-top: 1.1rem;
+    color: var(--site-heading);
+    font-size: clamp(2.4rem, 5.6vw, 3.4rem);
+    font-weight: 750;
+    line-height: 1.05;
+    letter-spacing: -0.032em;
+  }
+
+  .hero-lede {
+    max-width: 36rem;
+    margin-top: 1.5rem;
+    color: var(--site-muted);
+    font-size: 1.125rem;
+    line-height: 1.7;
+  }
+
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 2rem;
+  }
+
+  .hero-actions > a:first-child {
+    gap: 0.5rem;
+  }
+
+  .quickstart {
+    max-width: 36rem;
+    margin-top: 2rem;
+    border: 1px solid var(--site-border);
+    border-radius: 0.9rem;
+    background: var(--site-surface);
+  }
+
+  .quickstart-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    border-bottom: 1px solid var(--site-border);
+    padding: 0.45rem 0.6rem 0.45rem 1rem;
+    color: var(--site-muted);
+    font-size: 0.78rem;
+  }
+
+  .quickstart pre {
+    overflow-x: auto;
+    padding: 0.9rem 1rem;
+    color: var(--site-text);
+    font-size: 0.8rem;
+    line-height: 1.75;
+  }
+
+  .quickstart > p {
+    border-top: 1px dashed var(--site-border);
+    padding: 0.65rem 1rem;
+    color: var(--site-muted);
+    font-size: 0.8rem;
+    line-height: 1.55;
+  }
+
+  .quickstart > p code {
+    color: var(--site-text);
+    font-size: 0.76rem;
+  }
+
+  .copy-button {
     display: inline-flex;
     align-items: center;
-    gap: 0.45rem;
+    border-radius: 0.5rem;
+    padding: 0.3rem 0.55rem;
+    color: var(--site-text);
+    font-size: 0.76rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .copy-button:hover {
+    background: var(--site-bg-subtle);
+  }
+
+  .copy-button:focus-visible,
+  [role="tab"]:focus-visible {
+    outline: 2px solid var(--site-teal);
+    outline-offset: 2px;
+  }
+
+  :global(pre[data-overflow]) {
+    mask-image: linear-gradient(to right, black calc(100% - 2rem), transparent);
+  }
+
+  :global(pre[data-overflow][data-scrolled-end]) {
+    mask-image: none;
+  }
+
+  .copy-idle,
+  .copy-done {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .copy-done,
+  .copy-button[data-copied] .copy-idle {
+    display: none;
+  }
+
+  .copy-button[data-copied] .copy-done {
+    display: inline-flex;
     color: var(--site-primary-strong);
+  }
+
+  /* Code windows (dark) */
+  .code-window {
+    overflow: hidden;
+    border: 1px solid #1e2b38;
+    border-radius: 1rem;
+    background: #0e1621;
+    box-shadow: 0 18px 36px -24px rgba(15, 30, 45, 0.4);
+    color: #d5dee8;
+  }
+
+  .code-window-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border-bottom: 1px solid #1e2b38;
+    padding: 0.6rem 0.75rem 0.6rem 1.1rem;
+    min-height: 3rem;
+  }
+
+  .code-file,
+  .code-window-hint {
+    color: #8fa1b5;
+    font-size: 0.76rem;
+  }
+
+  .segmented {
+    display: inline-flex;
+    gap: 0.25rem;
+    border: 1px solid #253445;
+    border-radius: 0.6rem;
+    padding: 0.2rem;
+  }
+
+  .segmented [role="tab"] {
+    border-radius: 0.42rem;
+    padding: 0.3rem 0.65rem;
+    color: #8fa1b5;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .segmented [role="tab"][aria-selected="true"] {
+    background: #1f2d3c;
+    color: #f1f5f9;
+  }
+
+  .code-window pre {
+    overflow-x: auto;
+    padding: 1.1rem 1.2rem;
+    font-size: 0.8rem;
+    line-height: 1.7;
+  }
+
+  .code-request {
+    border-bottom: 1px solid #1e2b38;
+  }
+
+  .code-response {
+    background: #0b121b;
+  }
+
+  .code-response-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1.2rem 0;
+    color: #6f8399;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 0.66rem;
-    font-weight: 700;
+    font-size: 0.7rem;
     letter-spacing: 0.06em;
     text-transform: uppercase;
   }
 
-  .hero-system-status > span,
-  .contract-ready > span {
-    width: 0.45rem;
-    height: 0.45rem;
-    border-radius: 999px;
-    background: var(--site-teal);
-    box-shadow: 0 0 0 4px rgba(45, 185, 154, 0.12);
-  }
-
-  .hero-canvas {
-    position: relative;
-    min-height: 21rem;
-  }
-
-  .hero-flow-lines {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    overflow: visible;
-  }
-
-  .hero-flow-lines path {
-    fill: none;
-    stroke: #c9d6df;
-    stroke-dasharray: 5 6;
-    stroke-width: 1.4;
-  }
-
-  .hero-request,
-  .hero-engine,
-  .hero-outcome {
-    position: absolute;
-    z-index: 2;
-    border: 1px solid var(--site-border);
-    background: rgba(255, 255, 255, 0.94);
-    box-shadow: 0 9px 22px rgba(65, 84, 109, 0.1);
-  }
-
-  .hero-request {
-    top: 40%;
-    left: 3.5%;
-    display: grid;
-    width: 25%;
-    min-width: 7.5rem;
-    gap: 0.25rem;
-    border-radius: 0.9rem;
-    padding: 0.8rem;
-    transform: translateY(-50%);
-  }
-
-  .hero-request span,
-  .hero-request small,
-  .hero-engine small,
-  .hero-outcome small {
-    color: var(--site-muted-light);
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 0.58rem;
-  }
-
-  .hero-request strong {
-    overflow: hidden;
-    color: var(--site-heading);
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 0.7rem;
-    text-overflow: ellipsis;
-  }
-
-  .hero-engine {
-    top: 40%;
-    left: 42.5%;
-    display: grid;
-    width: 6.6rem;
-    place-items: center;
-    gap: 0.25rem;
-    border-color: rgba(45, 185, 154, 0.36);
-    border-radius: 1.2rem;
-    padding: 1rem 0.7rem;
-    transform: translate(-50%, -50%);
-  }
-
-  .hero-engine-mark {
-    display: grid;
-    width: 2.4rem;
-    height: 2.4rem;
-    place-items: center;
-    border-radius: 0.75rem;
-    background: linear-gradient(145deg, #25b58f, #0b8265);
-    box-shadow: 0 8px 18px rgba(22, 155, 120, 0.2);
-    color: white;
-    font-size: 0.7rem;
-    font-weight: 800;
-  }
-
-  .hero-engine strong {
-    color: var(--site-heading);
-    font-size: 0.78rem;
-  }
-
-  .hero-outcome {
-    right: 3.5%;
-    display: flex;
-    width: 26%;
-    min-width: 8rem;
-    align-items: center;
-    gap: 0.6rem;
-    border-radius: 0.85rem;
-    padding: 0.62rem 0.7rem;
-    color: var(--site-muted);
-    opacity: 0.64;
-    transition: border-color 220ms ease, box-shadow 220ms ease, color 220ms ease, opacity 220ms ease, transform 220ms ease;
-  }
-
-  .hero-outcome > span {
-    display: grid;
-    min-width: 0;
-    gap: 0.1rem;
-  }
-
-  .hero-outcome strong {
-    color: var(--site-heading);
-    font-size: 0.67rem;
-  }
-
-  .hero-outcome.is-active {
-    border-color: rgba(45, 185, 154, 0.52);
-    box-shadow: 0 10px 24px rgba(20, 135, 106, 0.14), 0 0 0 3px rgba(45, 185, 154, 0.08);
-    color: var(--site-primary-strong);
-    opacity: 1;
-    transform: translateX(-3px);
-  }
-
-  .hero-outcome-discounts { top: 7%; }
-  .hero-outcome-gift { top: 29%; }
-  .hero-outcome-loyalty { top: 51%; }
-  .hero-outcome-referrals { top: 73%; }
-
-  .hero-activity {
-    position: absolute;
-    z-index: 3;
-    right: 1rem;
-    bottom: 1rem;
-    left: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    border: 1px solid rgba(45, 185, 154, 0.2);
-    border-radius: 0.9rem;
-    background: rgba(235, 249, 245, 0.94);
-    padding: 0.7rem 0.85rem;
-    box-shadow: 0 7px 18px rgba(65, 84, 109, 0.07);
-  }
-
-  .hero-activity-check {
-    display: grid;
-    width: 1.5rem;
-    height: 1.5rem;
-    flex: 0 0 auto;
-    place-items: center;
-    border-radius: 999px;
-    background: var(--site-primary);
-    color: white;
-    font-size: 0.68rem;
-    font-weight: 800;
-  }
-
-  .hero-activity > span:nth-child(2) {
-    display: grid;
-    min-width: 0;
-    gap: 0.1rem;
-  }
-
-  .hero-activity strong,
-  .hero-activity small,
-  .hero-activity-status {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  }
-
-  .hero-activity strong {
-    overflow: hidden;
-    color: var(--site-heading);
-    font-size: 0.64rem;
-    text-overflow: ellipsis;
-  }
-
-  .hero-activity small {
-    color: var(--site-muted-light);
-    font-size: 0.56rem;
-  }
-
-  .hero-activity-status {
-    margin-left: auto;
-    color: var(--site-primary-strong);
-    font-size: 0.62rem;
-    font-weight: 750;
-  }
-
-  .capability-bento {
-    display: grid;
-    grid-auto-rows: minmax(12rem, auto);
-    gap: 1rem;
-  }
-
-  .capability-card {
-    position: relative;
-    display: flex;
-    min-height: 15rem;
-    overflow: hidden;
-    padding: 1.65rem;
-    transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
-  }
-
-  .capability-card::before {
-    position: absolute;
-    inset: auto -5rem -6rem auto;
-    width: 12rem;
-    height: 12rem;
-    border-radius: 999px;
-    background: rgba(45, 185, 154, 0.08);
-    content: "";
-  }
-
-  .capability-card:hover {
-    border-color: rgba(45, 185, 154, 0.42);
-    box-shadow: 0 18px 38px rgba(75, 96, 123, 0.13), 0 2px 8px rgba(75, 96, 123, 0.06);
-    transform: translateY(-2px);
-  }
-
-  .capability-copy {
-    position: relative;
-    z-index: 2;
-  }
-
-  .capability-icon {
-    display: grid;
-    width: 3rem;
-    height: 3rem;
-    place-items: center;
-    border: 1px solid rgba(45, 185, 154, 0.18);
-    border-radius: 0.9rem;
-    background: var(--site-primary-soft);
-    color: var(--site-primary-strong);
-    box-shadow: inset 0 1px white;
-  }
-
-  .capability-copy h3 {
-    margin-top: 1.4rem;
-    color: var(--site-heading);
-    font-size: 1.45rem;
-    font-weight: 750;
-    letter-spacing: -0.04em;
-  }
-
-  .capability-copy p {
-    max-width: 25rem;
-    margin-top: 0.7rem;
-    color: var(--site-muted);
-    line-height: 1.7;
-  }
-
-  .discount-visual,
-  .gift-card-visual,
-  .loyalty-visual,
-  .referral-visual {
-    position: relative;
-    z-index: 2;
-    color: var(--site-text);
-  }
-
-  .discount-visual {
-    display: grid;
-    width: 100%;
-    align-content: center;
-    gap: 0.65rem;
-    margin-top: 1.5rem;
-    border: 1px solid var(--site-border);
-    border-radius: 1rem;
-    background: rgba(255, 255, 255, 0.74);
-    padding: 1rem;
-    box-shadow: 0 12px 26px rgba(75, 96, 123, 0.08);
-  }
-
-  .discount-total,
-  .discount-rule,
-  .discount-final,
-  .gift-card-ledger,
-  .loyalty-visual > div:first-child {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  .discount-total span,
-  .discount-rule span,
-  .discount-final span,
-  .gift-card-visual span,
-  .loyalty-visual span,
-  .loyalty-visual small {
-    color: var(--site-muted);
-    font-size: 0.73rem;
-  }
-
-  .discount-rule {
-    border-top: 1px solid var(--site-border);
-    padding-top: 0.65rem;
-  }
-
-  .discount-rule strong {
-    color: var(--site-primary-strong);
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 0.72rem;
-  }
-
-  .discount-final {
-    border-top: 1px dashed var(--site-border-strong);
-    padding-top: 0.75rem;
-  }
-
-  .discount-final strong {
-    color: var(--site-heading);
-    font-size: 1rem;
-  }
-
-  .gift-card-visual,
-  .loyalty-visual {
-    align-self: end;
-    width: 100%;
-    margin-top: auto;
-    border-top: 1px solid var(--site-border);
-    padding-top: 1rem;
-  }
-
-  .gift-card-balance {
-    display: grid;
-    gap: 0.25rem;
-  }
-
-  .gift-card-balance strong {
-    color: var(--site-heading);
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 1.55rem;
-  }
-
-  .gift-card-ledger {
-    margin-top: 0.75rem;
-  }
-
-  .gift-card-ledger strong {
-    color: var(--site-primary-strong);
-    font-size: 0.76rem;
-  }
-
-  .gift-card-line,
-  .loyalty-track {
-    height: 0.4rem;
-    margin-top: 0.9rem;
-    overflow: hidden;
-    border-radius: 999px;
-    background: #e8eef3;
-  }
-
-  .gift-card-line span,
-  .loyalty-track span {
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: linear-gradient(90deg, var(--site-primary), var(--site-teal));
-  }
-
-  .loyalty-visual strong {
-    color: var(--site-heading);
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 0.82rem;
-  }
-
-  .loyalty-track span { width: 78%; }
-  .loyalty-visual small { display: block; margin-top: 0.6rem; }
-
-  .referral-visual {
-    display: flex;
-    width: 100%;
-    align-items: center;
-    justify-content: center;
-    gap: 0;
-    margin-top: 1.5rem;
-  }
-
-  .referral-person {
-    display: grid;
-    width: 3rem;
-    height: 3rem;
-    place-items: center;
-    border: 1px solid rgba(45, 185, 154, 0.28);
-    border-radius: 999px;
-    background: white;
-    box-shadow: 0 7px 16px rgba(65, 84, 109, 0.1);
-    color: var(--site-primary-strong);
-    font-size: 0.72rem;
-    font-weight: 800;
-  }
-
-  .referral-line {
-    width: min(8vw, 5.5rem);
-    height: 1px;
-    background: var(--site-border-strong);
-  }
-
-  .referral-reward {
-    margin-left: 1rem;
-    border-left: 2px solid var(--site-teal);
-    padding: 0.55rem 0 0.55rem 0.8rem;
-    color: var(--site-heading);
-    font-size: 0.75rem;
+  .result-badge {
     font-weight: 700;
   }
 
-  .contract-window {
-    overflow: hidden;
-    padding: 0.75rem;
+  .result-valid { color: #4ad6ad; }
+  .result-rejected { color: #f59e8b; }
+
+  .code-response pre {
+    padding-top: 0.6rem;
   }
 
-  .contract-toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid var(--site-border);
-    padding: 0.55rem 0.65rem 0.8rem;
-    color: var(--site-muted-light);
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 0.68rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-  }
-
-  .contract-stage {
-    min-height: 23.8rem;
-    padding: 1.25rem;
-  }
-
-  .contract-panel.is-active {
-    animation: contract-panel-in 240ms ease-out both;
-  }
-
-  .contract-endpoint {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    min-width: 0;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 0.75rem;
-  }
-
-  .contract-endpoint span {
-    border-radius: 0.4rem;
-    background: var(--site-primary-soft);
-    padding: 0.35rem 0.5rem;
-    color: var(--site-primary-strong);
-    font-weight: 800;
-  }
-
-  .contract-endpoint code {
-    overflow: hidden;
-    color: var(--site-muted);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .contract-panel pre {
-    min-height: 11.25rem;
-    overflow-x: auto;
-    margin-top: 1.15rem;
-    border: 1px solid var(--site-border);
-    border-radius: 0.85rem;
-    background: #f4f7fa;
-    padding: 1rem;
-    box-shadow: inset 0 1px 2px rgba(69, 91, 119, 0.04);
-    color: #425168;
-    font-size: 0.72rem;
-    line-height: 1.65;
-  }
-
-  .contract-response {
-    margin-top: 1rem;
-    border: 1px solid rgba(45, 185, 154, 0.2);
-    border-radius: 0.85rem;
-    background: var(--site-primary-soft);
-    padding: 0.9rem;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 0.7rem;
-  }
-
-  .contract-response > div {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    color: var(--site-text);
-  }
-
-  .contract-response strong {
-    color: var(--site-primary-strong);
-  }
-
-  .contract-response ul {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.6rem;
-    margin: 0.75rem 0 0;
-    border-top: 1px solid rgba(45, 185, 154, 0.16);
-    padding: 0.75rem 0 0;
-    color: var(--site-muted);
-    font-size: 0.61rem;
-    letter-spacing: 0.04em;
-    list-style: none;
-    text-transform: uppercase;
-  }
-
-  .hotpath-tab {
-    position: relative;
-    min-height: 9.75rem;
-    overflow: hidden;
-    border: 1px solid var(--site-border);
-    border-radius: 1rem;
-    background: rgba(255, 255, 255, 0.72);
-    padding: 1.25rem 1.25rem 1.45rem;
-    text-align: left;
-    box-shadow: var(--site-shadow-sm);
-    cursor: pointer;
-    transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
-  }
-
-  .hotpath-tab:hover,
-  .hotpath-tab.is-active {
-    border-color: rgba(45, 185, 154, 0.4);
-    background: white;
-  }
-
-  .hotpath-tab.is-active {
-    box-shadow: 0 13px 30px rgba(65, 84, 109, 0.1);
-    transform: translateY(-2px);
-  }
-
-  .hotpath-tab:focus-visible {
-    outline: 2px solid var(--site-teal);
-    outline-offset: 3px;
-  }
-
-  .hotpath-tab-title,
-  .hotpath-tab-copy {
-    display: block;
-  }
-
-  .hotpath-tab-title {
-    color: var(--site-heading);
-    font-weight: 750;
-  }
-
-  .hotpath-tab-copy {
-    margin-top: 0.55rem;
-    color: var(--site-muted);
-    font-size: 0.88rem;
+  .code-note {
+    border-top: 1px solid #1a2633;
+    padding: 0.75rem 1.2rem 0.9rem;
+    color: #8fa1b5;
+    font-size: 0.8rem;
     line-height: 1.55;
   }
 
-  .hotpath-progress {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    height: 0.2rem;
-    background: #e6edf2;
+  :global(.tok-keyword) { color: #c4a5ff; }
+  :global(.tok-string) { color: #7fdcb8; }
+  :global(.tok-key) { color: #8cc4ff; }
+  :global(.tok-number) { color: #ffc77a; }
+  :global(.tok-comment) { color: #74889e; }
+
+  .quickstart :global(.tok-string) { color: #08775d; }
+  .quickstart :global(.tok-comment) { color: var(--site-muted-light); }
+
+  /* ---------- Facts ---------- */
+  .facts {
+    border-block: 1px solid var(--site-border);
+    background: var(--site-surface);
   }
 
-  .hotpath-progress > span {
+  .facts-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    padding-block: 0.5rem;
+  }
+
+  .facts-grid > div {
+    display: grid;
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+    align-items: baseline;
+    gap: 1rem;
+    padding: 0.55rem 0;
+  }
+
+  .facts dt {
+    color: var(--site-muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  .facts dd {
+    color: var(--site-heading);
+    font-size: 1rem;
+    font-weight: 650;
+  }
+
+  .facts dd a:hover {
+    color: var(--site-primary-strong);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  /* ---------- Sections ---------- */
+  .section {
+    padding-block: 4.5rem;
+  }
+
+  .band {
+    border-block: 1px solid var(--site-border);
+    background: var(--site-bg-subtle);
+  }
+
+  .band-dark {
+    border-color: #0b131c;
+    background: #0b131c;
+    color: #c7d2de;
+  }
+
+  .band-dark .section-head h2,
+  .band-dark .guarantee h3 {
+    color: #f8fafc;
+  }
+
+  .band-dark .section-head > p:not(.eyebrow),
+  .band-dark .guarantee p {
+    color: #9fb0c3;
+  }
+
+  .band-dark .guarantee {
+    border-color: #253445;
+  }
+
+  .band-dark .guarantee code,
+  .band-dark .text-link {
+    color: #7fdcb8;
+  }
+
+  .band-dark .guarantee-index {
+    color: #6f8399;
+  }
+
+  .band-dark .code-window {
+    border-color: #22303f;
+    box-shadow: none;
+  }
+
+  .section-head h2,
+  .final-cta h2 {
+    text-wrap: balance;
+  }
+
+  .section-head h2 {
+    margin-top: 0.85rem;
+    max-width: 18ch;
+    color: var(--site-heading);
+    font-size: clamp(2rem, 4.6vw, 2.75rem);
+    font-weight: 750;
+    line-height: 1.1;
+    letter-spacing: -0.026em;
+  }
+
+  .section-head > p:not(.eyebrow) {
+    max-width: 34rem;
+    margin-top: 1rem;
+    color: var(--site-muted);
+    font-size: 1.0625rem;
+    line-height: 1.7;
+  }
+
+  .text-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-top: 2rem;
+    color: var(--site-primary-strong);
+    font-size: 0.9rem;
+    font-weight: 650;
+  }
+
+  .text-link:hover {
+    color: var(--site-primary);
+  }
+
+  /* Incentives */
+  .incentive-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    margin-top: 2.75rem;
+    border-top: 1px solid var(--site-border);
+  }
+
+  .incentive {
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid var(--site-border);
+    padding: 1.5rem 0;
+  }
+
+  .incentive h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    color: var(--site-heading);
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .incentive h3 :global(svg) {
+    color: var(--site-primary);
+  }
+
+  .incentive p {
+    margin-top: 0.55rem;
+    color: var(--site-muted);
+    line-height: 1.65;
+  }
+
+  /* Dashboard */
+  .dashboard-pair {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2rem;
+    margin-top: 2.5rem;
+  }
+
+  .dashboard-pair figcaption {
+    margin-bottom: 0.75rem;
+    color: var(--site-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .dashboard-shot {
     display: block;
     width: 100%;
-    height: 100%;
-    background: var(--site-primary);
-    transform: scaleX(0);
-    transform-origin: left;
+    height: auto;
+    border: 1px solid var(--site-border-strong);
+    border-radius: 0.9rem;
+    background: white;
+    box-shadow: var(--site-shadow-sm);
   }
 
-  .hotpath-tab.is-active .hotpath-progress > span {
-    animation: hotpath-progress 3s linear both;
+  .compare-note a {
+    color: var(--site-primary-strong);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
   }
 
-  .cta-card {
-    background:
-      radial-gradient(circle at 18% 20%, rgba(45, 185, 154, 0.1), transparent 26rem),
-      radial-gradient(circle at 82% 90%, rgba(56, 141, 242, 0.09), transparent 24rem),
-      white;
+  .quickstart > p a {
+    color: var(--site-primary-strong);
+    font-weight: 600;
+    white-space: nowrap;
   }
 
-  @keyframes hotpath-progress {
-    to { transform: scaleX(1); }
+  .auth-note code {
+    color: var(--site-text);
+    font-size: 0.85em;
   }
 
-  @keyframes contract-panel-in {
-    from { opacity: 0; transform: translateY(5px); }
-    to { opacity: 1; transform: translateY(0); }
+  .compare-verdict {
+    display: grid;
+    gap: 0.5rem;
+    margin-top: 1.75rem;
+    color: var(--site-text);
+    font-size: 1rem;
+    line-height: 1.6;
   }
 
-  @media (min-width: 48rem) {
-    .capability-bento {
-      grid-template-columns: repeat(12, minmax(0, 1fr));
-      grid-template-rows: repeat(3, minmax(12rem, auto));
+  .compare-verdict strong {
+    color: var(--site-heading);
+  }
+
+  .targeting {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+    margin-top: 2.5rem;
+    border: 1px solid var(--site-border);
+    border-radius: 1rem;
+    background: var(--site-surface);
+    padding: 1.5rem;
+  }
+
+  .targeting h3 {
+    color: var(--site-heading);
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .targeting p {
+    margin-top: 0.5rem;
+    color: var(--site-muted);
+    line-height: 1.65;
+  }
+
+  .targeting p code {
+    color: var(--site-text);
+    font-size: 0.85em;
+  }
+
+  .targeting pre {
+    overflow-x: auto;
+    margin-top: 1rem;
+    border-radius: 0.7rem;
+    background: var(--site-bg-subtle);
+    padding: 0.9rem 1rem;
+    color: var(--site-text);
+    font-size: 0.82rem;
+    line-height: 1.65;
+  }
+
+  .targeting :global(.tok-key) { color: #1d6fd1; }
+  .targeting :global(.tok-string) { color: #08775d; }
+  .targeting :global(.tok-number) { color: #b45309; }
+  .targeting :global(.tok-keyword) { color: #7c3aed; }
+
+  .targeting-results {
+    display: grid;
+    align-self: center;
+    align-content: center;
+    list-style: none;
+    padding: 0;
+  }
+
+  .targeting-results li {
+    display: grid;
+    gap: 0.25rem;
+    border-top: 1px solid var(--site-border);
+    padding-block: 0.85rem;
+  }
+
+  .targeting-results li:first-child {
+    border-top: 0;
+  }
+
+  .targeting-results span {
+    color: var(--site-muted);
+    font-size: 0.9rem;
+  }
+
+  .targeting-results strong {
+    color: #b4442f;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.85rem;
+  }
+
+  .targeting-results strong.is-valid {
+    color: var(--site-primary-strong);
+  }
+
+  .compare-note {
+    max-width: 44rem;
+    margin-top: 1.5rem;
+    color: var(--site-muted);
+    font-size: 0.92rem;
+    line-height: 1.65;
+  }
+  .section-final {
+    padding-top: 1rem;
+  }
+  /* Guarantees */
+
+  .guarantee-index {
+    padding-top: 0.2rem;
+    color: var(--site-muted-light);
+    font-size: 0.75rem;
+  }
+
+  .guarantee h3 {
+    color: var(--site-heading);
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .guarantee p {
+    margin-top: 0.4rem;
+    color: var(--site-muted);
+    line-height: 1.6;
+  }
+
+  .guarantee code {
+    display: block;
+    margin-top: 0.6rem;
+    color: var(--site-primary-strong);
+    font-size: 0.72rem;
+    overflow-wrap: anywhere;
+  }
+
+  .guarantee-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    margin-top: 2.5rem;
+  }
+
+  .guarantee {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr);
+    border-top: 1px solid var(--site-border-strong);
+    padding-block: 1.25rem;
+  }
+
+  .retry-window {
+    margin-block: 0.5rem 1.75rem;
+  }
+
+  .tab-short {
+    display: none;
+  }
+
+  .incentive-proof {
+    display: grid;
+    gap: 0.25rem;
+    margin-top: auto;
+    border-left: 2px solid var(--site-primary);
+    padding: 0.15rem 0 0.15rem 0.75rem;
+  }
+
+  .incentive p {
+    margin-bottom: 1rem;
+  }
+
+  .incentive-proof code {
+    color: var(--site-muted);
+    font-size: 0.8rem;
+    overflow-wrap: anywhere;
+  }
+
+  .incentive-proof span {
+    color: var(--site-heading);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.85rem;
+    font-weight: 650;
+  }
+
+  .auth-note {
+    margin-top: 1rem;
+    color: var(--site-muted);
+    font-size: 0.875rem;
+  }
+
+  .section-tight {
+    padding-top: 1rem;
+  }
+
+  .final-command {
+    position: relative;
+    min-width: 0;
+    border: 1px solid #253445;
+    border-radius: 0.8rem;
+    background: #0b121b;
+  }
+
+  .final-command-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #1a2633;
+    padding: 0.35rem 0.5rem 0.35rem 1rem;
+    color: #6f8399;
+    font-size: 0.75rem;
+  }
+
+  .final-command pre {
+    overflow-x: auto;
+    padding: 0.9rem 1rem;
+    color: #d5dee8;
+    font-size: 0.8rem;
+    line-height: 1.75;
+  }
+
+  .final-command .copy-button {
+    color: #d5dee8;
+  }
+
+  .final-command .copy-button:hover {
+    background: #1a2634;
+  }
+
+  /* Interfaces */
+  .interface-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    margin-top: 2.75rem;
+    overflow: hidden;
+    border: 1px solid var(--site-border-strong);
+    border-radius: 1rem;
+    background: var(--site-surface);
+    color: var(--site-text);
+  }
+
+  .interface-tabs {
+    display: flex;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--site-border);
+    background: var(--site-bg-subtle);
+    padding: 0 0.5rem;
+  }
+
+  .interface-tabs [role="tab"] {
+    flex: 0 0 auto;
+    border-bottom: 2px solid transparent;
+    padding: 0.9rem 0.75rem 0.8rem;
+    color: var(--site-muted);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .interface-tabs [role="tab"]:hover {
+    color: var(--site-heading);
+  }
+
+  .interface-tabs [role="tab"][aria-selected="true"] {
+    border-bottom-color: var(--site-primary);
+    color: var(--site-heading);
+  }
+
+  .interface-layout :global(.tok-keyword) { color: #7c3aed; }
+  .interface-layout :global(.tok-string) { color: #08775d; }
+  .interface-layout :global(.tok-key) { color: #1d6fd1; }
+  .interface-layout :global(.tok-number) { color: #b45309; }
+  .interface-layout :global(.tok-comment) { color: #7b8aa0; }
+
+  .interface-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 650;
+  }
+
+  .interface-label {
+    display: none;
+  }
+
+  .interface-short {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 650;
+  }
+
+  .interface-panel-caption {
+    padding: 1.1rem 1.25rem 0;
+    color: var(--site-muted);
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+
+  .interface-body pre {
+    overflow-x: auto;
+    padding: 1rem 1.25rem 1.4rem;
+    font-size: 0.8rem;
+    line-height: 1.7;
+  }
+
+  /* Comparison */
+  .compare-table {
+    width: 100%;
+    margin-top: 2.5rem;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+    text-align: left;
+  }
+
+  .compare-table thead {
+    display: none;
+  }
+
+  .compare-table tbody tr {
+    display: block;
+    border-top: 1px solid var(--site-border-strong);
+    padding-block: 1rem;
+  }
+
+  .compare-table tbody tr:last-child {
+    border-bottom: 1px solid var(--site-border-strong);
+  }
+
+  .compare-table tbody th {
+    display: block;
+    color: var(--site-heading);
+    font-weight: 700;
+  }
+
+  .compare-table tbody td {
+    display: grid;
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+    gap: 0.75rem;
+    margin-top: 0.45rem;
+    color: var(--site-muted);
+    line-height: 1.5;
+  }
+
+  .compare-table tbody td::before {
+    content: attr(data-label);
+    color: var(--site-muted-light);
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding-top: 0.1rem;
+  }
+
+  .compare-table tbody td {
+    color: var(--site-text);
+  }
+
+  .compare-table tbody td:nth-of-type(1)::before {
+    color: var(--site-primary-strong);
+  }
+
+  /* Final CTA */
+  .final-cta {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2rem;
+    border-radius: 1.25rem;
+    background: #0e1621;
+    padding: 2.25rem 1rem;
+    color: #c7d2de;
+  }
+
+  .final-cta h2 {
+    color: #f8fafc;
+    font-size: clamp(2rem, 4.6vw, 2.75rem);
+    font-weight: 750;
+    line-height: 1.1;
+    letter-spacing: -0.026em;
+  }
+
+  .final-cta p {
+    max-width: 34rem;
+    margin-top: 1rem;
+    font-size: 1.0625rem;
+    line-height: 1.7;
+  }
+
+  .final-cta p code {
+    color: #7fdcb8;
+    font-size: 0.92em;
+  }
+
+  .final-actions {
+    margin-top: 1.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .final-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: #c7d2de;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .final-link:hover {
+    color: white;
+  }
+
+  .final-actions .site-button-primary {
+    box-shadow: none;
+  }
+
+  .final-actions .site-button-secondary {
+    border-color: #2b3b4d;
+    background: transparent;
+    box-shadow: none;
+    color: #f1f5f9;
+  }
+
+  .final-actions .site-button-secondary:hover {
+    background: #1a2634;
+  }
+
+  .final-cta .final-note {
+    margin-top: 1rem;
+    color: #8fa1b5;
+    font-size: 0.875rem;
+  }
+
+  .final-note a {
+    color: #f1f5f9;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  /* ---------- Breakpoints ---------- */
+  @media (min-width: 40rem) {
+    .facts-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      padding-block: 0;
     }
 
-    .bento-discounts {
-      grid-row: span 2;
-      grid-column: span 7;
-      flex-direction: column;
+    .facts-grid > div {
+      display: block;
+      padding: 1.25rem 1.25rem 1.25rem 0;
     }
 
-    .bento-gift-cards,
-    .bento-loyalty {
-      grid-column: span 5;
-      flex-direction: column;
+    .facts-grid dd {
+      margin-top: 0.25rem;
     }
 
-    .bento-referrals {
-      grid-column: span 12;
-      align-items: center;
-      gap: 2rem;
+    .facts-grid > div + div {
+      border-top: 0;
     }
 
-    .bento-referrals .capability-copy {
-      width: 47%;
+    .facts-grid > div:nth-child(n + 3) {
+      border-top: 1px solid var(--site-border);
     }
 
-    .bento-referrals .referral-visual {
-      width: 53%;
+    .incentive-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: 2.5rem;
+    }
+
+    .interface-label {
+      display: block;
+    }
+
+    .interface-short {
+      display: none;
+    }
+
+    .compare-table thead {
+      display: table-header-group;
+    }
+
+    .compare-table tbody tr {
+      display: table-row;
+    }
+
+    .compare-table thead th,
+    .compare-table tbody th,
+    .compare-table tbody td {
+      display: table-cell;
+      padding: 1rem 1.25rem 1rem 0;
+      vertical-align: top;
+    }
+
+    .compare-table tbody td {
+      margin: 0;
+    }
+
+    .compare-table tbody td::before {
+      content: none;
+    }
+
+    .compare-table thead th {
+      padding-bottom: 0.85rem;
+      color: var(--site-heading);
+      font-weight: 700;
+    }
+
+    .compare-table thead th:nth-child(2) {
+      color: var(--site-primary-strong);
+    }
+
+    .compare-table tbody th {
+      width: 22%;
+    }
+
+    .compare-table tbody td:nth-of-type(1) {
+      width: 42%;
+    }
+
+    .final-cta {
+      padding: 3.5rem;
+    }
+  }
+
+  @media (min-width: 64rem) {
+    .hero-proof {
+      margin-top: 2.6rem;
+    }
+
+    .hero {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 0.95fr);
+      align-items: start;
+      gap: 4.5rem;
+      padding-block: 5rem 5.5rem;
+    }
+
+    .section {
+      padding-block: 5rem;
+    }
+
+    .section-head.split {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+      align-items: start;
+      gap: 4rem;
+    }
+
+    .section-head.split > p {
+      margin-top: 0;
+      padding-top: 1.2rem;
+    }
+
+    .facts-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .facts-grid > div:nth-child(n + 3) {
+      border-top: 0;
+    }
+
+    .facts-grid > div + div {
+      border-left: 1px solid var(--site-border);
+      padding-left: 1.5rem;
+    }
+
+    .incentive-grid {
+      column-gap: 4rem;
+    }
+
+    .interface-body pre {
+      padding: 1rem 1.25rem 1.5rem;
+      font-size: 0.82rem;
+    }
+
+    .guarantee-grid {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      column-gap: 4.5rem;
+    }
+
+    .guarantee {
+      grid-column: 1;
+    }
+
+    .retry-window {
+      grid-column: 2;
+      grid-row: 1 / span 5;
+      align-self: start;
+      position: sticky;
+      top: 2rem;
+      margin: 0;
+    }
+
+    .interfaces-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+      align-items: start;
+      gap: 4rem;
+    }
+
+    .interfaces-grid .interface-layout {
       margin-top: 0;
     }
 
-    .discount-visual {
-      margin-top: auto;
+    .interfaces-grid > div:first-child {
+      position: sticky;
+      top: 2rem;
+    }
+
+    .final-cta {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      align-items: center;
+      gap: 3rem;
+    }
+
+    .dashboard-pair {
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+      align-items: start;
+      gap: 3rem;
+    }
+
+    .targeting {
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+      gap: 3rem;
+      padding: 2rem;
     }
   }
 
-  @media (max-width: 32rem) {
-    .hero-system { min-height: 33rem; }
-    .hero-canvas { min-height: 23rem; }
-    .hero-flow-lines { display: none; }
+  @media (max-width: 40rem) {
 
-    .hero-request {
-      top: 1rem;
-      left: 1rem;
-      width: calc(50% - 1.4rem);
-      min-width: 0;
-      transform: none;
+    .final-actions > a {
+      flex: 1 1 100%;
     }
-
-    .hero-engine {
-      top: 1rem;
-      right: 1rem;
-      left: auto;
-      width: calc(50% - 1.4rem);
-      transform: none;
-    }
-
-    .hero-outcome {
-      right: auto;
-      width: calc(50% - 1.4rem);
-      min-width: 0;
-    }
-
-    .hero-outcome-discounts,
-    .hero-outcome-loyalty { left: 1rem; }
-    .hero-outcome-gift,
-    .hero-outcome-referrals { right: 1rem; }
-    .hero-outcome-discounts,
-    .hero-outcome-gift { top: 9.5rem; }
-    .hero-outcome-loyalty,
-    .hero-outcome-referrals { top: 13.5rem; }
-
-    .hero-outcome.is-active { transform: translateY(-2px); }
-    .hero-activity-status { display: none; }
-    .contract-stage { min-height: 25rem; padding: 1rem 0.25rem 0.25rem; }
-    .contract-response ul { grid-template-columns: 1fr; }
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .capability-card,
-    .hero-outcome,
-    .hotpath-tab {
-      transition: none;
+  @media (max-width: 63.99rem) {
+    .retry-window {
+      order: 10;
+      margin-top: 1.5rem;
+    }
+  }
+
+  @media (max-width: 30rem) {
+    .targeting {
+      padding: 1.1rem;
     }
 
-    .hero-flow-lines circle,
-    .hotpath-tab.is-active .hotpath-progress > span,
-    .contract-panel.is-active {
-      animation: none;
+    .targeting pre {
+      padding-inline: 0.75rem;
+      font-size: 0.68rem;
     }
 
-    .hotpath-tab.is-active .hotpath-progress > span {
-      transform: scaleX(1);
+    .tab-long {
+      display: none;
+    }
+
+    .tab-short {
+      display: inline;
+    }
+
+    .hero .eyebrow {
+      font-size: 0.68rem;
+      letter-spacing: 0.04em;
+    }
+
+    .hero-actions > a {
+      flex: 1 1 100%;
+    }
+
+    .code-window pre,
+    .interface-body pre {
+      padding-inline: 0.75rem;
+      font-size: 0.75rem;
+    }
+
+    .interface-body pre.lang-bash {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .final-command pre {
+      padding-inline: 0.75rem;
+      font-size: 0.72rem;
+    }
+
+    .interface-panel-caption {
+      padding-inline: 0.75rem;
+    }
+
+    .section {
+      padding-block: 3.75rem;
+    }
+
+    .quickstart > pre {
+      padding-inline: 0.8rem;
+      font-size: 0.66rem;
     }
   }
 </style>
