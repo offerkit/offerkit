@@ -39,9 +39,30 @@ export function toDashboardLocale(tag: string | null | undefined): DashboardLoca
 const QVALUE = /^(?:0(?:\.\d{0,3})?|1(?:\.0{0,3})?)$/;
 
 /**
- * Best dashboard locale for an Accept-Language header. Honours q-values
- * (case-insensitive `q`, `q=0` excludes a language, header order breaks ties);
- * an invalid q-value drops its entry.
+ * Weight of one Accept-Language entry from its `;`-separated parameters.
+ * Parameter names are case-insensitive; each parameter splits on its first
+ * `=` only and the whole value must be an RFC 9110 qvalue. A malformed,
+ * out-of-range or repeated q parameter drops the entry (weight 0), and a
+ * later parameter can never rehabilitate it. No q parameter means weight 1.
+ * Same rules as the account-email locale resolver.
+ */
+function parseWeight(params: string[]): number {
+  let q: number | null = null;
+  for (const param of params) {
+    const eq = param.indexOf("=");
+    const key = (eq === -1 ? param : param.slice(0, eq)).trim().toLowerCase();
+    if (key !== "q") continue;
+    if (q !== null) return 0;
+    const raw = eq === -1 ? "" : param.slice(eq + 1).trim();
+    if (!QVALUE.test(raw)) return 0;
+    q = Number(raw);
+  }
+  return q ?? 1;
+}
+
+/**
+ * Best dashboard locale for an Accept-Language header, ranked by q-value
+ * (`q=0` excludes a language, header order breaks ties).
  */
 export function matchAcceptLanguage(header: string | null | undefined): DashboardLocale | null {
   if (!header) return null;
@@ -49,15 +70,7 @@ export function matchAcceptLanguage(header: string | null | undefined): Dashboar
     .split(",")
     .map((entry, index) => {
       const [tag = "", ...params] = entry.trim().split(";");
-      let q = 1;
-      for (const param of params) {
-        const [key = "", value = ""] = param.trim().split("=");
-        if (key.trim().toLowerCase() === "q") {
-          const raw = value.trim();
-          q = QVALUE.test(raw) ? Number(raw) : 0;
-        }
-      }
-      return { tag: tag.trim(), q, index };
+      return { tag: tag.trim(), q: parseWeight(params), index };
     })
     .filter((entry) => entry.tag.length > 0 && entry.q > 0)
     .sort((a, b) => b.q - a.q || a.index - b.index);

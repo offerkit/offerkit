@@ -38,6 +38,32 @@ describe("matchAcceptLanguage", () => {
     expect(matchAcceptLanguage("it;q=0.7, nl;q=0.7")).toBe("it");
   });
 
+  it("ignores malformed and out-of-range q-values", () => {
+    expect(matchAcceptLanguage("nl;q=2, it;q=1")).toBe("it");
+    expect(matchAcceptLanguage("nl;q=0x1, it;q=0.5")).toBe("it");
+    expect(matchAcceptLanguage("nl;q=1e0, it;q=0.5")).toBe("it");
+    expect(matchAcceptLanguage("nl;q=0.1234, it;q=0.5")).toBe("it");
+    expect(matchAcceptLanguage("nl;q=, it;q=0.5")).toBe("it");
+    expect(matchAcceptLanguage("nl;q = 0.9 , it;q=0.5")).toBe("nl");
+  });
+
+  it("drops entries whose q-value has trailing garbage", () => {
+    expect(matchAcceptLanguage("nl;q=0.9=garbage, it;q=0.8")).toBe("it");
+  });
+
+  it("does not let a later q parameter rehabilitate an invalid one", () => {
+    expect(matchAcceptLanguage("nl;q=bogus;q=1, it;q=0.8")).toBe("it");
+  });
+
+  it("drops entries with repeated q parameters", () => {
+    expect(matchAcceptLanguage("nl;q=0.9;q=0.9, it;q=0.8")).toBe("it");
+    expect(matchAcceptLanguage("nl;q, it;q=0.8")).toBe("it");
+  });
+
+  it("ignores non-q parameters", () => {
+    expect(matchAcceptLanguage("nl;level=1, it;q=0.8")).toBe("nl");
+  });
+
   it("drops entries with invalid q-values", () => {
     expect(matchAcceptLanguage("nl;q=2, it;q=0.5")).toBe("it");
     expect(matchAcceptLanguage("nl;q=0.1234, it;q=0.5")).toBe("it");
