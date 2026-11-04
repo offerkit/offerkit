@@ -3,11 +3,12 @@
 import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
-import { T } from "gt-next/client";
+import { T, DateTime } from "gt-next/client";
 import { Plus } from "lucide-react";
 import { DataTable } from "@/components/dashboard/data-table";
 import { Button } from "@/components/ui/button";
 import { type ApiListItem, type OfferKitClient, ovx } from "@/lib/sdk";
+import { DATE_FORMAT } from "@/lib/date-format";
 
 type LoyaltyProgramRow = ApiListItem<OfferKitClient["loyalty"]["programs"]["list"]>;
 
@@ -50,7 +51,7 @@ export default function LoyaltyPage() {
       header: () => <div className="text-right"><T>Created</T></div>,
       cell: ({ row }) => (
         <div className="text-right text-muted-foreground">
-          {new Date(row.original.createdAt).toLocaleDateString()}
+          <DateTime options={DATE_FORMAT}>{new Date(row.original.createdAt)}</DateTime>
         </div>
       ),
     },

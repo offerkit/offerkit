@@ -4,7 +4,7 @@ import Link from "next/link";
 import { use } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { T, useGT } from "gt-next/client";
+import { T, DateTime, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import {
   type RewardTypeFormState,
 } from "@/components/dashboard/reward-type-form";
 import { ovx } from "@/lib/sdk";
+import { DATE_TIME_FORMAT } from "@/lib/date-format";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -90,7 +91,7 @@ export default function RewardTypeDetailPage({ params }: PageProps) {
           <div>
             <h1 className="font-mono text-2xl font-semibold tracking-tight">{data.key}</h1>
             <p className="text-sm text-muted-foreground">
-              <T>Updated {new Date(data.updatedAt).toLocaleString()}</T>
+              <T>Updated <DateTime options={DATE_TIME_FORMAT}>{new Date(data.updatedAt)}</DateTime></T>
             </p>
           </div>
         </div>

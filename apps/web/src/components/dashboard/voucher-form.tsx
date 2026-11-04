@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { T, useGT } from "gt-next/client";
 import { FormFieldErrors } from "@/components/dashboard/form-field-errors";
+import { currencyFractionDigits } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -173,14 +174,20 @@ export function VoucherForm({
   onSubmit,
   pending,
   mode,
+  currency,
 }: {
   initial: VoucherFormState;
   submitLabel: string;
   onSubmit: (state: VoucherFormState) => void;
   pending: boolean;
   mode: "create" | "edit";
+  /** ISO 4217 code of the voucher's campaign; sets the money inputs' minor-unit precision. */
+  currency?: string;
 }) {
   const gt = useGT();
+  // Unknown currency (no campaign yet) keeps the previous 2-decimal behavior.
+  const moneyDecimals = currency ? currencyFractionDigits(currency) : 2;
+  const moneyScale = 10 ** moneyDecimals;
   const form = useForm({
     defaultValues: initial,
     validators: {
@@ -366,7 +373,7 @@ export function VoucherForm({
                   {(field) => (
                     <div className="space-y-2">
                       <Label htmlFor={field.name}>
-                        <T>Balance (cents)</T>
+                        <T>Balance (minor units)</T>
                       </Label>
                       <Input
                         id={field.name}
@@ -488,10 +495,10 @@ export function VoucherForm({
                           id={field.name}
                           value={field.state.value}
                           onChange={(value) => field.handleChange(value)}
-                          scale={100}
-                          decimals={2}
-                          min={0.01}
-                          placeholder="10.00"
+                          scale={moneyScale}
+                          decimals={moneyDecimals}
+                          min={1 / moneyScale}
+                          placeholder={(10).toFixed(moneyDecimals)}
                           invalid={field.state.meta.errors.length > 0}
                         />
                       </>
@@ -515,8 +522,8 @@ export function VoucherForm({
                   id={field.name}
                   value={field.state.value}
                   onChange={(value) => field.handleChange(value)}
-                  scale={100}
-                  decimals={2}
+                  scale={moneyScale}
+                  decimals={moneyDecimals}
                   min={0}
                   placeholder={gt("Optional cap")}
                   invalid={field.state.meta.errors.length > 0}

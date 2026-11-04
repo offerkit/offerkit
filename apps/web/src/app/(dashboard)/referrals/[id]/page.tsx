@@ -5,7 +5,7 @@ import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { T, useGT } from "gt-next/client";
+import { T, DateTime, useGT, useLocale } from "gt-next/client";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatMinorCurrency } from "@/lib/money";
 import { type ApiListItem, type OfferKitClient, ovx } from "@/lib/sdk";
+import { DATE_FORMAT, DATE_TIME_FORMAT } from "@/lib/date-format";
 
 type ReferralCodeRow = ApiListItem<OfferKitClient["referrals"]["listCodes"]>;
 type ReferralConversionRow = ApiListItem<
@@ -50,8 +51,8 @@ type LastConversion = {
   refereeReward?: ReferralOutcome;
 };
 
-function cents(value: number | undefined, currency: string): string {
-  return formatMinorCurrency(value ?? 0, currency);
+function cents(value: number | undefined, currency: string, locale: string): string {
+  return formatMinorCurrency(value ?? 0, currency, locale);
 }
 
 function rewardKindLabel(kind: ReferralReward["kind"]): string {
@@ -67,14 +68,14 @@ function rewardKindLabel(kind: ReferralReward["kind"]): string {
   }
 }
 
-function rewardDescription(reward: ReferralReward, currency: string): string {
+function rewardDescription(reward: ReferralReward, currency: string, locale: string): string {
   if (reward.kind === "discount") {
     if (reward.discount?.type === "PERCENTAGE") {
       return `${(reward.discount.percent ?? 0) / 100}% off`;
     }
-    return `${cents(reward.discount?.amount, currency)} off`;
+    return `${cents(reward.discount?.amount, currency, locale)} off`;
   }
-  if (reward.kind === "gift_card") return `${cents(reward.creditCents, currency)} credit`;
+  if (reward.kind === "gift_card") return `${cents(reward.creditCents, currency, locale)} credit`;
   if (reward.kind === "loyalty_points") return `${reward.loyaltyPoints ?? 0} points`;
   return reward.typeKey || "Custom payload";
 }
@@ -88,6 +89,7 @@ function RewardSummary({
   reward: ReferralReward;
   currency: string;
 }) {
+  const locale = useLocale();
   return (
     <Card>
       <CardHeader>
@@ -95,7 +97,7 @@ function RewardSummary({
       </CardHeader>
       <CardContent className="space-y-2">
         <Badge variant="secondary">{rewardKindLabel(reward.kind)}</Badge>
-        <p className="text-sm font-medium">{rewardDescription(reward, currency)}</p>
+        <p className="text-sm font-medium">{rewardDescription(reward, currency, locale)}</p>
         {reward.kind === "loyalty_points" && reward.loyaltyProgramId ? (
           <p className="font-mono text-xs text-muted-foreground">{reward.loyaltyProgramId}</p>
         ) : null}
@@ -232,7 +234,7 @@ export default function ReferralProgramDetail({ params }: PageProps) {
       header: () => <div className="text-right"><T>Created</T></div>,
       cell: ({ row }) => (
         <div className="text-right text-muted-foreground">
-          {new Date(row.original.createdAt).toLocaleDateString()}
+          <DateTime options={DATE_FORMAT}>{new Date(row.original.createdAt)}</DateTime>
         </div>
       ),
     },
@@ -265,7 +267,7 @@ export default function ReferralProgramDetail({ params }: PageProps) {
       header: () => <div className="text-right"><T>Converted</T></div>,
       cell: ({ row }) => (
         <div className="text-right text-muted-foreground">
-          {new Date(row.original.convertedAt).toLocaleDateString()}
+          <DateTime options={DATE_FORMAT}>{new Date(row.original.convertedAt)}</DateTime>
         </div>
       ),
     },
@@ -308,7 +310,7 @@ export default function ReferralProgramDetail({ params }: PageProps) {
               <T>Referral program</T>
             </h1>
             <p className="text-sm text-muted-foreground">
-              <T>Updated {new Date(program.updatedAt).toLocaleString()}</T>
+              <T>Updated <DateTime options={DATE_TIME_FORMAT}>{new Date(program.updatedAt)}</DateTime></T>
             </p>
           </div>
         </div>

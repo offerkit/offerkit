@@ -4,7 +4,7 @@ import Link from "next/link";
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { T, useGT } from "gt-next/client";
+import { T, DateTime, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -18,8 +18,9 @@ import {
   type VoucherFormState,
 } from "@/components/dashboard/voucher-form";
 import { voucherFormToUpdateInput } from "@/lib/forms/voucher";
-import { formatMinorCurrency } from "@/lib/money";
+import { Money } from "@/components/dashboard/money";
 import { ovx } from "@/lib/sdk";
+import { DATE_TIME_FORMAT } from "@/lib/date-format";
 
 interface PageProps {
   params: Promise<{ code: string }>;
@@ -154,7 +155,7 @@ export default function VoucherDetailPage({ params }: PageProps) {
           <div>
             <h1 className="font-mono text-2xl font-semibold tracking-tight">{data.code}</h1>
             <p className="text-sm text-muted-foreground">
-              <T>Updated {new Date(data.updatedAt).toLocaleString()}</T>
+              <T>Updated <DateTime options={DATE_TIME_FORMAT}>{new Date(data.updatedAt)}</DateTime></T>
             </p>
           </div>
           <Badge variant={data.active ? "default" : "secondary"}>
@@ -182,6 +183,7 @@ export default function VoucherDetailPage({ params }: PageProps) {
       <VoucherForm
         key={data.updatedAt}
         mode="edit"
+        currency={campaignCurrency}
         initial={initial}
         submitLabel={gt("Save changes")}
         pending={update.isPending}
@@ -289,7 +291,7 @@ function GiftCardLedger({
           <span className="text-sm font-normal text-muted-foreground">
             <T>
               Current balance:{" "}
-              {currency ? formatMinorCurrency(balance, currency) : (balance / 100).toFixed(2)}
+              {currency ? <Money value={balance} currency={currency} /> : (balance / 100).toFixed(2)}
             </T>
           </span>
         </CardTitle>
@@ -310,18 +312,18 @@ function GiftCardLedger({
                 <div>
                   <Badge variant="secondary">{t.reason}</Badge>
                   <span className="ml-2 text-xs text-muted-foreground">
-                    {new Date(t.createdAt).toLocaleString()}
+                    <DateTime options={DATE_TIME_FORMAT}>{new Date(t.createdAt)}</DateTime>
                   </span>
                 </div>
                 <div className="font-mono text-sm">
                   <span className={t.delta < 0 ? "text-red-500" : "text-emerald-500"}>
                     {t.delta > 0 ? "+" : ""}
-                    {currency ? formatMinorCurrency(t.delta, currency) : (t.delta / 100).toFixed(2)}
+                    {currency ? <Money value={t.delta} currency={currency} /> : (t.delta / 100).toFixed(2)}
                   </span>
                   <span className="ml-3 text-muted-foreground">
                     →{" "}
                     {currency
-                      ? formatMinorCurrency(t.balanceAfter, currency)
+                      ? <Money value={t.balanceAfter} currency={currency} />
                       : (t.balanceAfter / 100).toFixed(2)}
                   </span>
                 </div>

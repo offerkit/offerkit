@@ -5,7 +5,7 @@ import { use } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { T, useGT } from "gt-next/client";
+import { T, DateTime, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { ovx } from "@/lib/sdk";
+import { DATE_TIME_FORMAT } from "@/lib/date-format";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -83,7 +84,7 @@ function CustomerForm({
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">{headerLabel}</h1>
             <p className="text-sm text-muted-foreground">
-              <T>Created {new Date(data.createdAt).toLocaleString()}</T>
+              <T>Created <DateTime options={DATE_TIME_FORMAT}>{new Date(data.createdAt)}</DateTime></T>
             </p>
           </div>
         </div>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { T, useGT } from "gt-next/client";
+import { T, DateTime, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { Copy, Plus, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { type ApiListItem, type OfferKitClient, ovx } from "@/lib/sdk";
+import { DATE_TIME_FORMAT } from "@/lib/date-format";
 
 type ApiKeyRow = ApiListItem<OfferKitClient["apiKeys"]["list"]>;
 
@@ -80,7 +81,7 @@ export default function ApiKeysPage() {
       cell: ({ row }) => (
         <span className="text-xs text-muted-foreground">
           {row.original.lastUsedAt
-            ? new Date(row.original.lastUsedAt).toLocaleString()
+            ? <DateTime options={DATE_TIME_FORMAT}>{new Date(row.original.lastUsedAt)}</DateTime>
             : gt("never")}
         </span>
       ),

@@ -47,6 +47,7 @@ export default function NewVoucherPage() {
       <VoucherForm
         key={`${campaignId}:${campaign?.type ?? "default"}`}
         mode="create"
+        currency={campaign?.currency}
         initial={{
           code: "",
           campaignId,
