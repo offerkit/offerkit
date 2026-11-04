@@ -32,10 +32,10 @@ The dashboard ships in English (default), Italian (`it`) and Dutch (`nl`). Trans
 ### How the language is chosen
 
 1. A saved choice: the `generaltranslation.locale` cookie, set for one year by **Language** in the user menu.
-2. Otherwise the browser's `Accept-Language` header.
+2. Otherwise the browser's `Accept-Language` header, ranked by q-value (`q=0` excludes a language, invalid q-values drop the entry, header order breaks ties, regional tags such as `nl-BE` map to their base language).
 3. Otherwise English.
 
-URLs carry no locale prefix, and `<html lang>` follows the active locale. Locale resolution is gt-next's built-in cookie/header lookup; no proxy (middleware) is involved.
+URLs carry no locale prefix, and `<html lang>` follows the active locale. `src/getLocale.ts` is gt-next's request-locale override (picked up by file convention); it replaces gt-next's default lookup, which ignores q-values. No proxy (middleware) is involved. The switcher uses gt-next's `useSetLocale()` so client components pick up the new locale without a full reload.
 
 ### Adding or changing strings
 
@@ -54,7 +54,7 @@ pnpm --filter @offerkit/web i18n:extract
 
 `i18n:extract` runs the `gt` CLI's local `generate` command (pinned with `pnpm dlx`, no login). It rewrites `src/i18n/en.json` from the source, adds new keys to `it.json` and `nl.json` with the English text as a placeholder, and drops keys whose source string is gone. Keys are content hashes, so edit the `it`/`nl` value that has the same key as the English entry. Keep OfferKit, product names, codes and API terms such as `LOYALTY_PROGRAM` untranslated, and keep `{variables}` and `_gt_value_N` placeholders intact.
 
-`pnpm --filter @offerkit/web test` fails when an `it`/`nl` entry is missing, stale, still identical to English (outside a short allowlist in `src/i18n/translations.test.ts`) or drops a variable. CI also runs `i18n:check`, which fails when `src/i18n/` is out of date with the source.
+`pnpm --filter @offerkit/web test` fails when an `it`/`nl` entry is missing, stale, still identical to English (outside a short allowlist in `src/i18n/translations.test.ts`) or drops a variable. CI also runs `i18n:check` (`scripts/i18n-check.mjs`), which fails when `src/i18n/` is out of date with the source, or when the extractor reports a `<T>` child it cannot translate that is not in the script's known list. `i18n:extract` passes `--ignore-errors` only because a few date/balance sites are still listed there; remove them from the list as they are wrapped in `<Var>`/`<DateTime>`/`<Currency>`. The `pnpm dlx` step downloads the pinned `gt` CLI, so it needs npm registry access on a cold runner.
 
 ### Adding a language
 
