@@ -1,12 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
 import { useApiErrorMessage } from "@/lib/api-error-message";
 import { toast } from "sonner";
 import { VoucherForm, type VoucherFormState } from "@/components/dashboard/voucher-form";
-import { voucherFormToCreateInput } from "@/lib/forms/voucher";
+import { isCampaignId, voucherFormToCreateInput } from "@/lib/forms/voucher";
 import { ovx } from "@/lib/sdk";
 
 export default function NewVoucherPage() {
@@ -21,6 +22,16 @@ export default function NewVoucherPage() {
     queryKey: ["campaigns", campaignId],
     queryFn: () => ovx().campaigns.get({ params: { id: campaignId } }),
     enabled: campaignId !== "",
+  });
+
+  // Money precision follows the campaign the form will submit, which the user
+  // can change from the one in the URL. Shares the query cache with `campaign`.
+  const [selectedCampaignId, setSelectedCampaignId] = useState(campaignId);
+  const selectedIsCampaign = isCampaignId(selectedCampaignId);
+  const { data: selectedCampaign, isPending: selectedPending } = useQuery({
+    queryKey: ["campaigns", selectedCampaignId],
+    queryFn: () => ovx().campaigns.get({ params: { id: selectedCampaignId } }),
+    enabled: selectedIsCampaign,
   });
 
   const create = useMutation({
@@ -49,7 +60,9 @@ export default function NewVoucherPage() {
       <VoucherForm
         key={`${campaignId}:${campaign?.type ?? "default"}`}
         mode="create"
-        currency={campaign?.currency}
+        currency={selectedIsCampaign ? selectedCampaign?.currency : undefined}
+        currencyPending={selectedIsCampaign && selectedPending}
+        onCampaignIdChange={setSelectedCampaignId}
         initial={{
           code: "",
           campaignId,

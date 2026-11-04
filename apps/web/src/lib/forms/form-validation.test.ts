@@ -6,6 +6,7 @@ import {
   type CampaignFormState,
 } from "./campaign";
 import {
+  isCampaignId,
   voucherCreateFormSchema,
   voucherEditFormSchema,
   voucherFormToCreateInput,
@@ -199,5 +200,13 @@ describe("voucher form validation", () => {
     expect(input).not.toHaveProperty("code");
     expect(input).not.toHaveProperty("campaignId");
     expect(input).not.toHaveProperty("type");
+  });
+});
+
+describe("isCampaignId", () => {
+  it("accepts a campaign UUID and rejects partial or empty input", () => {
+    expect(isCampaignId("8a6e0804-2bd0-4672-b79d-d97027f9071a")).toBe(true);
+    expect(isCampaignId("8a6e0804-2bd0")).toBe(false);
+    expect(isCampaignId("")).toBe(false);
   });
 });

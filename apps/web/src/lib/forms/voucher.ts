@@ -13,6 +13,11 @@ const emptyOrCampaignId = z.union([
   z.literal(""),
   voucherCreateInput.shape.campaignId.unwrap(),
 ]);
+/** Whether `value` is a well-formed campaign ID (not whether the campaign exists). */
+export function isCampaignId(value: string): boolean {
+  return voucherCreateInput.shape.campaignId.unwrap().safeParse(value).success;
+}
+
 const emptyOrGiftBalance = z.union([
   z.literal(""),
   voucherCreateInput.shape.giftBalance.unwrap(),

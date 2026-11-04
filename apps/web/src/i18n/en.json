@@ -708,6 +708,15 @@
   "3b0021dc535abe42": "Validate",
   "8fb0340fb0f43651": "Redeem",
   "263919a119c0ab8e": "Gift card ledger",
+  "4e12903a64278d3c": [
+    "Current balance:",
+    " ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
   "e3c7776ae876cb34": "No transactions yet.",
   "a246340a30f25203": "Voucher created",
   "75c976a7c91bee3b": "Create voucher",

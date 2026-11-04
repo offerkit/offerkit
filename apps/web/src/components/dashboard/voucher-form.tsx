@@ -5,6 +5,13 @@ import { useForm } from "@tanstack/react-form";
 import { T, useGT } from "gt-next/client";
 import { FormFieldErrors } from "@/components/dashboard/form-field-errors";
 import { currencyFractionDigits } from "@/lib/money";
+import {
+  formatDecimal,
+  formatOptionalDecimal,
+  needsReformat,
+  parseDecimalToMinorUnit,
+  type ShownMoney,
+} from "@/lib/money-input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,25 +37,6 @@ type DiscountKind = VoucherFormState["discountKind"];
 
 const TYPES: VoucherType[] = ["DISCOUNT", "GIFT_CARD"];
 
-function parseDecimalToMinorUnit(value: string, scale: number): number {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return 0;
-  return Math.round(parsed * scale);
-}
-
-function formatDecimal(value: number, scale: number, decimals: number): string {
-  return (value / scale).toFixed(decimals);
-}
-
-function formatOptionalDecimal(
-  value: number | "",
-  scale: number,
-  decimals: number,
-): string {
-  if (value === "") return "";
-  return formatDecimal(value, scale, decimals);
-}
-
 function DecimalInput({
   id,
   value,
@@ -72,14 +60,17 @@ function DecimalInput({
   suffix?: string;
   invalid?: boolean;
 }) {
-  const committed = useRef(value);
+  // What the text currently shows; regenerated when the value changes from
+  // outside or the currency precision changes (e.g. the campaign loads).
+  const shown = useRef<ShownMoney<number>>({ value, scale, decimals });
   const [displayValue, setDisplayValue] = useState(() =>
     formatDecimal(value, scale, decimals),
   );
 
   useEffect(() => {
-    if (value !== committed.current) {
-      committed.current = value;
+    const next = { value, scale, decimals };
+    if (needsReformat(shown.current, next)) {
+      shown.current = next;
       setDisplayValue(formatDecimal(value, scale, decimals));
     }
   }, [decimals, scale, value]);
@@ -99,7 +90,7 @@ function DecimalInput({
           const next = e.target.value;
           setDisplayValue(next);
           const parsed = parseDecimalToMinorUnit(next, scale);
-          committed.current = parsed;
+          shown.current = { value: parsed, scale, decimals };
           onChange(parsed);
         }}
         onBlur={() => setDisplayValue(formatDecimal(value, scale, decimals))}
@@ -134,14 +125,17 @@ function OptionalDecimalInput({
   placeholder?: string;
   invalid?: boolean;
 }) {
-  const committed = useRef(value);
+  // What the text currently shows; regenerated when the value changes from
+  // outside or the currency precision changes (e.g. the campaign loads).
+  const shown = useRef<ShownMoney<number | "">>({ value, scale, decimals });
   const [displayValue, setDisplayValue] = useState(() =>
     formatOptionalDecimal(value, scale, decimals),
   );
 
   useEffect(() => {
-    if (value !== committed.current) {
-      committed.current = value;
+    const next = { value, scale, decimals };
+    if (needsReformat(shown.current, next)) {
+      shown.current = next;
       setDisplayValue(formatOptionalDecimal(value, scale, decimals));
     }
   }, [decimals, scale, value]);
@@ -159,7 +153,7 @@ function OptionalDecimalInput({
         const next = e.target.value;
         setDisplayValue(next);
         const parsed = next === "" ? "" : parseDecimalToMinorUnit(next, scale);
-        committed.current = parsed;
+        shown.current = { value: parsed, scale, decimals };
         onChange(parsed);
       }}
       onBlur={() => setDisplayValue(formatOptionalDecimal(value, scale, decimals))}
@@ -175,6 +169,8 @@ export function VoucherForm({
   pending,
   mode,
   currency,
+  currencyPending = false,
+  onCampaignIdChange,
 }: {
   initial: VoucherFormState;
   submitLabel: string;
@@ -183,6 +179,10 @@ export function VoucherForm({
   mode: "create" | "edit";
   /** ISO 4217 code of the voucher's campaign; sets the money inputs' minor-unit precision. */
   currency?: string;
+  /** True while the selected campaign's currency is loading; blocks submit. */
+  currencyPending?: boolean;
+  /** Called as the Campaign ID field changes, so the caller can load its currency. */
+  onCampaignIdChange?: (campaignId: string) => void;
 }) {
   const gt = useGT();
   // Unknown currency (no campaign yet) keeps the previous 2-decimal behavior.
@@ -244,7 +244,10 @@ export function VoucherForm({
                 <Input
                   id={field.name}
                   value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
+                  onChange={(e) => {
+                    field.handleChange(e.target.value);
+                    onCampaignIdChange?.(e.target.value);
+                  }}
                   aria-invalid={field.state.meta.errors.length > 0}
                   placeholder={gt("Optional")}
                   disabled={mode === "edit"}
@@ -632,7 +635,7 @@ export function VoucherForm({
       <div className="flex justify-end gap-2">
         <form.Subscribe selector={(s) => [s.canSubmit, s.isSubmitting] as const}>
           {([canSubmit, isSubmitting]) => (
-            <Button type="submit" disabled={pending || isSubmitting || !canSubmit}>
+            <Button type="submit" disabled={pending || currencyPending || isSubmitting || !canSubmit}>
               {pending || isSubmitting ? <T>Saving…</T> : submitLabel}
             </Button>
           )}

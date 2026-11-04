@@ -4,7 +4,7 @@ import Link from "next/link";
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { T, DateTime, useGT } from "gt-next/client";
+import { T, DateTime, useGT, Var } from "gt-next/client";
 import { useApiErrorMessage } from "@/lib/api-error-message";
 import { toast } from "sonner";
 import { ArrowLeft, Trash2 } from "lucide-react";
@@ -46,7 +46,7 @@ export default function VoucherDetailPage({ params }: PageProps) {
     queryFn: () => ovx().vouchers.get({ params: { code } }),
   });
 
-  const { data: campaign } = useQuery({
+  const { data: campaign, isPending: campaignPending } = useQuery({
     queryKey: ["campaigns", data?.campaignId],
     queryFn: () => ovx().campaigns.get({ params: { id: data?.campaignId ?? "" } }),
     enabled: Boolean(data?.campaignId),
@@ -186,6 +186,7 @@ export default function VoucherDetailPage({ params }: PageProps) {
         key={data.updatedAt}
         mode="edit"
         currency={campaignCurrency}
+        currencyPending={Boolean(data.campaignId) && campaignPending}
         initial={initial}
         submitLabel={gt("Save changes")}
         pending={update.isPending}
@@ -293,7 +294,13 @@ function GiftCardLedger({
           <span className="text-sm font-normal text-muted-foreground">
             <T>
               Current balance:{" "}
-              {currency ? <Money value={balance} currency={currency} /> : (balance / 100).toFixed(2)}
+              <Var>
+                {currency ? (
+                  <Money value={balance} currency={currency} />
+                ) : (
+                  (balance / 100).toFixed(2)
+                )}
+              </Var>
             </T>
           </span>
         </CardTitle>
