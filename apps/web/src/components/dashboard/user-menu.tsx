@@ -1,15 +1,19 @@
 "use client";
 
-import { LogOut, User } from "lucide-react";
+import { Languages, LogOut, User } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
-import { T } from "gt-next/client";
+import { useId, useTransition } from "react";
+import { T, useLocale, useSetLocale } from "gt-next/client";
 import { authClient } from "@/lib/auth-client";
+import { DASHBOARD_LOCALES, isDashboardLocale, localeCookie } from "@/lib/i18n";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -18,6 +22,17 @@ import { SidebarMenuButton } from "@/components/ui/sidebar";
 export function UserMenu({ name, email }: { name: string; email: string }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const locale = useLocale();
+  const setLocale = useSetLocale();
+  const languageLabelId = useId();
+  function changeLocale(next: string) {
+    if (!isDashboardLocale(next) || next === locale) return;
+    // gt-next's setter updates the client provider's locale state (it does
+    // not follow later server props) and refreshes server components. It
+    // writes a session cookie, so rewrite it to persist the choice for a year.
+    setLocale(next);
+    document.cookie = localeCookie(next);
+  }
   function signOut() {
     start(async () => {
       await authClient.signOut();
@@ -40,6 +55,27 @@ export function UserMenu({ name, email }: { name: string; email: string }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent side="top" align="end" className="w-56">
         <DropdownMenuLabel className="text-xs text-muted-foreground">{email}</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuLabel
+            id={languageLabelId}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground"
+          >
+            <Languages className="size-3.5" aria-hidden />
+            <T>Language</T>
+          </DropdownMenuLabel>
+          <DropdownMenuRadioGroup
+            aria-labelledby={languageLabelId}
+            value={locale}
+            onValueChange={changeLocale}
+          >
+            {DASHBOARD_LOCALES.map((option) => (
+              <DropdownMenuRadioItem key={option.code} value={option.code} lang={option.code}>
+                {option.label}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={signOut} disabled={pending}>
           <LogOut className="size-4" />

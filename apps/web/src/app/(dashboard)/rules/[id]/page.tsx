@@ -5,6 +5,7 @@ import { use } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, DateTime, useGT } from "gt-next/client";
+import { useApiErrorMessage } from "@/lib/api-error-message";
 import { toast } from "sonner";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ export default function RuleDetailPage({ params }: PageProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const gt = useGT();
+  const apiError = useApiErrorMessage();
 
   const { data, isLoading } = useQuery({
     queryKey: ["validationRules", id],
@@ -46,7 +48,7 @@ export default function RuleDetailPage({ params }: PageProps) {
       toast.success(gt("Rule updated"));
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : gt("Update failed"));
+      toast.error(apiError(err, gt("Update failed")));
     },
   });
 
@@ -58,7 +60,7 @@ export default function RuleDetailPage({ params }: PageProps) {
       router.push("/rules");
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : gt("Delete failed"));
+      toast.error(apiError(err, gt("Delete failed")));
     },
   });
 

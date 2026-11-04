@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, DateTime, useGT } from "gt-next/client";
+import { useApiErrorMessage } from "@/lib/api-error-message";
 import { toast } from "sonner";
 import { Copy, Plus, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
@@ -21,6 +22,7 @@ type ApiKeyRow = ApiListItem<OfferKitClient["apiKeys"]["list"]>;
 export default function ApiKeysPage() {
   const queryClient = useQueryClient();
   const gt = useGT();
+  const apiError = useApiErrorMessage();
   const [name, setName] = useState("");
   const [mintedToken, setMintedToken] = useState<string | null>(null);
 
@@ -38,7 +40,7 @@ export default function ApiKeysPage() {
       toast.success(gt("API key minted — copy it now, it won't be shown again"));
     },
     onError: (err: unknown) =>
-      toast.error(err instanceof Error ? err.message : gt("Create failed")),
+      toast.error(apiError(err, gt("Create failed"))),
   });
 
   const revoke = useMutation({

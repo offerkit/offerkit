@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
+import { useApiErrorMessage } from "@/lib/api-error-message";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +28,7 @@ export default function NewReferralProgramPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const gt = useGT();
+  const apiError = useApiErrorMessage();
   const [campaignId, setCampaignId] = useState("");
   const [referrerReward, setReferrerReward] = useState<ReferralRewardState>(blankReferralReward);
   const [refereeReward, setRefereeReward] = useState<ReferralRewardState>(blankReferralReward);
@@ -50,7 +52,7 @@ export default function NewReferralProgramPage() {
       router.push(`/referrals/${program.id}`);
     },
     onError: (err: unknown) =>
-      toast.error(err instanceof Error ? err.message : gt("Create failed")),
+      toast.error(apiError(err, gt("Create failed"))),
   });
 
   return (

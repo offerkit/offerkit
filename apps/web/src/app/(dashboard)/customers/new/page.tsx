@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
+import { useApiErrorMessage } from "@/lib/api-error-message";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +16,7 @@ export default function NewCustomerPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const gt = useGT();
+  const apiError = useApiErrorMessage();
 
   const create = useMutation({
     mutationFn: (input: { email?: string; name?: string; phone?: string }) =>
@@ -25,7 +27,7 @@ export default function NewCustomerPage() {
       router.push(`/customers/${customer.id}`);
     },
     onError: (error: unknown) => {
-      const message = error instanceof Error ? error.message : gt("Create failed");
+      const message = apiError(error, gt("Create failed"));
       toast.error(message);
     },
   });

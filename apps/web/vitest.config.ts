@@ -3,7 +3,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   resolve: { tsconfigPaths: true },
   test: {
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "scripts/**/*.test.mjs"],
     environment: "node",
     // Live-DB e2e tests under flows/ share a memoized pg pool via
     // _helpers.getTestDb. Sequential file execution keeps the cache

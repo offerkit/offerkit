@@ -6,24 +6,12 @@ import { useQuery } from "@tanstack/react-query";
 import { T, DateTime } from "gt-next/client";
 import { Plus } from "lucide-react";
 import { DataTable } from "@/components/dashboard/data-table";
+import { ReferralRewardKindLabel } from "@/components/dashboard/referral-reward-kind";
 import { Button } from "@/components/ui/button";
 import { type ApiListItem, type OfferKitClient, ovx } from "@/lib/sdk";
 import { DATE_FORMAT } from "@/lib/date-format";
 
 type ReferralProgramRow = ApiListItem<OfferKitClient["referrals"]["programs"]["list"]>;
-
-function rewardLabel(kind: "discount" | "gift_card" | "loyalty_points" | "custom"): string {
-  switch (kind) {
-    case "discount":
-      return "Discount voucher";
-    case "gift_card":
-      return "Gift card";
-    case "loyalty_points":
-      return "Loyalty points";
-    case "custom":
-      return "Custom reward";
-  }
-}
 
 export default function ReferralsPage() {
   const { data, isLoading } = useQuery({
@@ -51,7 +39,7 @@ export default function ReferralsPage() {
       header: () => <T>Referrer reward</T>,
       cell: ({ row }) => (
         <span className="text-muted-foreground">
-          {rewardLabel(row.original.referrerReward.kind)}
+          <ReferralRewardKindLabel kind={row.original.referrerReward.kind} />
         </span>
       ),
     },
@@ -60,7 +48,7 @@ export default function ReferralsPage() {
       header: () => <T>Referee reward</T>,
       cell: ({ row }) => (
         <span className="text-muted-foreground">
-          {rewardLabel(row.original.refereeReward.kind)}
+          <ReferralRewardKindLabel kind={row.original.refereeReward.kind} />
         </span>
       ),
     },

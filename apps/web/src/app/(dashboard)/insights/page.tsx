@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { T } from "gt-next/client";
@@ -61,9 +62,9 @@ export default function InsightsPage() {
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-3">
-            <KPI label="Redemptions today" value={data.counters.redemptionsToday} />
-            <KPI label="Last 7 days" value={data.counters.redemptions7d} />
-            <KPI label="Last 30 days" value={data.counters.redemptions30d} />
+            <KPI label={<T>Redemptions today</T>} value={data.counters.redemptionsToday} />
+            <KPI label={<T>Last 7 days</T>} value={data.counters.redemptions7d} />
+            <KPI label={<T>Last 30 days</T>} value={data.counters.redemptions30d} />
           </div>
 
           <Card>
@@ -146,12 +147,12 @@ export default function InsightsPage() {
   );
 }
 
-function KPI({ label, value }: { label: string; value: number }) {
+function KPI({ label, value }: { label: ReactNode; value: number }) {
   return (
     <Card>
       <CardHeader className="pb-1">
         <CardTitle className="text-sm font-normal text-muted-foreground">
-          <T>{label}</T>
+          {label}
         </CardTitle>
       </CardHeader>
       <CardContent>

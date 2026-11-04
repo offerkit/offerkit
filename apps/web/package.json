@@ -11,7 +11,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "test:coverage": "vitest run --coverage --coverage.reporter=text --coverage.reporter=html --coverage.reporter=lcov --coverage.reporter=json-summary --passWithNoTests",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "i18n:extract": "pnpm dlx gt@2.26.5 generate --suppress-id-compatibility-warning --ignore-errors",
+    "i18n:check": "node scripts/i18n-check.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
+import { useApiErrorMessage } from "@/lib/api-error-message";
 import { toast } from "sonner";
 import { RuleForm, type RuleFormState } from "@/components/dashboard/rule-form";
 import { ovx } from "@/lib/sdk";
@@ -11,6 +12,7 @@ export default function NewRulePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const gt = useGT();
+  const apiError = useApiErrorMessage();
 
   const create = useMutation({
     mutationFn: (state: RuleFormState) =>
@@ -26,7 +28,7 @@ export default function NewRulePage() {
       router.push(`/rules/${rule.id}`);
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : gt("Create failed"));
+      toast.error(apiError(err, gt("Create failed")));
     },
   });
 

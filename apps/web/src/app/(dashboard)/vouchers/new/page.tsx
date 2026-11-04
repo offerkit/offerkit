@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
+import { useApiErrorMessage } from "@/lib/api-error-message";
 import { toast } from "sonner";
 import { VoucherForm, type VoucherFormState } from "@/components/dashboard/voucher-form";
 import { voucherFormToCreateInput } from "@/lib/forms/voucher";
@@ -12,6 +13,7 @@ export default function NewVoucherPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const gt = useGT();
+  const apiError = useApiErrorMessage();
   const search = useSearchParams();
   const campaignId = search.get("campaignId") ?? "";
 
@@ -30,7 +32,7 @@ export default function NewVoucherPage() {
       router.push(`/vouchers/${voucher.code}`);
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : gt("Create failed"));
+      toast.error(apiError(err, gt("Create failed")));
     },
   });
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactElement } from "react";
+import { useGT } from "gt-next/client";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,12 +31,13 @@ export function ConfirmDialog({
   trigger,
   title,
   description,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
+  confirmLabel,
+  cancelLabel,
   destructive = false,
   onConfirm,
   pending = false,
 }: ConfirmDialogProps) {
+  const gt = useGT();
   const [open, setOpen] = useState(false);
 
   return (
@@ -47,7 +49,7 @@ export function ConfirmDialog({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>{cancelLabel}</AlertDialogCancel>
+          <AlertDialogCancel disabled={pending}>{cancelLabel ?? gt("Cancel")}</AlertDialogCancel>
           <AlertDialogAction
             disabled={pending}
             className={cn(
@@ -60,7 +62,7 @@ export function ConfirmDialog({
               setOpen(false);
             }}
           >
-            {pending ? "…" : confirmLabel}
+            {pending ? "…" : (confirmLabel ?? gt("Confirm"))}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

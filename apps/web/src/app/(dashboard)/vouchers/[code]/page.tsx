@@ -5,6 +5,7 @@ import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, DateTime, useGT } from "gt-next/client";
+import { useApiErrorMessage } from "@/lib/api-error-message";
 import { toast } from "sonner";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +37,7 @@ export default function VoucherDetailPage({ params }: PageProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const gt = useGT();
+  const apiError = useApiErrorMessage();
   const [orderAmount, setOrderAmount] = useState(10000);
   const [redeemKey, setRedeemKey] = useState("");
 
@@ -63,7 +65,7 @@ export default function VoucherDetailPage({ params }: PageProps) {
       toast.success(gt("Voucher updated"));
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : gt("Update failed"));
+      toast.error(apiError(err, gt("Update failed")));
     },
   });
 
@@ -75,7 +77,7 @@ export default function VoucherDetailPage({ params }: PageProps) {
       router.push("/vouchers");
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : gt("Delete failed"));
+      toast.error(apiError(err, gt("Delete failed")));
     },
   });
 

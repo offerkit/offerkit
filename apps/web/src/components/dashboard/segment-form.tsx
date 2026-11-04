@@ -3,6 +3,7 @@
 import { useForm } from "@tanstack/react-form";
 import { useMutation } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
+import { useApiErrorMessage } from "@/lib/api-error-message";
 import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +33,7 @@ export function SegmentForm({
   pending: boolean;
 }) {
   const gt = useGT();
+  const apiError = useApiErrorMessage();
   const form = useForm({
     defaultValues: initial,
     onSubmit: ({ value }) => {
@@ -173,7 +175,7 @@ export function SegmentForm({
 
           {preview.error ? (
             <p className="text-xs text-red-500">
-              {preview.error instanceof Error ? preview.error.message : gt("Preview failed")}
+              {apiError(preview.error, gt("Preview failed"))}
             </p>
           ) : null}
         </CardContent>

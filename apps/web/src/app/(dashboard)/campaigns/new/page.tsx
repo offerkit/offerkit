@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
+import { useApiErrorMessage } from "@/lib/api-error-message";
 import { toast } from "sonner";
 import { CampaignForm, type CampaignFormState } from "@/components/dashboard/campaign-form";
 import { campaignFormToCreateInput } from "@/lib/forms/campaign";
@@ -12,6 +13,7 @@ export default function NewCampaignPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const gt = useGT();
+  const apiError = useApiErrorMessage();
   const { data: workspace, isLoading } = useQuery({
     queryKey: ["workspace"],
     queryFn: () => ovx().workspace.get({}),
@@ -26,7 +28,7 @@ export default function NewCampaignPage() {
       router.push(`/campaigns/${campaign.id}`);
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : gt("Create failed"));
+      toast.error(apiError(err, gt("Create failed")));
     },
   });
 

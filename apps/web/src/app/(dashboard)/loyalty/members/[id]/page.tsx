@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { use, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { T, DateTime, useGT } from "gt-next/client";
+import { T, DateTime, useGT, Var } from "gt-next/client";
+import { useApiErrorMessage } from "@/lib/api-error-message";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +30,7 @@ export default function LoyaltyMemberPage({ params }: PageProps) {
   const { id } = use(params);
   const queryClient = useQueryClient();
   const gt = useGT();
+  const apiError = useApiErrorMessage();
   const [earnPoints, setEarnPoints] = useState(100);
   const [adjustPoints, setAdjustPoints] = useState(0);
   const [adjustNote, setAdjustNote] = useState("");
@@ -59,8 +61,8 @@ export default function LoyaltyMemberPage({ params }: PageProps) {
     mutationFn: () =>
       ovx().loyalty.members.earn({ memberId: id, basePoints: earnPoints }),
     onSuccess: async (r) => {
-      if (!r.ok) toast.error(r.message ?? gt("Earn failed"));
-      else toast.success(gt("Earned {n} points").replace("{n}", String(r.delta)));
+      if (!r.ok) toast.error(apiError(r, gt("Earn failed")));
+      else toast.success(gt("Earned {n} points", { n: r.delta }));
       await refresh();
     },
   });
@@ -69,7 +71,7 @@ export default function LoyaltyMemberPage({ params }: PageProps) {
     mutationFn: () =>
       ovx().loyalty.members.adjust({ memberId: id, delta: adjustPoints, note: adjustNote }),
     onSuccess: async (r) => {
-      if (!r.ok) toast.error(r.message ?? gt("Adjust failed"));
+      if (!r.ok) toast.error(apiError(r, gt("Adjust failed")));
       else toast.success(gt("Balance adjusted"));
       await refresh();
     },
@@ -78,7 +80,7 @@ export default function LoyaltyMemberPage({ params }: PageProps) {
   const redeem = useMutation({
     mutationFn: () => ovx().loyalty.members.redeem({ memberId: id, rewardId }),
     onSuccess: async (r) => {
-      if (!r.ok) toast.error(r.message ?? gt("Redeem failed"));
+      if (!r.ok) toast.error(apiError(r, gt("Redeem failed")));
       else toast.success(gt("Reward redeemed"));
       await refresh();
     },
@@ -125,7 +127,9 @@ export default function LoyaltyMemberPage({ params }: PageProps) {
             {member.balance} <T>pts</T>
           </Badge>
           <span className="text-sm text-muted-foreground">
-            <T>Lifetime: {member.lifetimePoints}</T>
+            <T>
+              Lifetime: <Var>{member.lifetimePoints}</Var>
+            </T>
           </span>
         </div>
       </header>

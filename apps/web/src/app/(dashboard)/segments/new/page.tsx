@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { T, useGT } from "gt-next/client";
+import { useApiErrorMessage } from "@/lib/api-error-message";
 import { toast } from "sonner";
 import { SegmentForm } from "@/components/dashboard/segment-form";
 import { ovx } from "@/lib/sdk";
@@ -11,6 +12,7 @@ export default function NewSegmentPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const gt = useGT();
+  const apiError = useApiErrorMessage();
 
   const create = useMutation({
     mutationFn: (state: { name: string; description: string; rule: Record<string, unknown> }) =>
@@ -25,7 +27,7 @@ export default function NewSegmentPage() {
       router.push(`/segments/${segment.id}`);
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : gt("Create failed"));
+      toast.error(apiError(err, gt("Create failed")));
     },
   });
 
