@@ -34,6 +34,9 @@ function readCookie(cookieHeader: string | null, name: string): string | null {
   return null;
 }
 
+/** RFC 9110 qvalue: 0–1 with at most three decimals. */
+const QVALUE = /^(?:0(?:\.\d{0,3})?|1(?:\.0{0,3})?)$/;
+
 /** Best supported match from an Accept-Language header, honouring q-values. */
 export function matchAcceptLanguage(header: string | null | undefined): EmailLocale | null {
   if (!header) return null;
@@ -43,10 +46,12 @@ export function matchAcceptLanguage(header: string | null | undefined): EmailLoc
       const [tag = "", ...params] = entry.trim().split(";");
       let q = 1;
       for (const param of params) {
-        const [key, value] = param.trim().split("=");
-        if (key?.trim() === "q") {
-          const parsed = Number(value);
-          q = Number.isFinite(parsed) ? parsed : 0;
+        const [key, value = ""] = param.trim().split("=");
+        // Parameter names are case-insensitive; malformed or out-of-range
+        // q-values drop the entry rather than outranking valid ones.
+        if (key?.trim().toLowerCase() === "q") {
+          const raw = value.trim();
+          q = QVALUE.test(raw) ? Number(raw) : 0;
         }
       }
       return { tag: tag.trim(), q, index };

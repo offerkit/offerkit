@@ -58,6 +58,20 @@ describe("resolveEmailLocale", () => {
     expect(matchAcceptLanguage("nl;q=0, it;q=0.1")).toBe("it");
   });
 
+  it("treats the q parameter name case-insensitively", () => {
+    expect(matchAcceptLanguage("nl;Q=0, it;q=0.8")).toBe("it");
+    expect(matchAcceptLanguage("nl;Q=0.2, it;Q=0.9")).toBe("it");
+  });
+
+  it("ignores malformed and out-of-range q-values", () => {
+    expect(matchAcceptLanguage("nl;q=2, it;q=1")).toBe("it");
+    expect(matchAcceptLanguage("nl;q=0x1, it;q=0.5")).toBe("it");
+    expect(matchAcceptLanguage("nl;q=1e0, it;q=0.5")).toBe("it");
+    expect(matchAcceptLanguage("nl;q=0.1234, it;q=0.5")).toBe("it");
+    expect(matchAcceptLanguage("nl;q=, it;q=0.5")).toBe("it");
+    expect(matchAcceptLanguage("nl;q = 0.9 , it;q=0.5")).toBe("nl");
+  });
+
   it("falls back to en for unsupported languages", () => {
     expect(resolveEmailLocale(headers({ "accept-language": "fr-FR,de;q=0.8" }))).toBe("en");
   });
