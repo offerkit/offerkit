@@ -22,17 +22,9 @@ const webRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
  * removed or updated when integrating it.
  */
 const KNOWN_DIAGNOSTICS = [
-  ["src/app/(dashboard)/campaigns/[id]/page.tsx", "{new Date(data.updatedAt).toLocaleString()}"],
-  ["src/app/(dashboard)/customers/[id]/page.tsx", "{new Date(data.createdAt).toLocaleString()}"],
-  ["src/app/(dashboard)/loyalty/[id]/page.tsx", "{new Date(program.updatedAt).toLocaleString()}"],
-  ["src/app/(dashboard)/referrals/[id]/page.tsx", "{new Date(program.updatedAt).toLocaleString()}"],
-  ["src/app/(dashboard)/rewards/[id]/page.tsx", "{new Date(data.updatedAt).toLocaleString()}"],
-  ["src/app/(dashboard)/rules/[id]/page.tsx", "{new Date(data.updatedAt).toLocaleString()}"],
-  ["src/app/(dashboard)/segments/[id]/page.tsx", "{new Date(data.updatedAt).toLocaleString()}"],
-  ["src/app/(dashboard)/vouchers/[code]/page.tsx", "{new Date(data.updatedAt).toLocaleString()}"],
   [
     "src/app/(dashboard)/vouchers/[code]/page.tsx",
-    "{currency ? formatMinorCurrency(balance, currency) : (balance / 100).toFixed(2)}",
+    "{currency ? <Money value={balance} currency={currency} /> : (balance / 100).toFixed(2)}",
   ],
 ].map(([file, ...body]) => ({ file, body }));
 
