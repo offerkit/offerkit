@@ -4,15 +4,16 @@ import Link from "next/link";
 import { use } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { T, useGT } from "gt-next/client";
+import { T, DateTime, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { DataTable } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatMinorCurrency } from "@/lib/money";
+import { Money } from "@/components/dashboard/money";
 import { type ApiListItem, type ApiResult, type OfferKitClient, ovx } from "@/lib/sdk";
+import { DATE_TIME_FORMAT } from "@/lib/date-format";
 
 type OrderItemRow = ApiResult<OfferKitClient["orders"]["get"]>["items"][number];
 type OrderRedemptionRow = ApiListItem<OfferKitClient["orders"]["redemptions"]>;
@@ -83,7 +84,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       header: () => <div className="text-right"><T>Unit price</T></div>,
       cell: ({ row }) => (
         <div className="text-right font-mono">
-          {formatMinorCurrency(row.original.unitPrice, data.currency)}
+          <Money value={row.original.unitPrice} currency={data.currency} />
         </div>
       ),
     },
@@ -117,7 +118,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       cell: ({ row }) => (
         <div className="text-right font-mono">
           {row.original.amount != null
-            ? formatMinorCurrency(row.original.amount, data.currency)
+            ? <Money value={row.original.amount} currency={data.currency} />
             : "-"}
         </div>
       ),
@@ -127,7 +128,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       header: () => <div className="text-right"><T>When</T></div>,
       cell: ({ row }) => (
         <div className="text-right text-xs text-muted-foreground">
-          {new Date(row.original.createdAt).toLocaleString()}
+          <DateTime options={DATE_TIME_FORMAT}>{new Date(row.original.createdAt)}</DateTime>
         </div>
       ),
     },
@@ -188,7 +189,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             </CardTitle>
           </CardHeader>
           <CardContent className="font-mono">
-            {formatMinorCurrency(data.amount, data.currency)}
+            <Money value={data.amount} currency={data.currency} />
           </CardContent>
         </Card>
         <Card>
@@ -199,7 +200,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           </CardHeader>
           <CardContent className="font-mono">
             {data.discountAmount > 0
-              ? formatMinorCurrency(data.discountAmount, data.currency)
+              ? <Money value={data.discountAmount} currency={data.currency} />
               : "—"}
           </CardContent>
         </Card>

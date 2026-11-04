@@ -366,7 +366,7 @@ export function VoucherForm({
                   {(field) => (
                     <div className="space-y-2">
                       <Label htmlFor={field.name}>
-                        <T>Balance (cents)</T>
+                        <T>Balance (minor units)</T>
                       </Label>
                       <Input
                         id={field.name}

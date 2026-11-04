@@ -3,12 +3,13 @@
 import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
-import { T, useGT } from "gt-next/client";
+import { T, DateTime, useGT } from "gt-next/client";
 import { Search } from "lucide-react";
 import { DataTable } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { type ApiListItem, type OfferKitClient, ovx } from "@/lib/sdk";
+import { DATE_TIME_FORMAT } from "@/lib/date-format";
 
 type EventRow = ApiListItem<OfferKitClient["events"]["list"]>;
 
@@ -54,7 +55,7 @@ export default function EventsPage() {
       header: () => <div className="text-right"><T>Created</T></div>,
       cell: ({ row }) => (
         <div className="text-right text-xs text-muted-foreground">
-          {new Date(row.original.createdAt).toLocaleString()}
+          <DateTime options={DATE_TIME_FORMAT}>{new Date(row.original.createdAt)}</DateTime>
         </div>
       ),
     },

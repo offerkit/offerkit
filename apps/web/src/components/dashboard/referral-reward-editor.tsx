@@ -91,7 +91,7 @@ export function ReferralRewardEditor({
               </Label>
               <Select
                 items={[
-                  { label: gt("Amount (cents)"), value: "AMOUNT" },
+                  { label: gt("Amount (minor units)"), value: "AMOUNT" },
                   { label: gt("Percentage (basis points)"), value: "PERCENTAGE" },
                 ]}
                 value={state.discountKind}
@@ -103,7 +103,7 @@ export function ReferralRewardEditor({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="AMOUNT">{gt("Amount (cents)")}</SelectItem>
+                  <SelectItem value="AMOUNT">{gt("Amount (minor units)")}</SelectItem>
                   <SelectItem value="PERCENTAGE">{gt("Percentage (basis points)")}</SelectItem>
                 </SelectContent>
               </Select>
@@ -125,7 +125,7 @@ export function ReferralRewardEditor({
         {state.kind === "gift_card" ? (
           <div className="space-y-2 sm:col-span-2">
             <Label>
-              <T>Credit (cents)</T>
+              <T>Credit (minor units)</T>
             </Label>
             <Input
               type="number"

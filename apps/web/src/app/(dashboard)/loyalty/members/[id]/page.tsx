@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { use, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { T, useGT } from "gt-next/client";
+import { T, DateTime, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ovx } from "@/lib/sdk";
+import { DATE_TIME_FORMAT } from "@/lib/date-format";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -262,7 +263,7 @@ export default function LoyaltyMemberPage({ params }: PageProps) {
                       <span className="text-xs text-muted-foreground">{t.note}</span>
                     ) : null}
                     <span className="text-xs text-muted-foreground">
-                      {new Date(t.createdAt).toLocaleString()}
+                      <DateTime options={DATE_TIME_FORMAT}>{new Date(t.createdAt)}</DateTime>
                     </span>
                   </div>
                   <div className="font-mono text-sm">

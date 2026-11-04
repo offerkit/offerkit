@@ -4,12 +4,13 @@ import Link from "next/link";
 import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
-import { T, useGT } from "gt-next/client";
+import { T, DateTime, useGT } from "gt-next/client";
 import { Plus, Search } from "lucide-react";
 import { DataTable } from "@/components/dashboard/data-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { type ApiListItem, type OfferKitClient, ovx } from "@/lib/sdk";
+import { DATE_FORMAT } from "@/lib/date-format";
 
 type SegmentRow = ApiListItem<OfferKitClient["segments"]["list"]>;
 
@@ -42,7 +43,7 @@ export default function SegmentsPage() {
       header: () => <div className="text-right"><T>Updated</T></div>,
       cell: ({ row }) => (
         <div className="text-right text-muted-foreground">
-          {new Date(row.original.updatedAt).toLocaleDateString()}
+          <DateTime options={DATE_FORMAT}>{new Date(row.original.updatedAt)}</DateTime>
         </div>
       ),
     },

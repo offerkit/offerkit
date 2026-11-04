@@ -4,7 +4,7 @@ import Link from "next/link";
 import { use } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { T, useGT } from "gt-next/client";
+import { T, DateTime, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { ArrowLeft, RotateCw } from "lucide-react";
 import { DataTable } from "@/components/dashboard/data-table";
@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { type ApiListItem, type OfferKitClient, ovx } from "@/lib/sdk";
+import { DATE_TIME_FORMAT } from "@/lib/date-format";
 
 type WebhookDeliveryRow = ApiListItem<OfferKitClient["webhooks"]["deliveries"]>;
 
@@ -88,7 +89,7 @@ export default function WebhookDetailPage({ params }: PageProps) {
       header: () => <T>Created</T>,
       cell: ({ row }) => (
         <span className="text-xs text-muted-foreground">
-          {new Date(row.original.createdAt).toLocaleString()}
+          <DateTime options={DATE_TIME_FORMAT}>{new Date(row.original.createdAt)}</DateTime>
         </span>
       ),
     },

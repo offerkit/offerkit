@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
-import { T, useGT } from "gt-next/client";
+import { T, DateTime, useGT } from "gt-next/client";
 import { DataTable } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { useCursorPagination } from "@/hooks/use-cursor-pagination";
 import { type ApiListItem, type OfferKitClient, ovx } from "@/lib/sdk";
+import { DATE_TIME_FORMAT } from "@/lib/date-format";
 
 type AuditLogRow = ApiListItem<OfferKitClient["auditLog"]["list"]>;
 
@@ -50,7 +51,7 @@ export default function AuditLogPage() {
       header: () => <T>When</T>,
       cell: ({ row }) => (
         <span className="whitespace-nowrap text-xs text-muted-foreground">
-          {new Date(row.original.createdAt).toLocaleString()}
+          <DateTime options={DATE_TIME_FORMAT}>{new Date(row.original.createdAt)}</DateTime>
         </span>
       ),
     },

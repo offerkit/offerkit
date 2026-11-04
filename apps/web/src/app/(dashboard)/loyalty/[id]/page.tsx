@@ -5,7 +5,7 @@ import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { T, useGT } from "gt-next/client";
+import { T, DateTime, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { type ApiListItem, type OfferKitClient, ovx } from "@/lib/sdk";
+import { DATE_TIME_FORMAT } from "@/lib/date-format";
 
 type LoyaltyTierRow = ApiListItem<OfferKitClient["loyalty"]["tiers"]["list"]>;
 type LoyaltyEarningRuleRow = ApiListItem<
@@ -85,7 +86,7 @@ export default function LoyaltyProgramPage({ params }: PageProps) {
               <T>Loyalty program</T>
             </h1>
             <p className="text-sm text-muted-foreground">
-              <T>Updated {new Date(program.updatedAt).toLocaleString()}</T>
+              <T>Updated <DateTime options={DATE_TIME_FORMAT}>{new Date(program.updatedAt)}</DateTime></T>
             </p>
           </div>
         </div>
@@ -564,7 +565,7 @@ function RewardsTab({ programId }: { programId: string }) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="reward-amount">
-              <T>Amount (cents)</T>
+              <T>Amount (minor units)</T>
             </Label>
             <Input
               id="reward-amount"

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
-import { T, useGT } from "gt-next/client";
+import { T, DateTime, useGT } from "gt-next/client";
 import { Search } from "lucide-react";
 import { DataTable } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
@@ -17,8 +17,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCursorPagination } from "@/hooks/use-cursor-pagination";
-import { formatMinorCurrency } from "@/lib/money";
+import { Money } from "@/components/dashboard/money";
 import { type ApiListItem, type OfferKitClient, ovx } from "@/lib/sdk";
+import { DATE_FORMAT } from "@/lib/date-format";
 
 type OrderRow = ApiListItem<OfferKitClient["orders"]["list"]>;
 
@@ -71,7 +72,7 @@ export default function OrdersPage() {
       header: () => <div className="text-right"><T>Amount</T></div>,
       cell: ({ row }) => (
         <div className="text-right font-mono">
-          {formatMinorCurrency(row.original.amount, row.original.currency)}
+          <Money value={row.original.amount} currency={row.original.currency} />
         </div>
       ),
     },
@@ -81,7 +82,7 @@ export default function OrdersPage() {
       cell: ({ row }) => (
         <div className="text-right font-mono text-muted-foreground">
           {row.original.discountAmount > 0
-            ? formatMinorCurrency(row.original.discountAmount, row.original.currency)
+            ? <Money value={row.original.discountAmount} currency={row.original.currency} />
             : "-"}
         </div>
       ),
@@ -91,7 +92,7 @@ export default function OrdersPage() {
       header: () => <div className="text-right"><T>Created</T></div>,
       cell: ({ row }) => (
         <div className="text-right text-muted-foreground">
-          {new Date(row.original.createdAt).toLocaleDateString()}
+          <DateTime options={DATE_FORMAT}>{new Date(row.original.createdAt)}</DateTime>
         </div>
       ),
     },

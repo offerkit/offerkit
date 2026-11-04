@@ -5,7 +5,7 @@ import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { T, useGT } from "gt-next/client";
+import { T, DateTime, useGT } from "gt-next/client";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
@@ -21,6 +21,7 @@ import {
 } from "@/components/dashboard/campaign-form";
 import { type ApiListItem, type OfferKitClient, ovx } from "@/lib/sdk";
 import { campaignFormToUpdateInput } from "@/lib/forms/campaign";
+import { DATE_TIME_FORMAT } from "@/lib/date-format";
 
 type VoucherRow = ApiListItem<OfferKitClient["vouchers"]["list"]>;
 
@@ -174,7 +175,7 @@ export default function CampaignDetailPage({ params }: PageProps) {
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">{data.name}</h1>
             <p className="text-sm text-muted-foreground">
-              <T>Updated {new Date(data.updatedAt).toLocaleString()}</T>
+              <T>Updated <DateTime options={DATE_TIME_FORMAT}>{new Date(data.updatedAt)}</DateTime></T>
             </p>
           </div>
           <Badge variant={data.status === "active" ? "default" : "secondary"}>
@@ -247,7 +248,7 @@ export default function CampaignDetailPage({ params }: PageProps) {
               {isGiftVoucherCampaign ? (
                 <div className="space-y-2">
                   <Label htmlFor="bulk-gift-balance">
-                    <T>Gift card balance (cents)</T>
+                    <T>Gift card balance (minor units)</T>
                   </Label>
                   <Input
                     id="bulk-gift-balance"
@@ -261,7 +262,7 @@ export default function CampaignDetailPage({ params }: PageProps) {
               ) : (
                 <div className="space-y-2">
                   <Label htmlFor="bulk-discount-amount">
-                    <T>Discount amount (cents)</T>
+                    <T>Discount amount (minor units)</T>
                   </Label>
                   <Input
                     id="bulk-discount-amount"

@@ -1,13 +1,14 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { T, useGT } from "gt-next/client";
+import { T, DateTime, useGT } from "gt-next/client";
 import { Cable, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DATE_TIME_FORMAT } from "@/lib/date-format";
 
 interface Connection {
   id: string;
@@ -93,7 +94,7 @@ export default function ConnectionsPage() {
                         </Badge>
                       ))}
                       <span className="ml-1 text-xs text-muted-foreground">
-                        {new Date(connection.updatedAt).toLocaleString()}
+                        <DateTime options={DATE_TIME_FORMAT}>{new Date(connection.updatedAt)}</DateTime>
                       </span>
                     </div>
                   </div>
