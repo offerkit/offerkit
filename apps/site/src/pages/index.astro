@@ -387,7 +387,7 @@ const comparison = [
                     data-tab
                   >
                     <span class="tab-long">{example.label}</span>
-                    <span class="tab-short" aria-hidden="true">{example.short}</span>
+                    <span class="tab-short">{example.short}</span>
                   </button>
                 ))}
               </div>
@@ -559,8 +559,8 @@ const comparison = [
           </p>
         </div>
         <p class="auth-note">
-          Install with <code>npm install @offerkit/sdk</code>. Each surface authenticates with a
-          server API key from the dashboard.
+          Install with <code>npm install @offerkit/sdk</code>. The SDK, REST API, and CLI authenticate with a
+          server API key from the dashboard. The hosted MCP server uses OAuth account sign-in.
         </p>
         <a class="text-link" href="/docs/reference/developer-tools/">
           SDK, REST, CLI, and MCP reference <ArrowRightIcon size={14} weight="bold" aria-hidden="true" />
@@ -579,7 +579,7 @@ const comparison = [
                 data-tab
               >
                 <span class="interface-label">{item.label}</span>
-                <span class="interface-short" aria-hidden="true">{item.short}</span>
+                <span class="interface-short">{item.short}</span>
               </button>
             ))}
           </div>
