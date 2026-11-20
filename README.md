@@ -12,6 +12,7 @@
   <a href="./LICENSE"><img src="https://img.shields.io/github/license/offerkit/offerkit?style=flat-square" alt="MIT License" /></a>
   <a href="https://github.com/offerkit/offerkit/stargazers"><img src="https://img.shields.io/github/stars/offerkit/offerkit?style=flat-square" alt="GitHub stars" /></a>
   <a href="https://github.com/offerkit/offerkit/network/members"><img src="https://img.shields.io/github/forks/offerkit/offerkit?style=flat-square" alt="GitHub forks" /></a>
+  <a href="https://github.com/sponsors/offerkit"><img src="https://img.shields.io/badge/sponsor-offerkit-ea4aaa?style=flat-square&logo=githubsponsors&logoColor=white" alt="GitHub Sponsors" /></a>
 </p>
 
 <p align="center">
@@ -20,6 +21,7 @@
   <a href="#-self-host">Self-Host</a> ·
   <a href="#-sdk-cli-mcp">SDK, CLI, MCP</a> ·
   <a href="#-website-and-docs">Website &amp; Docs</a> ·
+  <a href="#-sponsor">Sponsor</a> ·
   <a href="#-license">License</a>
 </p>
 
@@ -251,6 +253,12 @@ The public website is at <https://offerkit.dev>, with documentation at <https://
 4. Open a PR
 
 No CLA required.
+
+## 💖 Sponsor
+
+OfferKit is built and maintained in the open. If it saves you or your team time, you can support its development through [GitHub Sponsors](https://github.com/sponsors/offerkit). Sponsorship funds releases, Docker images, documentation, and security fixes.
+
+Bug reports, feedback, and pull requests help just as much.
 
 ## ⭐ Star History
 
